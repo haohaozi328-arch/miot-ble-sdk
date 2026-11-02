@@ -41,6 +41,16 @@ void thermometer_report(miot_device_t *dev, float temp_c, float hum_pct,
 void switch_dev_init(miot_device_t *dev, miot_port_t *port,
                      miot_prop_t **tbl, size_t *cnt);
 
+/* ============ 5. 夜灯2（MUE4094RT） ============
+ * 验证状态：v54 固件完整打通 ✓（spec 下行：亮度/延时/开关 + 电量回报） */
+void night_light_init(miot_device_t *dev, miot_port_t *port,
+                      miot_prop_t **tbl, size_t *cnt);
+
+/* ============ 6. 驱蚊器智能版（WX08ZM，PID 0x040A） ============
+ * 验证状态：绑定 + 开关下发/回报 + 电量 ✓（0x1012 开关 / 0x1013 驱蚊片余量） */
+void repeller_init(miot_device_t *dev, miot_port_t *port,
+                   miot_prop_t **tbl, size_t *cnt);
+
 /* ============ 4. 无线按钮（XMWXKG01LM） ============
  * 验证状态：绑定 + 按钮配置属性读写(3.1020) ✓ */
 void button_dev_init(miot_device_t *dev, miot_port_t *port,

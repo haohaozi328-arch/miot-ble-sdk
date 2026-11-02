@@ -55,7 +55,7 @@ size_t miot_spec_encode_value(const miot_spec_value_t *v, uint8_t *out, size_t c
     default:
         return 0;
     }
-    if (2 + vlen > cap) return 0;
+    if (2 + (size_t)vlen > cap) return 0;
     put16(out, (uint16_t)((v->type << 12) | vlen));
     memcpy(out + 2, buf, vlen);
     return 2 + (size_t)vlen;
@@ -163,17 +163,21 @@ int miot_spec_build_version_reply(uint16_t tid, uint8_t *out, size_t cap)
 
 /* ---------------- 解包 ---------------- */
 
+/* App→设备 SET 请求对象（固件实测互通格式，勿改）：
+ * [siid 1B][piid 16LE][type 16LE（纯类型号，非 (type<<12)|len）][len 1B][value]
+ * 注意：设备→App 方向（get_reply 等）的 value 编码才是 [type16=(type<<12)|len]，
+ * 两个方向格式不同 —— 见 docs/protocol.md。 */
 static int parse_object(const uint8_t *p, size_t remain, miot_spec_value_t *v)
 {
     if (remain < 6) return -1;
     v->siid = p[0];
     v->piid = get16(p + 1);
-    uint16_t tl = get16(p + 3);
-    v->type = (uint8_t)(tl >> 12);
-    uint8_t vlen = (uint8_t)(tl & 0x0FFF);
+    uint16_t vtype = get16(p + 3);
+    uint8_t vlen = p[5];
     if (remain < (size_t)6 + vlen) return -1;
-    const uint8_t *val = p + 5;
-    switch (v->type) {
+    const uint8_t *val = p + 6;
+    v->type = (uint8_t)vtype;
+    switch (vtype) {
     case MIOT_TYPE_BOOL:
     case MIOT_TYPE_U8:   v->val.u8  = val[0]; break;
     case MIOT_TYPE_U16:  v->val.u16 = get16(val); break;

@@ -234,6 +234,60 @@ void button_dev_init(miot_device_t *dev, miot_port_t *port,
     if (cnt) *cnt = sizeof(btn_props) / sizeof(btn_props[0]);
 }
 
+/* ================= 5. 夜灯2（MUE4094RT） =================
+ * v54 固件完整打通：2.1 亮度%(1-100) / 2.2 延时ms(5000-60000) /
+ * 2.3 开关 / 3.1 电量。on_set 副作用 = 存 NVS + 重设 LED。 */
+
+static uint8_t  nl_bright  = 50;
+static uint32_t nl_dur     = 10000;
+static uint8_t  nl_power   = 0;
+static uint8_t  nl_battery = 80;
+
+static void nl_on_any(const struct miot_prop *p) { (void)p; /* nl_save(); led_set(); */ }
+
+static miot_prop_t nl_props[] = {
+    { 2, 1, MIOT_TYPE_U8,   MIOT_PROP_RW, 1, &nl_bright,  1,    100,   nl_on_any, "bright"  },
+    { 2, 2, MIOT_TYPE_U32,  MIOT_PROP_RW, 4, &nl_dur,     5000, 60000, nl_on_any, "dur"     },
+    { 2, 3, MIOT_TYPE_BOOL, MIOT_PROP_RW, 1, &nl_power,   0,    0,     nl_on_any, "power"   },
+    { 3, 1, MIOT_TYPE_U8,   MIOT_PROP_R,  1, &nl_battery, 0,    0,     NULL,      "battery" },
+};
+
+void night_light_init(miot_device_t *dev, miot_port_t *port,
+                      miot_prop_t **tbl, size_t *cnt)
+{
+    miot_device_init(dev, port);
+    miot_device_attach(dev, nl_props, sizeof(nl_props) / sizeof(nl_props[0]),
+                       NULL, NULL, NULL);
+    if (tbl) *tbl = nl_props;
+    if (cnt) *cnt = sizeof(nl_props) / sizeof(nl_props[0]);
+}
+
+/* ================= 6. 驱蚊器智能版（WX08ZM，PID 0x040A） =================
+ * 2.1 开关（唯一可写）/ 3.1 电量。真机行为：set 后立刻回报 0x1012。 */
+
+static uint8_t rp_on      = 0;
+static uint8_t rp_battery = 65;
+
+static void rp_on_power(const struct miot_prop *p)
+{
+    (void)p;    /* 真机：置 pending 标志，下一拍发 properties_changed(2.1) */
+}
+
+static miot_prop_t rp_props[] = {
+    { 2, 1, MIOT_TYPE_BOOL, MIOT_PROP_RW, 1, &rp_on,      0, 0, rp_on_power, "power"   },
+    { 3, 1, MIOT_TYPE_U8,   MIOT_PROP_R,  1, &rp_battery, 0, 0, NULL,        "battery" },
+};
+
+void repeller_init(miot_device_t *dev, miot_port_t *port,
+                   miot_prop_t **tbl, size_t *cnt)
+{
+    miot_device_init(dev, port);
+    miot_device_attach(dev, rp_props, sizeof(rp_props) / sizeof(rp_props[0]),
+                       NULL, NULL, NULL);
+    if (tbl) *tbl = rp_props;
+    if (cnt) *cnt = sizeof(rp_props) / sizeof(rp_props[0]);
+}
+
 /* ================= 通用：auth ↔ device 标准接线 ================= */
 
 void profiles_wire_auth(miot_auth_t *auth, miot_device_t *dev,

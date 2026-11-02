@@ -11,6 +11,7 @@ add_library(miot-ble-sdk STATIC
     src/miot_device.c
     src/miot_auth.c
     src/miot_profiles.c
+    src/miot_beacon.c
 )
 target_include_directories(miot-ble-sdk PUBLIC include)
 target_compile_options(miot-ble-sdk PRIVATE -Wall -Wextra)
@@ -18,10 +19,24 @@ target_compile_options(miot-ble-sdk PRIVATE -Wall -Wextra)
 add_executable(test_spec test/test_spec.c)
 target_link_libraries(test_spec PRIVATE miot-ble-sdk)
 
-add_executable(example_scale
-    examples/scale_s400/main.c
+# ---- 每台设备一个示例目录（见 README 设备清单） ----
+set(EXAMPLES
+    scale_s400
+    thermometer
+    night_light
+    repeller
+    button
+    sensor_hcho
+    sensor_door
+    sensor_motion
+    sensor_leak
+    thermo_t3m
 )
-target_link_libraries(example_scale PRIVATE miot-ble-sdk)
+foreach(ex IN LISTS EXAMPLES)
+    string(REPLACE "_" "-" bin "example-${ex}")
+    add_executable(${bin} examples/${ex}/main.c)
+    target_link_libraries(${bin} PRIVATE miot-ble-sdk)
+endforeach()
 
 enable_testing()
 add_test(NAME spec COMMAND test_spec)
