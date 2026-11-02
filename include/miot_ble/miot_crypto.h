@@ -27,9 +27,15 @@ typedef struct miot_crypto_ops {
     /** HMAC-SHA256，返回 0 成功 */
     int (*hmac_sha256)(void *ctx, const uint8_t *key, size_t klen,
                        const uint8_t *data, size_t dlen, uint8_t out[32]);
-    /** AES-CCM（tag 4 字节，无 AAD），enc=1 加密 0 解密，返回 0 成功 */
+    /** AES-CCM（tag 4 字节，支持 AAD），enc=1 加密 0 解密，返回 0 成功 */
     int (*aes_ccm)(void *ctx, int enc, const uint8_t key[16], const uint8_t nonce[12],
+                   const uint8_t *aad, size_t aad_len,
                    const uint8_t *in, size_t len, uint8_t *out, uint8_t tag[4]);
+    /* ---- 标准认证 REGISTER：ECDH P-256 ---- */
+    /** 生成设备密钥对；pubkey64 = 公钥 X||Y（无 04 前缀）。返回 0 成功 */
+    int (*ecdh_keygen)(void *ctx, uint8_t pubkey64[64]);
+    /** 用 App 公钥（64B X||Y）算共享密钥。返回 0 成功 */
+    int (*ecdh_shared)(void *ctx, const uint8_t app_pubkey64[64], uint8_t secret[32]);
 } miot_crypto_ops_t;
 
 void miot_crypto_set_ops(const miot_crypto_ops_t *ops);
@@ -49,13 +55,31 @@ int miot_hkdf_sha256(const uint8_t *ikm, size_t ikm_len,
                      const char *info, size_t info_len,
                      uint8_t *out, size_t out_len);
 
-/* ---------- 3. spec 通道 k61 帧加解密 ---------- */
+/* ---------- 3. 标准认证（REGISTER / LOGIN） ---------- */
+
+int miot_hmac_sha256(const uint8_t *key, size_t klen,
+                     const uint8_t *data, size_t dlen, uint8_t out[32]);
+int miot_ecdh_keygen(uint8_t pubkey64[64]);
+int miot_ecdh_shared(const uint8_t app_pubkey64[64], uint8_t secret[32]);
+
+/* ---------- 4. spec 通道 k61 帧加解密 ---------- */
 
 /** 帧格式 [seq16 LE][ct+tag4]，输出 = len+4 字节。返回 0 成功 */
 int miot_spec_frame_encrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t seq,
                             const uint8_t *pt, size_t len, uint8_t *out);
 int miot_spec_frame_decrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t seq,
                             const uint8_t *in, size_t len, uint8_t *pt /* len */);
+
+/* ---------- 5. 通用 AES-CCM（带 AAD，REGISTER 加密 did 用） ---------- */
+
+/** 输出 [ct][tag4] 连续 buffer。返回 0 成功 */
+int miot_ccm_encrypt(const uint8_t key[16], const uint8_t nonce[12],
+                     const uint8_t *aad, size_t aad_len,
+                     const uint8_t *pt, size_t len, uint8_t *out);
+/** in = [ct][tag4]。返回 0 成功 */
+int miot_ccm_decrypt(const uint8_t key[16], const uint8_t nonce[12],
+                     const uint8_t *aad, size_t aad_len,
+                     const uint8_t *in, size_t len, uint8_t *pt);
 
 #ifdef __cplusplus
 }

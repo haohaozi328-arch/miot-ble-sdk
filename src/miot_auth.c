@@ -1,0 +1,495 @@
+/**
+ * @file miot_auth.c
+ * @brief 米家 BLE 标准认证状态机实现（REGISTER + LOGIN）
+ *
+ * 所有报文格式、状态推进条件、应答通道均来自固件实测 + App 反汇编互证，
+ * 注释里保留关键坑位说明（照抄勿改）。
+ */
+#include "miot_ble/miot_auth.h"
+#include "miot_ble/miot_crypto.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+/* ================= 日志 ================= */
+
+static void alog(const miot_auth_t *a, const char *fmt, ...)
+{
+    (void)a;   /* 预留：平台可在此接入 port 日志系统 */
+    char buf[160];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    printf("[miot-auth] %s\n", buf);
+}
+
+/* ================= 底层发送 ================= */
+
+static void n19(const miot_auth_t *a, const uint8_t *d, size_t n)
+{
+    if (a->port.notify_0019) a->port.notify_0019(a->port.user, d, n);
+}
+
+static void n10(const miot_auth_t *a, const uint8_t *d, size_t n)
+{
+    if (a->port.notify_0010) a->port.notify_0010(a->port.user, d, n);
+}
+
+static void result_code(const miot_auth_t *a, uint8_t code)
+{
+    uint8_t f[4] = { code, 0, 0, 0 };      /* ★ 结果码必须发 0x0010 */
+    n10(a, f, 4);
+}
+
+/* ag2 ACK（status=1 就绪 / 0 收齐确认） */
+static void ag_ack(miot_auth_t *a, uint8_t status)
+{
+    uint8_t f[4] = { 0x00, 0x00, 0x01, status };
+    n19(a, f, 4);
+}
+
+/* channel data 包：[00 00][cmd=2][msgType][payload] —— 业务消息必须包这层，
+ * 裸发会被 App 当管理包丢弃（-55 notify timeout 的根因） */
+static void ch_send(miot_auth_t *a, uint8_t msg_type, const uint8_t *payload, size_t len)
+{
+    uint8_t buf[144];
+    if (len + 4 > sizeof(buf)) return;
+    buf[0] = 0x00; buf[1] = 0x00;
+    buf[2] = 0x02;
+    buf[3] = msg_type;
+    if (len) memcpy(buf + 4, payload, len);
+    n19(a, buf, len + 4);
+}
+
+/* ag2 SINGLE：[00 00][02][pkgType][payload]（不分片） */
+static void ag_single(miot_auth_t *a, uint8_t pkg_type, const uint8_t *d, size_t n)
+{
+    (void)pkg_type;
+    ch_send(a, 0, d, n);   /* device info 走 channel data 包 msgType=0 */
+}
+
+/* ag2 分片：START(pkgType) + N 个数据帧（[fno 1B][00][chunk<=18]） */
+static void ag_parcel(miot_auth_t *a, uint8_t pkg_type, const uint8_t *d, size_t n)
+{
+    uint8_t cnt = (uint8_t)((n + 17) / 18);
+    if (!cnt) cnt = 1;
+    uint8_t start[6] = { 0x00, 0x00, 0x00, pkg_type, cnt, 0x00 };
+    n19(a, start, 6);
+    size_t off = 0;
+    for (uint8_t i = 1; i <= cnt; i++) {
+        size_t chunk = n - off;
+        if (chunk > 18) chunk = 18;
+        uint8_t f[20];
+        f[0] = i; f[1] = 0x00;
+        memcpy(f + 2, d + off, chunk);
+        n19(a, f, 2 + chunk);
+        off += chunk;
+    }
+}
+
+/* ================= 通用随机数 ================= */
+
+static void auth_random(miot_auth_t *a, uint8_t *out, size_t len)
+{
+    if (a->port.random && a->port.random(a->port.user, out, len) == 0) return;
+    for (size_t i = 0; i < len; i++) {          /* 伪随机退化 */
+        out[i] = (uint8_t)(out[i] * 1103515245u + 12345u);
+        out[i] ^= (uint8_t)(out[i] >> 3);
+    }
+}
+
+/* ================= REGISTER ================= */
+
+/* device info：channel data(msgType=0)，载荷 [ver_lo=2][ver_hi=0][caps=0][0]+did。
+ * ★载荷必须 ≥4B，少一字节 App 报 -47（recvDeviceInfo data format error）。
+ * ★did 回传前去前后导 0x00 —— 云端 did 是「左补零到 20B」，原样回传会被
+ *   当成 did 字符导致 bindDidToServerV2 失败（App 写 0x14 后断开）。 */
+static void send_device_info(miot_auth_t *a)
+{
+    uint8_t info[4 + 20];
+    info[0] = 0x02; info[1] = 0x00; info[2] = 0x00; info[3] = 0x00;
+    size_t n = 4, off = 0, dl = 20;
+    while (off < dl && a->id.did[off] == 0x00) off++;
+    while (dl > off && a->id.did[dl - 1] == 0x00) dl--;
+    dl -= off;
+    if (dl) memcpy(info + 4, a->id.did + off, dl), n += dl;
+    ag_single(a, 0x00, info, n);
+    alog(a, "device info sent (did=%uB)", (unsigned)dl);
+}
+
+void miot_auth_prepare(miot_auth_t *a)
+{
+    if (a->key_ready) return;
+    if (miot_ecdh_keygen(a->pubkey64) == 0) {
+        a->key_ready = 1;
+        alog(a, "ECDH keypair ready");
+    } else {
+        alog(a, "ECDH keygen FAIL (crypto backend registered?)");
+    }
+}
+
+static void register_start(miot_auth_t *a)
+{
+    miot_auth_prepare(a);
+    if (!a->key_ready) return;
+    a->state = MIOT_AUTH_ST_REG_PUBKEY;
+    a->ecdh_ok = 0;
+    send_device_info(a);
+}
+
+/* 注册完成（收到 App 公钥）：ECDH → HKDF 派生身份 → 回公钥+devRandom+devConfirm */
+static void register_on_app_pubkey(miot_auth_t *a, const uint8_t *pk64)
+{
+    uint8_t secret[32];
+    static const uint8_t zeros16[16] = { 0 };
+    if (miot_ecdh_shared(pk64, secret) != 0) {
+        alog(a, "REGISTER: ECDH fail");
+        return;
+    }
+    memcpy(a->shared, secret, 32);
+    a->has_shared = 1;
+    a->ecdh_ok = 1;
+
+    /* token = out[0:12]，bind_key = [12:28]，dev_key = [28:44] */
+    uint8_t out[64];
+    miot_hkdf_sha256(secret, 32, zeros16, 16, "mible-setup-info", 16, out, 64);
+    memcpy(a->id.token, out, 12);
+    memcpy(a->id.bind_key, out + 12, 16);
+    memcpy(a->id.dev_key, out + 28, 16);
+
+    /* 回设备公钥（64B，去 04 前缀，ag2 分片 pkg=3） */
+    ag_parcel(a, 0x03, a->pubkey64, 64);
+
+    /* 紧接着 devRandom(0x0D) + devConfirm(0x0C)，App 才会算 token。
+     * devConfirm = HMAC-SHA256(shared32, devRand || zeros16) */
+    uint8_t devrand[16], body[32], mac[32];
+    auth_random(a, devrand, 16);
+    memcpy(body, devrand, 16);
+    memcpy(body + 16, zeros16, 16);
+    miot_hmac_sha256(a->shared, 32, body, 32, mac);
+    ag_parcel(a, 0x0D, devrand, 16);
+    ag_parcel(a, 0x0C, mac, 32);
+    alog(a, "REGISTER: pubkey + devRandom + devConfirm sent");
+    a->state = MIOT_AUTH_ST_REG_ENCDATA;
+}
+
+/* 92B 加密 did：AES-CCM(dev_key, iv=0x10..0x1B, aad="devID", tag4)，
+ * 明文 88B = did(20) + cloud_sign(64) + utc(4)。试偏移 0/2/4（App 版本差异）。
+ * ★解出并保存 did 才能让 App 重连时认出设备，否则每次连接都当新设备反复绑定 */
+static void register_on_encrypted_did(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    static const uint8_t iv12[12] = { 0x10,0x11,0x12,0x13,0x14,0x15,
+                                      0x16,0x17,0x18,0x19,0x1a,0x1b };
+    uint8_t out[128];
+    for (int off = 0; off <= 4; off += 2) {
+        if ((size_t)off + 5 > len) break;
+        size_t clen = len - (size_t)off;
+        if (miot_ccm_decrypt(a->id.dev_key, iv12, (const uint8_t *)"devID", 5,
+                             d + off, clen - 4, out) == 0) {
+            memcpy(a->id.did, out, 20);
+            memcpy(a->id.sign, out + 20, 64);
+            memcpy(&a->id.utc, out + 84, 4);
+            if (a->port.save) a->port.save(a->port.user, &a->id);
+            alog(a, "REGISTER: did stored (utc=%u)", (unsigned)a->id.utc);
+            return;
+        }
+    }
+    alog(a, "REGISTER: encrypted did decrypt FAIL (%uB)", (unsigned)len);
+}
+
+static void register_on_cert(miot_auth_t *a, size_t len)
+{
+    (void)len;
+    /* 收到云证书必须回 [11 00 00 00]（0x0010），否则 App 一直显示设备初始化 */
+    result_code(a, MIOT_AUTH_R_REG_OK);
+    a->state = MIOT_AUTH_ST_IDLE;
+    alog(a, "REGISTER COMPLETE (result 0x11 on 0x0010)");
+}
+
+static void ra_on_data(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    if (a->state == MIOT_AUTH_ST_REG_PUBKEY && len == 64) {
+        register_on_app_pubkey(a, d);
+        return;
+    }
+    if (a->state == MIOT_AUTH_ST_REG_ENCDATA && len == 16) {
+        a->state = MIOT_AUTH_ST_REG_CERT;           /* writeEncryptData 暂存忽略 */
+        return;
+    }
+    if ((a->state == MIOT_AUTH_ST_REG_CERT || a->state == MIOT_AUTH_ST_REG_ENCDATA) &&
+        len == 92) {
+        register_on_encrypted_did(a, d, len);        /* 米家 11.9.623：did 先于证书 */
+        return;
+    }
+    if ((a->state == MIOT_AUTH_ST_REG_CERT || a->state == MIOT_AUTH_ST_REG_ENCDATA) &&
+        (len == 24 || len == 163)) {
+        register_on_cert(a, len);                    /* 24B 旧版 / 163B(11.9.623 ag2 pkg=7) */
+        return;
+    }
+    if (len == 4 && d[0] == 0x13 && d[1] == 0 && d[2] == 0 && d[3] == 0) {
+        /* bind result = 成功：提交 token/bind_key。★0x13 不是终点：
+         * App 随后还发 92B did + 云证书，保持 CERT 态等回执 */
+        a->bound = a->ecdh_ok ? 1 : 0;
+        if (a->port.save) a->port.save(a->port.user, &a->id);
+        alog(a, "*** STD REGISTER: bind result OK (bound=%d) ***", a->bound);
+        a->state = MIOT_AUTH_ST_REG_CERT;
+        return;
+    }
+    alog(a, "REGISTER: unhandled %uB (state=%d)", (unsigned)len, (int)a->state);
+}
+
+/* ================= LOGIN =================
+ * ikm = token12；salt = appRand || devRand；
+ * E = HKDF-SHA256(ikm, salt, "mible-login-info", 64)
+ * devConfirm = HMAC(E[0:16],  devRand || appRand)
+ * appConfirm = HMAC(E[16:32], appRand || devRand)   ← 两边数据顺序相反，照抄 */
+
+static void login_start(miot_auth_t *a)
+{
+    a->state = MIOT_AUTH_ST_LOGIN_AWAIT_RAND;
+    a->logged_in = 0;
+    a->conf_pending = 0;
+    alog(a, "CMD_LOGIN -> wait appRandom(0x0B)");
+}
+
+static void login_on_app_random(miot_auth_t *a, const uint8_t *app_rand)
+{
+    memcpy(a->app_rand, app_rand, 16);
+    auth_random(a, a->dev_rand, 16);
+
+    uint8_t salt[32];
+    memcpy(salt, a->app_rand, 16);
+    memcpy(salt + 16, a->dev_rand, 16);
+    miot_hkdf_sha256(a->id.token, 12, salt, 32, "mible-login-info", 16, a->session, 64);
+
+    uint8_t body[32];
+    memcpy(body, a->dev_rand, 16);          /* devRand 在前 */
+    memcpy(body + 16, a->app_rand, 16);
+    miot_hmac_sha256(a->session, 16, body, 32, a->conf);
+
+    ag_parcel(a, 0x0D, a->dev_rand, 16);    /* 先发 devRandom */
+    /* devConfirm 延迟 120ms 首发（让 0x0D 的 ACK 先走完），之后 400ms 重发 ×4。
+     * ★不重发时 App 偶尔收不到 0x0C，15s 后按 notify timeout 断开 */
+    a->conf_pending = 1;
+    a->conf_tries = 0;
+    a->conf_deadline_ms = 0;                /* 由 poll 按相对时间推进（见下） */
+    a->state = MIOT_AUTH_ST_LOGIN_SENT_CONF;
+    alog(a, "LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)");
+}
+
+static void login_send_conf(miot_auth_t *a)
+{
+    ag_parcel(a, 0x0C, a->conf, 32);
+    a->conf_tries++;
+    alog(a, "LOGIN: devConfirm sent (#%d)", a->conf_tries);
+}
+
+static void login_on_app_confirm(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    uint8_t rands[32], mac[32];
+    memcpy(rands, a->app_rand, 16);         /* appRand 在前 */
+    memcpy(rands + 16, a->dev_rand, 16);
+    miot_hmac_sha256(a->session + 16, 16, rands, 32, mac);
+
+    bool ok = (len >= 32 && memcmp(d, mac, 32) == 0) ||
+              (len >= 16 && memcmp(d, mac, 16) == 0);
+    if (!ok) {
+        alog(a, "LOGIN: app confirm MISMATCH (len=%u)", (unsigned)len);
+        result_code(a, MIOT_AUTH_R_LOGIN_FAIL);          /* 0xE2 → App -52 */
+        a->state = MIOT_AUTH_ST_IDLE;
+        a->conf_pending = 0;
+        return;
+    }
+    a->conf_pending = 0;
+    a->logged_in = 1;
+    a->state = MIOT_AUTH_ST_IDLE;
+    result_code(a, MIOT_AUTH_R_LOGIN_OK);                /* 0x21 → App 连接完成 */
+    alog(a, "*** STD LOGIN COMPLETE (0x21 on 0x0010) ***");
+}
+
+/* ================= 0x0019 三层解析 ================= */
+
+static void dispatch_payload(miot_auth_t *a, uint8_t pkg, const uint8_t *d, size_t len)
+{
+    if (a->state == MIOT_AUTH_ST_REG_PUBKEY ||
+        a->state == MIOT_AUTH_ST_REG_ENCDATA ||
+        a->state == MIOT_AUTH_ST_REG_CERT) {
+        ra_on_data(a, d, len);
+        return;
+    }
+    if (a->state == MIOT_AUTH_ST_LOGIN_AWAIT_RAND && pkg == 0x0B && len >= 16) {
+        login_on_app_random(a, d);
+        return;
+    }
+    if (a->state == MIOT_AUTH_ST_LOGIN_SENT_CONF && pkg == 0x0A) {
+        login_on_app_confirm(a, d, len);
+        return;
+    }
+    alog(a, "dispatch: no consumer (pkg=%u len=%u state=%d)",
+         (unsigned)pkg, (unsigned)len, (int)a->state);
+}
+
+static void on_ch_data(miot_auth_t *a, uint8_t seq, const uint8_t *d, size_t len)
+{
+    /* 注册：channel data 直达业务层 */
+    if (a->state == MIOT_AUTH_ST_REG_PUBKEY && len == 64) { ra_on_data(a, d, len); return; }
+    if (a->state == MIOT_AUTH_ST_REG_ENCDATA && len == 16) { ra_on_data(a, d, len); return; }
+    if (a->state == MIOT_AUTH_ST_REG_CERT && len == 24)    { ra_on_data(a, d, len); return; }
+    /* 登录：短包走 channel single（seq=业务 pkg） */
+    if ((a->state == MIOT_AUTH_ST_LOGIN_AWAIT_RAND && seq == 0x0B && len >= 16) ||
+        (a->state == MIOT_AUTH_ST_LOGIN_SENT_CONF && seq == 0x0A && len >= 16)) {
+        dispatch_payload(a, seq, d, len);
+        return;
+    }
+    alog(a, "ch data seq=%u len=%u unhandled (state=%d)", (unsigned)seq,
+         (unsigned)len, (int)a->state);
+}
+
+/* App 通道建链测试包：16 字节、每字节 = 长度+2（即 0x12）。校验通过回同款 */
+static void mng_test_reply(miot_auth_t *a)
+{
+    uint8_t t[4 + 16];
+    t[0] = 0x00; t[1] = 0x00; t[2] = 0x05; t[3] = 0x01;
+    memset(t + 4, 18, 16);                  /* 每字节 = 16+2 */
+    n19(a, t, sizeof(t));
+    a->chan_ready = 1;
+    alog(a, "channel READY (mng_ack test 16x0x12 sent)");
+}
+
+void miot_auth_on_0019(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    /* ---- 第 1 层：ag2 控制帧 [00 00][type][...] ---- */
+    if (len >= 3 && d[0] == 0x00 && d[1] == 0x00) {
+        uint8_t type = d[2];
+        if (type == 0x00 && len >= 6) {                     /* START */
+            a->ag_pkg = d[3];
+            a->ag_expect = d[4];
+            a->ag_got = 0;
+            a->ag_len = 0;
+            ag_ack(a, 0x01);                 /* ★必须 ACK 就绪，否则 App 5s 超时重发 a2 → -28 */
+            return;
+        }
+        if (type == 0x01 && len >= 4) return;               /* App 对我们数据的 ACK */
+        if (type == 0x02 && len >= 4) {                     /* SINGLE */
+            dispatch_payload(a, d[3], d + 4, len - 4);
+            return;
+        }
+        if (type == 0x03) return;                           /* SACK */
+        if (type == 0x05) {                                 /* mng_ack */
+            uint8_t code = (len >= 4) ? d[3] : 0xFF;
+            if (code == 0x00 && !a->chan_ready) mng_test_reply(a);
+            else if (code == 0x01) { /* App 测试包回执，已 READY */ }
+            return;
+        }
+        if (type == 0x04) {                                 /* mng：code=1 是 App 测试包 */
+            uint8_t code = (len >= 4) ? d[3] : 0xFF;
+            if (code == 0x01) mng_test_reply(a);
+            return;
+        }
+        /* 其余 type 落到 channel 解析 */
+    }
+
+    /* ---- 第 2 层：ag2 数据帧 [fno 1B][00][chunk<=18] ---- */
+    if (len >= 2 && d[1] == 0x00 && d[0] >= 1 && d[0] <= 64 && a->ag_expect > 0) {
+        size_t chunk = len - 2;
+        if (a->ag_len + chunk > sizeof(a->ag_buf)) { a->ag_len = 0; a->ag_got = 0; return; }
+        memcpy(a->ag_buf + a->ag_len, d + 2, chunk);
+        a->ag_len += chunk;
+        a->ag_got++;
+        /* ★按帧号判收齐（d[0]==expect 即末帧），不用计数——163B 证书 22 帧
+         * 时实测 got 会少 1，导致永远不 ACK、App 干等 3.6s 重发 */
+        if (d[0] < a->ag_expect) return;
+        a->ag_expect = 0;
+        ag_ack(a, 0x00);
+        dispatch_payload(a, a->ag_pkg, a->ag_buf, a->ag_len);
+        return;
+    }
+
+    /* ---- 第 3 层：channel 包 [00 00][cmd][seq][payload] ---- */
+    if (len >= 4 && d[0] == 0x00 && d[1] == 0x00) {
+        uint8_t cmd = d[2], seq = d[3];
+        if (cmd == 0x02) { on_ch_data(a, seq, d + 4, len - 4); return; }
+        if (cmd == 0x03) return;                            /* ack */
+        if (cmd == 0x05) { n19(a, d, len); return; }        /* 建链参数回显 */
+        /* cmd=0x04 等忽略 */
+        return;
+    }
+
+    /* ---- 兜底：无 channel 头的裸包（旧版 App 路径） ---- */
+    if (a->state == MIOT_AUTH_ST_REG_PUBKEY && len == 64) {
+        ra_on_data(a, d, len);
+        return;
+    }
+    alog(a, "0019 unhandled %uB (state=%d)", (unsigned)len, (int)a->state);
+}
+
+/* ================= 0x0010 命令 ================= */
+
+void miot_auth_on_0010(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    if (len == 1 && d[0] == MIOT_AUTH_CMD_MTU) {
+        /* 通道建链入口：回 mng(code=0) [num][dmtu]。
+         * ★dmtu 必须给非 0（实测 num=6 dmtu=18），给 0 会算出负长度测试包，
+         * 整条建链走不下去 —— App「设备初始化卡住」的起点 */
+        uint8_t mtu[6] = { 0, 0, 0x04, 0x00, 0x06, 0x12 };
+        n19(a, mtu, 6);
+        a->chan_ready = 0;
+        alog(a, "a4 -> mng(code=0) num=6 dmtu=18");
+        return;
+    }
+    if (len == 4 && d[0] == MIOT_AUTH_CMD_LOGIN && d[1] == 0 && d[2] == 0 && d[3] == 0) {
+        login_start(a);
+        return;
+    }
+    if (len == 4 && (d[0] & 0x7F) == 0x22 && d[1] == 0 && d[2] == 0 && d[3] == 0) {
+        /* 0xA2 = CMD_REGISTER(0x22|0x80)。★无论本地是否已绑定都走注册流程：
+         * App 写 a2 后一定等 device info，把它当 login 只会 16s 超时报 -55 */
+        alog(a, "CMD_REGISTER(0x%02X) -> register flow", d[0]);
+        if (a->state == MIOT_AUTH_ST_IDLE) register_start(a);
+        else { a->state = MIOT_AUTH_ST_REG_PUBKEY; send_device_info(a); }
+        return;
+    }
+}
+
+/* ================= 周期轮询 ================= */
+
+void miot_auth_poll(miot_auth_t *a, uint32_t now_ms)
+{
+    if (a->state != MIOT_AUTH_ST_LOGIN_SENT_CONF || !a->conf_pending) return;
+    if (a->conf_tries >= 4) { a->conf_pending = 0; return; }
+
+    /* 首发延迟 120ms，重发间隔 400ms。用简单状态推进：
+     * deadline==0 表示从未发过 → 立即记 deadline；到点发送 */
+    if (a->conf_deadline_ms == 0) {
+        a->conf_deadline_ms = now_ms + 120;
+        return;
+    }
+    if ((int32_t)(now_ms - a->conf_deadline_ms) >= 0) {
+        login_send_conf(a);
+        a->conf_deadline_ms = now_ms + 400;
+    }
+}
+
+/* ================= 生命周期 ================= */
+
+void miot_auth_init(miot_auth_t *a, const miot_auth_port_t *port)
+{
+    memset(a, 0, sizeof(*a));
+    a->port = *port;
+    if (a->port.load) {
+        if (a->port.load(a->port.user, &a->id)) a->bound = 1;
+    }
+}
+
+void miot_auth_on_disconnect(miot_auth_t *a)
+{
+    a->logged_in = 0;
+    a->state = MIOT_AUTH_ST_IDLE;
+    a->conf_pending = 0;
+    a->ag_len = 0;
+    a->ag_expect = 0;
+    a->ag_got = 0;
+    a->chan_ready = 0;
+    memset(a->session, 0, sizeof(a->session));
+}

@@ -156,3 +156,49 @@ app 写 [13 00 00 00]（bind result）→ 设备存 token/bind_key，绑定完�
 
 注意：ECDH P-256 密钥对要在开机阶段预生成（ESP32-C3 上 ecp_gen_keypair 约
 390ms，放在 0x15 处理里会导致 device info 迟到，App 以 -51 断开）。
+
+## 8. 标准认证 LOGIN（会话密钥派生，纯对称）
+
+全部按反编译 standardauth/OooO0OO.java 对齐：
+
+```
+phone -> 0x0010  24 00 00 00                       （CMD_LOGIN）
+phone -> 0x0019  START pkg=0x0B DATA [appRand 16]
+dev   -> 0x0019  START pkg=0x0D DATA [devRand 16]   （App 用它算 salt）
+dev   -> 0x0019  START pkg=0x0C DATA [devConfirm 32]（App 用 E[0:16] 校验）
+phone -> 0x0019  START pkg=0x0A DATA [appConfirm 32]（App 用 E[16:32] 算）
+dev   -> 0x0010  21 00 00 00                        （登录成功）
+```
+
+```
+ikm  = token12
+salt = appRand(16) || devRand(16)
+E    = HKDF-SHA256(ikm, salt, "mible-login-info", 64)   /* 64B */
+devConfirm = HMAC-SHA256(E[0:16],  devRand || appRand)
+appConfirm = HMAC-SHA256(E[16:32], appRand || devRand)  /* 两边数据顺序相反，照抄 */
+```
+
+关键坑：
+- devConfirm 必须重发（首发延后 120ms，之后每 400ms 补发，最多 4 次），
+  否则 App 偶尔收不到 0x0C，15s 后按 notify timeout 断开
+- 登录成功码 {0x21,0,0,0} 必须发在 **0x0010**；0x0019 上的通知只进通道层
+- 会话密钥布局（E 的 64B）：Ekey[0:16]=设备加密 / Dkey[16:32]=设备解密 /
+  ivTx[32:36] / ivRx[36:40]；k61 nonce 用 ivTx 或 ivRx 对应取
+
+## 9. REGISTER（绑定）细节补充
+
+- a2（0xA2 = 0x22|0x80）后 App 一定等 device info（channel data msgType=0，
+  载荷 [ver_lo=2][ver_hi=0][caps=0][0]+did，**少一字节报 -47**）
+- 设备公钥 64B 必须走 ag2 分片（pkg=3），单帧 68B 会被 SACK 丢弃
+- 收到 64B 公钥后：ECDH → HKDF(secret, zeros16, "mible-setup-info", 64) →
+  token=[0:12] bind_key=[12:28] dev_key=[28:44] → 回公钥+devRandom(0x0D)+devConfirm(0x0C)
+- 92B 加密 did：AES-CCM(dev_key, iv=0x10..0x1B, aad="devID", tag4)，试偏移 0/2/4；
+  明文 88B = did(20)+cloud_sign(64)+utc(4)。**必须解出并持久化**，否则 App
+  每次连接都当新设备反复绑定
+- did 回传（device info）前去掉前后导 0x00（云端 did 是左补零到 20B）
+- 云证书 24B（旧版）/163B（11.9.623）收到后回 {0x11,0,0,0}（0x0010），
+  否则 App 一直显示「设备初始化」
+- 通道建链（0xA4 on 0x0010）→ 回 mng(code=0) num=6 dmtu=18；dmtu 给 0 会让
+  App 算出负长度测试包 → 整条建链卡死
+- ag2 0x0019 数据帧按帧号判收齐（d[0]==expect），不能按计数 —— 163B 证书
+  22 帧实测计数会少 1

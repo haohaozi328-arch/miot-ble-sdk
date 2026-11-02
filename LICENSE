@@ -1,21 +1,34 @@
-MIT License
+miot-ble-sdk 非商业许可协议
+miot-ble-sdk Non-Commercial License
 
 Copyright (c) 2026 miot-ble-sdk contributors
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+一、许可范围
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. 本项目（包括全部源代码、文档、协议描述与示例）仅供个人学习、
+   研究、教学与技术交流使用。
+2. 在遵守本协议的前提下，您可以为上述非商业目的自由使用、复制、
+   修改和再分发本项目，前提是保留本声明与版权信息。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+二、禁止事项
+
+1. 禁止将本项目或其衍生作品用于任何形式的商业用途，包括但不限于：
+   出售、许可收费、作为商业产品或服务的一部分、用于商业产品的
+   开发与验证、SaaS 集成、广告或任何直接或间接牟利行为。
+2. 禁止移除或掩盖本声明及源代码中的版权与许可标注。
+3. 本项目描述的协议格式来自对小米/米家产品的独立研究，归小米集团
+   所有商标与知识产权的部分归其权利人所有。使用本项目产生的
+   "米家"/"小米" 生态互操作行为，请自行确保符合当地法律及小米的
+   相关用户协议；由此产生的任何风险与责任由使用者自行承担。
+
+三、免责声明
+
+本项目按“现状”提供，不附带任何明示或暗示的担保。作者与贡献者
+不对因使用本项目而产生的任何直接或间接损失承担责任。
+
+四、其他
+
+如需商业授权，请联系项目维护者另行协商。
+
+  本项目仅供学习研究使用 —— 禁止商用。
+  For study and research only. Commercial use prohibited.

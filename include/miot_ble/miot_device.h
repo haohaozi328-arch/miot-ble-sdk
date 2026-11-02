@@ -28,8 +28,9 @@
 extern "C" {
 #endif
 
-/** 会话密钥块：40 字节 = E[0:16] D[16:32] ivRx[32:36] ivTx[36:40]
- *  （HKDF 派生顺序与米家标准认证 spec 会话一致） */
+/** 会话密钥块：40 字节，取自 LOGIN 派生 E(64B) 的前 40B：
+ *  Ekey[0:16]=设备加密 key，Dkey[16:32]=设备解密 key，
+ *  ivTx[32:36]=设备→App iv，ivRx[36:40]=App→设备 iv */
 #define MIOT_KEYS_LEN 40
 
 /** 自定义 get/set 兜底回调（属性表未命中的 siid/piid） */

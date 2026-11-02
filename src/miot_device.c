@@ -38,7 +38,7 @@ static void ag2_frame_cb(void *user, const uint8_t *k61, size_t n)
     size_t ct_len = n - 2 - 4;                  /* 去掉 seq16 与 tag4 */
     uint8_t pt[256];
     if (ct_len > sizeof(pt)) return;
-    if (miot_spec_frame_decrypt(d->keys + 16, d->keys + 32, seq, k61 + 2, ct_len, pt)) {
+    if (miot_spec_frame_decrypt(d->keys + 16, d->keys + 36, seq, k61 + 2, ct_len, pt)) {
         dev_log(d, MIOT_LOG_WARN, "spec decrypt fail seq=%u", seq);
         return;
     }
@@ -54,7 +54,7 @@ static int spec_reply(miot_device_t *d, const uint8_t *pt, size_t pt_len)
     if (pt_len > 300) return -2;
 
     uint8_t out[2 + 300 + 4];
-    if (miot_spec_frame_encrypt(d->keys, d->keys + 36, d->tx_seq, pt, pt_len, out + 2)) {
+    if (miot_spec_frame_encrypt(d->keys, d->keys + 32, d->tx_seq, pt, pt_len, out + 2)) {
         /* 最常见原因：忘记注册加密后端（miot_crypto_set_ops） */
         static int warned;
         if (!warned++) {

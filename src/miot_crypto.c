@@ -77,6 +77,25 @@ int miot_hkdf_sha256(const uint8_t *ikm, size_t ikm_len,
     return 0;
 }
 
+int miot_hmac_sha256(const uint8_t *key, size_t klen,
+                     const uint8_t *data, size_t dlen, uint8_t out[32])
+{
+    if (!s_ops || !s_ops->hmac_sha256) return -1;
+    return s_ops->hmac_sha256(s_ops->ctx, key, klen, data, dlen, out);
+}
+
+int miot_ecdh_keygen(uint8_t pubkey64[64])
+{
+    if (!s_ops || !s_ops->ecdh_keygen) return -1;
+    return s_ops->ecdh_keygen(s_ops->ctx, pubkey64);
+}
+
+int miot_ecdh_shared(const uint8_t app_pubkey64[64], uint8_t secret[32])
+{
+    if (!s_ops || !s_ops->ecdh_shared) return -1;
+    return s_ops->ecdh_shared(s_ops->ctx, app_pubkey64, secret);
+}
+
 /* ---------------- spec 通道 k61 帧加解密 ----------------
  * 帧 = [seq16 LE][ct][tag4]；nonce = iv(4) || 00 00 00 00 || seq32 LE */
 
@@ -89,7 +108,7 @@ int miot_spec_frame_encrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t
     memset(nonce + 4, 0, 4);
     nonce[8] = (uint8_t)(seq & 0xFF);
     nonce[9] = (uint8_t)(seq >> 8);
-    return s_ops->aes_ccm(s_ops->ctx, 1, key, nonce, pt, len, out, out + len);
+    return s_ops->aes_ccm(s_ops->ctx, 1, key, nonce, NULL, 0, pt, len, out, out + len);
 }
 
 int miot_spec_frame_decrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t seq,
@@ -101,5 +120,25 @@ int miot_spec_frame_decrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t
     memset(nonce + 4, 0, 4);
     nonce[8] = (uint8_t)(seq & 0xFF);
     nonce[9] = (uint8_t)(seq >> 8);
-    return s_ops->aes_ccm(s_ops->ctx, 0, key, nonce, in, len, pt, pt + len);
+    return s_ops->aes_ccm(s_ops->ctx, 0, key, nonce, NULL, 0, in, len, pt, pt + len);
+}
+
+/* ---------------- 通用 AES-CCM（带 AAD） ---------------- */
+
+int miot_ccm_encrypt(const uint8_t key[16], const uint8_t nonce[12],
+                     const uint8_t *aad, size_t aad_len,
+                     const uint8_t *pt, size_t len, uint8_t *out)
+{
+    if (!s_ops || !s_ops->aes_ccm) return -1;
+    return s_ops->aes_ccm(s_ops->ctx, 1, key, nonce, aad, aad_len,
+                          pt, len, out, out + len);
+}
+
+int miot_ccm_decrypt(const uint8_t key[16], const uint8_t nonce[12],
+                     const uint8_t *aad, size_t aad_len,
+                     const uint8_t *in, size_t len, uint8_t *pt)
+{
+    if (!s_ops || !s_ops->aes_ccm) return -1;
+    return s_ops->aes_ccm(s_ops->ctx, 0, key, nonce, aad, aad_len,
+                          in, len, pt, pt + len);
 }
