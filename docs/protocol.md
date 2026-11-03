@@ -80,29 +80,48 @@ tid  : 事务 ID，应答原样带回
 | 7  | event 事件 | Dev→App | `[siid][eiid16][argc]([piid16][type16][len][value])×argc` |
 | F0 | 版本交换 | 双向 | 无（`[05 20][tid][F0]` 镜像应答） |
 
-### 4.2 ⚠️ 三个决定性的格式细节（踩坑实证）
+### 4.2 ⚠️ 四个决定性的格式细节（踩坑实证）
 
 1. **op=7 事件每个参数前必须带 16 位 piid**
-   缺失时 App 端 `ud5` 解析器返回 NULL，事件全部被丢弃（v62c 之前 75 包全 NULL）。
+   缺失时 App 端 `ud5` 解析器返回 NULL，事件全部被丢弃（早期 75 包全 NULL）。
+   参数 piid 取值按 eiid 语义回填（如 S400 8.1 事件唯一参数 piid=1、8.2 唯一参数 piid=2）。
 2. **op=4 properties_changed 帧体首字节是 count**
    `gyb` 解析器首先读 count；把 siid 当首字节会被解析成 count=11 的残包。
-3. **op=6 action 应答只有 respCode16，不能带 siid/aiid**
-   `kt4` 解析器读 op 后的前两个字节当 respCode。带 `[siid][aiid]` 会被误读为
-   `respCode=269`（LE `0d 01`）→ App 判定动作失败 → 无限重发用户资料。
+3. **op=6 action 应答不能带 siid/aiid，respCode=0 时可带 out 参数**
+   `kt4` 格式：`[06][respCode16][count][piid8][type16][value]...`（count 为 out
+   参数个数，piid 为 8 位）。无 out 参数时仅 `[06][respCode16]`。
+   把 `[siid][aiid]` 放在 respCode 位置会被误读为 `respCode=269` → App 判定动作
+   失败 → 无限重发（如 13.sync 的 aiid 实为 0x0501=1281，out=[6,7,8,9,10]，
+   必须按 kt4 带齐 5 个 out 参数，App 的同步流程才会推进）。
+4. **App→设备的 SET 条目与设备→App 的 type16 编码不同**
+   设备→App（事件/changed/get 应答）：`type16 = (SpecValueType << 12) | len`，
+   len 12 位。
+   App→设备（set 请求条目）：`[siid][piid16][type16=纯类型号][len8][value]`，
+   type 字段只占 16 位中的类型号、长度是独立 8 位。按设备→App 的格式解析
+   App 的 set 请求会得到错误的类型与长度（实测 rc=-2/-4）。
 
 ### 4.3 value 编码
 
-`type16 = (type << 12) | len`，16 位字段一律小端。
+设备→App 方向：`type16 = (SpecValueType << 12) | len`（与米家 spec JSON 的
+`SpecValueType` 枚举一致），16 位字段一律小端。
 
-| type 码 | 类型 |
-|---------|------|
-| 1 | bool |
-| 2 | uint8 |
-| 3 | uint16 |
-| 4 | uint32 |
-| 5 | int32 |
-| 9 | float |
-| 10 | string |
+| SpecValueType | 类型 | 备注 |
+|---------------|------|------|
+| 0 | bool | |
+| 1 | uint8 | |
+| 2 | int8 | |
+| 3 | uint16 | |
+| 4 | int16 | |
+| 5 | uint32 | |
+| 6 | int32 | |
+| 7 | uint64 | |
+| 8 | int64 | |
+| 9 | float | |
+| 10 | string | |
+
+> ⚠️ 不要把 SDK/spec 内部自定义的类型枚举直接当 type16 发送：枚举值错位后
+> App 会按错误类型解析（实测 uint32 发成 4 被当 int16，时间戳 1793491239
+> 变成 -32353）。
 
 result 语义：0=成功；非 0=错误码（未认识的属性回 1）。
 
@@ -135,8 +154,8 @@ GATT notify (0x001A)
   → 插件 JS: subscribeReceivedMessage 按 spec topic (siid/eiid) 匹配
 ```
 
-调试建议：hook `SpecManager` 日志与解析入口（观察 `EventOccuredPacket` 是否生成），
-再对照插件 JS bundle 的 topic 匹配表。
+调试路径：App 端 hook `SpecManager` 与解析入口（观察 `EventOccuredPacket` 是否
+生成），再对照插件 JS bundle 的 topic 匹配表。
 
 ## 6. 旧版 beacon 鉴权（token 加密广播）
 
@@ -202,3 +221,26 @@ appConfirm = HMAC-SHA256(E[16:32], appRand || devRand)  /* 两边数据顺序相
   App 算出负长度测试包 → 整条建链卡死
 - ag2 0x0019 数据帧按帧号判收齐（d[0]==expect），不能按计数 —— 163B 证书
   22 帧实测计数会少 1
+
+## 10. S400 体脂秤（yunmai.scales.ms103）数据面
+
+spec 树是「标准 MIoT（siid 1/2/11）+ 云米/yunmai 私有服务（siid 6/8/9/10/13/14）」
+的合并树。插件（plugin_id 1013486）实际订阅：
+
+| spec | 载荷 | 插件行为 |
+|------|------|----------|
+| 8.1 事件 weight-upload（args=[1]） | 字符串 `"体重(0.01kg),状态"` | 实时称重页：体重÷10=kg；状态 0=weighting 1=bodyWeight 2=weighingHeart 3=overweighing 4=timeout 5=smallWeightCompleted 6=done |
+| 8.2 事件 upload-body-data（args=[2]） | 28 字段 CSV 字符串 | 测量结果：按插件 uploadBodyDataObj 下标取值（weight=3、heartRate=4、bfp=7、slm=8…），keyNeedDivide10 字段需 ÷10 |
+| 11.1022 事件 | 权限位 | 测量完成收尾 |
+| 10.1 属性 work-mode | uint8 | 页面第一道判断：0=normal 1=baby 2=balance 3=visitor 4=single |
+| 13.sync action | aiid=0x0501(1281)，out=[6,7,8,9,10] | 历史同步，kt4 应答必须带 out 参数 |
+
+关键字段（8.2 CSV 下标 5）`weightDoneStatus`：
+`0`=normalData（直接入库）/ `2`=userError（弹「是你吗」）/ `4`=multipleUsers（弹选人）。
+
+云端入库：插件按 `/eco/common/scale/add` 上报（时间戳取 App 侧 `Date.now()`）。
+**实测坑**：App 重启后插件可能把 10.1 mode 写成 3/4（visitor/single），此后
+每轮测量都走「访客单机」分支——报告页时间戳变 1970、不调云端。固件应在每次
+BLE 连接建立时把 work-mode 复位为 0（App 随后的 set 仍可正常覆盖）。
+
+入库成功判据：报告页时间戳为真实测量时间、记录挂在正确使用者名下且历史列表可见。

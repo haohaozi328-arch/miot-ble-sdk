@@ -5,7 +5,7 @@
 
 米家（MIoT）BLE Spec v2 设备端 SDK —— 从实测互通验证的 S400 体脂秤模拟固件中抽象而来。
 
-核心价值：**所有协议格式均通过米家 App 反汇编（com.miot.spec 包 ud5/gyb/kt4 解析器）+ 空中抓包互证实测验证**，包括三个公开资料从未记载、决定 App 能否解析事件的关键帧格式细节（见 [docs/protocol.md](docs/protocol.md)）。
+核心价值：**所有协议格式均通过米家 App 反汇编（com.miot.spec 包 ud5/gyb/kt4 解析器）+ 空中抓包互证实测验证**，包括多个公开资料从未记载、决定 App 能否解析帧的关键格式细节（见 [docs/protocol.md](docs/protocol.md) §4.2）。
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -92,7 +92,7 @@ void app_main(void) {
 
 | # | 设备名 | 型号 / model | 描述 | 验证状态 | 详情（代码） |
 |---|--------|--------------|------|----------|--------------|
-| 1 | 米家体脂秤 S400 | MJTZC01YM / `yunmai.scales.ms103`（PID 0x30D9） | 绑定/登录/用户资料推送/测量事件上报（8.1 过程流 + 8.2 结果 + 11.1022 + 属性变更）全链路；含「双脚上秤」过程事件流与 siid 扫射探针 | 全流程 ✓（App 解析+广播 ✓，插件出数排查中） | [examples/scale_s400/](examples/scale_s400/main.c) · `src/miot_profiles.c §1` |
+| 1 | 米家体脂秤 S400 | MJTZC01YM / `yunmai.scales.ms103`（PID 0x30D9） | 绑定/登录/用户资料推送/测量事件上报（8.1 过程流 + 8.2 结果 + 11.1022 + 属性变更）全链路，含云端入库与完整身体成分报告 | 全流程 ✓（App 实时页 + 报告页 + 云端历史实测通过） | [examples/scale_s400/](examples/scale_s400/main.c) · `src/miot_profiles.c §1` |
 | 2 | 蓝牙温湿度计2 | LYWSD03MMC(t9) / `cgllc-cgdk3`（PID 0x055B） | 双 spec siid 兼容（同一属性在两个 spec 里 siid 不同，两份都注册），温度 float / 湿度 / 电量，周期上报 | 绑定 + spec 读写 ✓ | [examples/thermometer/](examples/thermometer/main.c) · `src/miot_profiles.c §2` |
 | 3 | 夜灯2 | MUE4094RT | 亮度%(1-100)/延时ms/开关 spec 下行 + 电量回报，on_set 副作用挂钩 | v54 完整打通 ✓ | [examples/night_light/](examples/night_light/main.c) · `src/miot_profiles.c §5` |
 | 4 | 驱蚊器智能版 | WX08ZM（PID 0x040A） | 开关下行 + set 后立刻回报（页面开关停在正确位置）+ 电量/驱蚊片余量 | 绑定 + 开关下发/回报 ✓ | [examples/repeller/](examples/repeller/main.c) · `src/miot_profiles.c §6` |
@@ -108,15 +108,8 @@ void app_main(void) {
 | 9 | 水浸传感器 | SJWS01LM（PID 0x0863） | 0x1014 漏水状态(0=正常 >0=漏水) / 0x100A 电量 | ✓ | [examples/sensor_leak/](examples/sensor_leak/main.c) · `miot_beacon.h` |
 | 10 | 温湿度计3 mini | MJWSD06MMC（PID 0x5BEA，新批次） | 0x4801 温度 float32 / 0x4802 湿度 / 0x4803 电量（float 对象批次） | ✓ | [examples/thermo_t3m/](examples/thermo_t3m/main.c) · `miot_beacon.h` |
 
-### C. 实验记录（不建议使用）
-
-| 设备名 | 型号 / PID | 结果 | 详情 |
-|--------|-----------|------|------|
-| 无线开关双键版 | XMWXKG01YL（PID 0x1949） | 米家扫描不到，弃用 | 固件壳记录（SWITCH_SHELL） |
-| 体脂秤2 发现探针 | XMTZC05HM（0x181B 标准广播 + MI_SCALE2） | 验证米家设备发现机制的实验壳 | 固件壳记录（SHELL_SCALE 探针模式） |
-
-**原始固件**：以上设备的 ESP32-C3 完整固件（含全部坑位注释）见 `mi_beacon/main/main.c`
-（独立工程，未随 SDK 发布；SDK 是从它抽象出的协议核心）。
+> 各设备的验证均针对米家 Android App 实测（扫描添加 → 绑定 → 数据互通），
+> 逐设备回归步骤见 [docs/testing.md](docs/testing.md)。
 
 ## 接口一览
 
@@ -140,7 +133,8 @@ void app_main(void) {
 
 ## 文档
 
-- [docs/protocol.md](docs/protocol.md) —— 协议逆向文档（认证流程 / ag2 / spec v2 帧格式 / App 分发链）
+- [docs/protocol.md](docs/protocol.md) —— 协议文档（认证流程 / ag2 / spec v2 帧格式 / S400 数据面）
+- [docs/testing.md](docs/testing.md) —— 逐设备实机验证清单
 - [test/test_spec.c](test/test_spec.c) —— 黄金样本即实测帧
 
 ## License
