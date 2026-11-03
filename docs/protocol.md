@@ -93,12 +93,22 @@ tid  : 事务 ID，应答原样带回
    把 `[siid][aiid]` 放在 respCode 位置会被误读为 `respCode=269` → App 判定动作
    失败 → 无限重发（如 13.sync 的 aiid 实为 0x0501=1281，out=[6,7,8,9,10]，
    必须按 kt4 带齐 5 个 out 参数，App 的同步流程才会推进）。
-4. **App→设备的 SET 条目与设备→App 的 type16 编码不同**
-   设备→App（事件/changed/get 应答）：`type16 = (SpecValueType << 12) | len`，
-   len 12 位。
-   App→设备（set 请求条目）：`[siid][piid16][type16=纯类型号][len8][value]`，
-   type 字段只占 16 位中的类型号、长度是独立 8 位。按设备→App 的格式解析
-   App 的 set 请求会得到错误的类型与长度（实测 rc=-2/-4）。
+4. **App→设备的 SET 条目 type16 实际也是 `(type<<12)|len`（v65/v66 串口实测）**
+   v65 抓包推翻了早期结论：App 下发 10.1 `set mode=bool(false)` 时 type16 = `0x1001`
+   = `(0<<12)|1`，即与设备→App 方向**相同**的 `(SpecValueType << 12) | len` 格式。
+   早期按「纯类型号 + len8」解析会把 len 读成 0 → 拒绝（result=1，rc=-2/-4）。
+   固件解析建议做双格式判别（v66 起）：
+   ```c
+   uint16_t rawt = pt[p+3] | (pt[p+4] << 8);
+   if ((rawt >> 12) != 0) {        /* 新：(type<<12)|len，len 12 位 */
+       vtype = rawt >> 12;  vlen = rawt & 0xFFF;  val = pt + p + 5;  adv = 5 + vlen;
+   } else {                        /* 旧兼容：纯类型号(高4位为0) + len8 */
+       vtype = rawt;  vlen = pt[p+5];  val = pt + p + 6;  adv = 6 + vlen;
+   }
+   ```
+   边界：若某属性真以 type=0（bool）下发 SET，`(type<<12)|len` 的高 4 位也为 0，
+   会落入旧格式分支而被误读。实测未触发该情况——App 对 10.1（bool 属性）的
+   set 实际发的是 `0x1001`（type=1/uint8，len=1）。
 
 ### 4.3 value 编码
 
