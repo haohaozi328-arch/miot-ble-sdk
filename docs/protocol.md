@@ -254,3 +254,24 @@ spec 树是「标准 MIoT（siid 1/2/11）+ 云米/yunmai 私有服务（siid 6/
 BLE 连接建立时把 work-mode 复位为 0（App 随后的 set 仍可正常覆盖）。
 
 入库成功判据：报告页时间戳为真实测量时间、记录挂在正确使用者名下且历史列表可见。
+
+## 11. spec 双层权限：access vs gatt-access（⚠️ 入库死锁根因，2026-11-04 定案）
+
+云端 spec JSON 里每个属性带**两层权限字段**，App 对两层的执行点不同：
+
+| 字段 | 含义 | App 执行点 | 后果 |
+|------|------|-----------|------|
+| `access` | 云/miot 全局权限 | 插件 JS 框架：`setProps` 前校验 | `access:[]` → setProps **静默失败，连 BLE 帧都不构造**（成功/失败回调均不触发） |
+| `gatt-access` | BLE GATT 通道权限 | App native SpecMgr：收到设备推送时校验 | 无 `notify` → 设备推的 op=4 properties_changed **整帧丢弃**（传输层 ACK 但 SpecMgr 0 解析） |
+
+S400 的 10.1 work-mode 实测：`access:[]` + `gatt-access:["read","write"]` ——
+三重死锁：
+1. 插件 JS setProps（四键跳转）被 access 拦 → 无法写 mode；
+2. 设备推 op=4（mode=0）被 gatt 权限过滤（无 notify）→ 缓存无法刷新；
+3. 设备伪装 GET 应答（opcode 3）也被丢 —— App SpecMgr 只处理「自己发起请求的
+   应答（tid 匹配）」和 opcode 7 事件；收包白名单实测仅 op7 + f0。
+
+**结论：属性缓存只能经「App 发起请求的应答」或「事件（opcode 7）」更新。**
+属性若无 gatt-access:notify 且插件不发 GET，其订阅值在连接期间永远不变。
+
+opcode 7 事件是唯一可靠推送通道（8.1/8.2 每 30s 稳定到达并转发 RN）。
