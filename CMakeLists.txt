@@ -26,6 +26,7 @@ set(EXAMPLES
     night_light
     repeller
     button
+    button_event
     sensor_hcho
     sensor_door
     sensor_motion

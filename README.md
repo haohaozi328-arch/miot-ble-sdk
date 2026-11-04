@@ -36,6 +36,17 @@
 - **表驱动属性**：注册一张 `miot_prop_t` 表，get/set 自动处理（类型转换/范围夹取/权限校验/副作用回调）
 - **完整认证链路**：REGISTER（ECDH P-256 + 绑定）与 LOGIN（纯对称 HKDF）状态机全部内置
 
+## 目录结构
+
+```
+include/miot_ble/   SDK 公共头（auth / device / spec / props / ag2 / crypto / beacon / profiles / port）
+src/                对应实现（纯 C11，无 OS 依赖）
+port/esp32/         ESP32 + NimBLE + mbedTLS 移植参考
+examples/           每台设备一个可运行演示（host 编译，打印帧/解析结果）
+test/               黄金样本单测（样本即真机抓包）
+docs/               protocol.md（协议）/ testing.md（逐设备实机验收 + 踩坑）
+```
+
 ## 快速开始
 
 ```bash
@@ -83,7 +94,7 @@ void app_main(void) {
 }
 ```
 
-## 设备清单（全部已验证设备）
+## 设备清单（11 台，全部米家 Android App 实测通过）
 
 > 「详情」= 该设备代码的存放位置：`examples/<设备>/main.c`（可运行演示）+
 > `src/miot_profiles.c`（spec 属性表）/ `include/miot_ble/miot_beacon.h`（广播对象表）。
@@ -96,7 +107,7 @@ void app_main(void) {
 | 2 | 蓝牙温湿度计2 | LYWSD03MMC(t9) / `cgllc-cgdk3`（PID 0x055B） | 双 spec siid 兼容（同一属性在两个 spec 里 siid 不同，两份都注册），温度 float / 湿度 / 电量，周期上报 | 绑定 + spec 读写 ✓ | [examples/thermometer/](examples/thermometer/main.c) · `src/miot_profiles.c §2` |
 | 3 | 夜灯2 | MUE4094RT | 亮度%(1-100)/延时ms/开关 spec 下行 + 电量回报，on_set 副作用挂钩 | v54 完整打通 ✓ | [examples/night_light/](examples/night_light/main.c) · `src/miot_profiles.c §5` |
 | 4 | 驱蚊器智能版 | WX08ZM（PID 0x040A） | 开关下行 + set 后立刻回报（页面开关停在正确位置）+ 电量/驱蚊片余量 | 绑定 + 开关下发/回报 ✓ | [examples/repeller/](examples/repeller/main.c) · `src/miot_profiles.c §6` |
-| 5 | 米家无线开关 | XMWXKG01LM | 按钮配置属性（3.1020）读写，插件配置回读 | 绑定 + 配置读写 ✓ | [examples/button/](examples/button/main.c) · `src/miot_profiles.c §4` |
+| 5 | 米家无线开关（双键版） | XMWXKG01YL / `yeelink.remote.contrl`（PID 0x1949） | 绑定 + 按键事件广播（0x4E0C 单击 / 0x4E0D 双击 / 0x4E0E 长按，载荷 1B = 键位 1 左 / 2 右）；按键值不进 GATT，事件只走广播 | 绑定 + 事件上报 ✓（连接握手偏慢，见 testing.md #5） | [examples/button_event/](examples/button_event/main.c) · `miot_beacon.h` |
 
 ### B. MiBeacon 广播型（不建连接，加密广播帧）
 
@@ -106,10 +117,26 @@ void app_main(void) {
 | 7 | 门窗传感器2 | MCCGQ02HL（PID 0x098B） | 0x1019 开合(开/关/超时未关/复位) / 0x1018 光照 / 0x100A 电量 | ✓ | [examples/sensor_door/](examples/sensor_door/main.c) · `miot_beacon.h` |
 | 8 | 人体传感器2 | RTCGQ02LM（PID 0x0A8D） | 0x000F 移动+光照 / 0x1017 无人时长 / 0x1001 按键 / 0x100A 电量 | ✓ | [examples/sensor_motion/](examples/sensor_motion/main.c) · `miot_beacon.h` |
 | 9 | 水浸传感器 | SJWS01LM（PID 0x0863） | 0x1014 漏水状态(0=正常 >0=漏水) / 0x100A 电量 | ✓ | [examples/sensor_leak/](examples/sensor_leak/main.c) · `miot_beacon.h` |
-| 10 | 温湿度计3 mini | MJWSD06MMC（PID 0x5BEA，新批次） | 0x4801 温度 float32 / 0x4802 湿度 / 0x4803 电量（float 对象批次） | ✓ | [examples/thermo_t3m/](examples/thermo_t3m/main.c) · `miot_beacon.h` |
+| 10 | 温湿度计3 mini | MJWSD06MMC（国区 pdid 21941 = **0x55B5**；0x5BEA 是海外版 23530，国区扫不到） | 0x4C01 温度 float32 / 0x4C02 湿度 uint8 / 0x4803 电量 uint8（对象 ID 依 XiaomiGateway3 `mi`=19457/19458/18435） | ✓ | [examples/thermo_t3m/](examples/thermo_t3m/main.c) · `miot_beacon.h` |
+
+### C. 事件型按键（可连接用于绑定，事件本身走广播）
+
+| # | 设备名 | 型号 / PID | 描述 | 验证状态 | 详情（代码） |
+|---|--------|-----------|------|----------|--------------|
+| 11 | 小米无线开关（蓝牙版） | XMWXKG01CM / pdid 9095（**PID 0x2387**） | 单键：0x4E0C 单击 / 0x4E0D 双击 / 0x4E0E 长按，载荷恒 1；绑定走 legacy 移位应答，事件由网关收广播后触发自动化 | ✓（绑定 + 事件；自动化条件需重连网关后出现，上报有网关轮询延迟） | [examples/button_event/](examples/button_event/main.c) · `miot_beacon.h` |
 
 > 各设备的验证均针对米家 Android App 实测（扫描添加 → 绑定 → 数据互通），
 > 逐设备回归步骤见 [docs/testing.md](docs/testing.md)。
+
+## 已知边界（明确未适配）
+
+| 项 | 结论 | 原因 |
+|----|------|------|
+| S400 抱婴称重 | ❌ 未适配 | 固件未实现婴儿称重语义（低量程/去皮与对应事件字段），本轮不做 |
+| S400 平衡测试 | ❌ 未适配 | 未实现站姿/重心偏移数据 |
+| 驱蚊器定时任务 | ❌ 未适配 | 固件对 `0x0003 TIMER_ID` / `0x0004 TIMER_CONTENT` 只记录不落表，`0x0006 TIMER_INDEXS` 恒返回 11×`0xFF`（空槽）；且设备无 RTC，`0x0005 LINUX_STAMP` 未用于走时 |
+| 门锁 / security-chip 类 | ❌ 硬墙 | 云端强制 X.509 芯片证书链（`securityChip=1`），无法借壳 |
+| 「未连接蓝牙网关」提示 | ⚠️ 环境侧 | 网关/云端设备缓存问题，插拔网关 + 重启 App 可解；固件侧无拒连记录（多台复现） |
 
 ## 接口一览
 

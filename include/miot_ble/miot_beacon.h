@@ -37,9 +37,15 @@ extern "C" {
 #define MB_OBJ_NO_MOTION      0x1017  /* 4B：距上次移动秒数（RTCGQ02LM） */
 #define MB_OBJ_LIGHT          0x1018  /* 1B：0=暗 非0=亮（MCCGQ02HL） */
 #define MB_OBJ_DOOR           0x1019  /* 1B：0=开 1=关 2=超时未关 3=复位（MCCGQ02HL） */
-#define MB_OBJ_TEMP_F32       0x4801  /* 4B：float32 ℃（MJWSD06MMC 新批次） */
-#define MB_OBJ_HUM_U8         0x4802  /* 1B：uint8 %（MJWSD06MMC） */
-#define MB_OBJ_BATT_U8_48     0x4803  /* 1B：电量 %（MJWSD06MMC） */
+#define MB_OBJ_TEMP_F32       0x4C01  /* 4B：float32 ℃（MJWSD06MMC，miot 2.1001，mi=19457） */
+#define MB_OBJ_HUM_U8         0x4C02  /* 1B：uint8 %（MJWSD06MMC，miot 2.1002，mi=19458） */
+#define MB_OBJ_BATT_U8_48     0x4803  /* 1B：电量 %（MJWSD06MMC，miot 3.1003，mi=18435） */
+/* 无线开关事件对象：载荷恒 1B = 按键号（单键恒 1；双键 1=左 2=右）。
+ * 三键位分开成三个对象，App 侧据此拆成「单击/双击/长按」三个触发器。
+ * 实测：XMWXKG01YL（0x1949 双键）与 XMWXKG01CM（0x2387 单键）通用。 */
+#define MB_OBJ_BTN_CLICK      0x4E0C  /* 1B：单击 */
+#define MB_OBJ_BTN_DOUBLE     0x4E0D  /* 1B：双击 */
+#define MB_OBJ_BTN_HOLD       0x4E0E  /* 1B：长按 */
 
 /** beacon 广播配置（认证/绑定阶段获得，需持久化） */
 typedef struct miot_beacon_cfg {
@@ -65,6 +71,15 @@ size_t miot_beacon_obj_bytes(uint8_t *p, uint16_t obj_id, const uint8_t *v, size
  *
  * 注意：单帧对象总明文 ≤13B 才能保证含公司码的广播 ≤31B；
  * 多对象时按「三路轮换」分帧（温度/湿度/电量各占一帧交替广播）。
+ *
+ * ⚠️ 31B 硬上限（v85 实测定案）：广播包 = flags(3) + service data
+ *    「长度1 + UUID2 + 95FE2 + 帧」，即**帧本身可用 ≤26B**。超限时 NimBLE 返回
+ *    rc=4（BLE_HS_EMSGSIZE）；若此时广播已被 stop，设备会静默到下一个心跳，
+ *    表现为「App 一直正在连接 → 超时」。规避顺序：
+ *    ① 拆帧：一件事一个对象，别把多对象塞进一帧；
+ *    ② 仍超限 → 改「无 MAC 形态」：FC 由 58/59 改 48/49 并跳过 6B MAC 字段
+ *       （真机 24B 测量帧同款，网关按广播源地址归属）。本函数只产出带 MAC 形态，
+ *       无 MAC 形态需调用方按此规则自行裁剪，详见 docs/testing.md 踩坑 6。
  */
 int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
                          const uint8_t *objs, size_t objs_len,
