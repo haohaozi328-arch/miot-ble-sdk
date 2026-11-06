@@ -99,6 +99,7 @@ body:
     attributes:
       label: 串口实际出现了哪几行（按日志如实勾，不要猜）
       options:
+        - label: "`*** SCANNED-ON: form i ***` —— 广播轮播探测命中（注明第几种）"
         - label: "`PSK: start frame 26B captured` —— 收到了 26B 启动帧"
         - label: "`PSK: ECDH ok` —— 密钥协商完成"
         - label: "`handshake sent (info/0D/03/0C/04)` —— 五帧全发出，含签名"

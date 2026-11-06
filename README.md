@@ -179,7 +179,7 @@ void app_main(void) {
 | S400 抱婴称重 | ❌ 未适配 | 固件未实现婴儿称重语义（低量程/去皮与对应事件字段），本轮不做 |
 | S400 平衡测试 | ❌ 未适配 | 未实现站姿/重心偏移数据 |
 | 驱蚊器定时任务 | ❌ 未适配 | 固件对 `0x0003 TIMER_ID` / `0x0004 TIMER_CONTENT` 只记录不落表，`0x0006 TIMER_INDEXS` 恒返回 11×`0xFF`（空槽）；且设备无 RTC，`0x0005 LINUX_STAMP` 未用于走时 |
-| **legacy PSK 绑定**（驱蚊器 / 夜灯重绑 / 部分老型号） | ⚠️ 已实现·未实测 | 与标准认证**同构**（同一 ECDH P-256，换 `smartcfg-*` HKDF 标签，多一帧 `0x04 dev_sign`）。代码在 `miot_auth`（`MIOT_AUTH_MODE_PSK`，默认 `AUTO` 由启动帧自动判定），`test/test_psk.c` 覆盖状态流转。**缺的是一次真机验证**：`dev_sign` 签什么、云端 `ble_psk_*` 是否仍开放，只能实测回答 → [docs/psk-auth.md](docs/psk-auth.md)（实测结果请用 [PSK 实测 issue 模板](.github/ISSUE_TEMPLATE/psk-field-test.yml)，串口日志必填） |
+| **legacy PSK 绑定**（驱蚊器 / 夜灯重绑 / 部分老型号） | ⚠️ 已实现·未实测 | 与标准认证**同构**（同一 ECDH P-256，换 `smartcfg-*` HKDF 标签，多一帧 `0x04 dev_sign`）。代码在 `miot_auth`（`MIOT_AUTH_MODE_PSK`，默认 `AUTO` 由启动帧自动判定），`test/test_psk.c` 覆盖状态流转。**缺的是真机验证**，共三个未知：① App 扫描阶段认哪种广播形态（已做候选表轮播探测，[psk-auth.md](docs/psk-auth.md) §6.1）② `dev_sign` 签什么 ③ 云端 `ble_psk_*` 是否仍开放 → 实测结果请用 [PSK 实测 issue 模板](.github/ISSUE_TEMPLATE/psk-field-test.yml)，串口日志必填 |
 | 「手机网络异常」/ `设备绑定账号失败 (104,did=…)` | ⚠️ 见 FAQ | 云端查不到该 did 的产品档案（自造 did、PID 不符、或 92B 帧未解出）。**与网络无关**，见 [docs/troubleshooting.md](docs/troubleshooting.md) Q1 |
 | 门锁 / security-chip 类 | ❌ 硬墙 | 云端强制 X.509 芯片证书链（`securityChip=1`），无法借壳 |
 | 「未连接蓝牙网关」提示 | ⚠️ 环境侧 | 网关/云端设备缓存问题，插拔网关 + 重启 App 可解；固件侧无拒连记录（多台复现） |

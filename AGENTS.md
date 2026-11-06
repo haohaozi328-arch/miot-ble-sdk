@@ -343,6 +343,56 @@ int n = miot_beacon_frame_v5(&cfg, frame_cnt++, objs, objs_len, out, sizeof(out)
 `ble_gap_adv_set_fields()` 返回 `4`（EMSGSIZE）就是这个原因，且**失败后不要停在
 stop 状态**，否则表现为「App 一直正在连接 → 超时」。
 
+**PSK 型号（驱蚊器 0x040A 等）扫描探测：广播轮播，必开**
+
+上面 `30 58 / 0x10` 是**标准认证型号**实测认可的形态。PSK 型号 App 在扫描阶段
+按 FC/PID/capability 过滤，认哪组值**从未实测过**——表现正是「扫到了列表都没有，
+手机零连接」（被过滤 ≠ 连不上）。所以第一次实测驱蚊器时，广播不要写死，用
+SDK 的探测表轮播（`miot_beacon.h`）：
+
+```c
+static const miot_adv_form_t *probe; static size_t probe_n, probe_i;
+
+/* ble_link_init 里 */
+probe = miot_adv_probe_forms(&probe_n);
+
+/* 广播：固定帧换成探测形态 */
+static void advertise(void)
+{
+    const miot_adv_form_t *f = &probe[probe_i];
+    uint8_t fr[12];
+    int n = miot_beacon_frame_unbound(0x040A, mac_air, f->fc0, f->fc1,
+                                      f->capability, (uint8_t)probe_i, fr, sizeof fr);
+    struct ble_hs_adv_fields fields = {0};
+    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    fields.svc_data_uuid16 = fr;
+    fields.svc_data_uuid16_len = n;
+    if (ble_gap_adv_set_fields(&fields) != 0) { /* rc=4 处理同上，别停在 stop */ }
+    ...
+    printf("[adv] form %u/%u FC=%02X %02X cap=%02X  %s\n",
+           (unsigned)(probe_i + 1), (unsigned)probe_n,
+           f->fc0, f->fc1, f->capability, f->desc);
+}
+
+/* poll_task 里每 5s 换一种（连接建立后停止轮播） */
+if (!connected && ++tick >= 500) { tick = 0; probe_i = (probe_i + 1) % probe_n; advertise(); }
+```
+
+连接回调里把**命中形态**打出来（这一行就是整次实测的答案）：
+
+```c
+printf("*** SCANNED-ON: form %u (%s) ***\n",
+       (unsigned)(probe_i + 1), probe[probe_i].desc);
+```
+
+前提与判据：
+
+- **必须未绑定状态**：NVS 里 `store_load` 命中就别开探测——已绑定帧（`58 59` 加密）
+  App 不会放进「添加设备」列表，轮播只会得到假阴性。App 设备列表里还挂着这台的先删除。
+- 串口每 5s 一行 `[adv] form i/7 …`；App 扫到并连接 → `*** SCANNED-ON: form i ***`。
+- 命中后：把该形态固化为默认（探测表删到只剩它），再继续 [psk-auth.md](docs/psk-auth.md)
+  §6 的握手实测。判据与候选排序见 [psk-auth.md §6.1](docs/psk-auth.md#61-扫描探测app-扫不到时先做这一步必做)。
+
 #### S3.3 `main.c` —— 接线与主循环
 
 ```c
@@ -452,7 +502,7 @@ miot_auth_set_psk_options(&auth, 1, MIOT_PSK_SIGN_DEV_APP_RAND);  /* trace=1 */
 然后照 [docs/psk-auth.md](docs/psk-auth.md) §6 的串口判据表走。
 **不要**为了让它「先能用」而去改 App、装模块或伪造 did——那对别人无效。
 
-实测完把结果记下来（[§6.1](docs/psk-auth.md#61-记录结果) 有填空模板，
+实测完把结果记下来（[§6.2](docs/psk-auth.md#62-记录结果) 有填空模板，
 仓库也有 [PSK 实测 issue 模板](.github/ISSUE_TEMPLATE/psk-field-test.yml)）。
 **串口日志是必填的**：只说「试了不行」等于没试，下一次还得从变体 0 重来。
 

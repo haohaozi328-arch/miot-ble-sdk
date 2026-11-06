@@ -85,6 +85,40 @@ int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
                          const uint8_t *objs, size_t objs_len,
                          uint8_t *out, size_t cap);
 
+/* ---------- 未绑定（可被 App 发现）广播帧与扫描探测 ---------- */
+
+/**
+ * 构造绑定前广播帧（未加密，App 靠它发现设备并列出「添加」入口）。
+ *
+ *   FC(2) | PID(2 LE) | frame_cnt(1) | MAC(6 空中序) | capability(1) = 12B
+ *
+ * 基线取自标准认证型号实测：fc0=0x30（MAC|Capability，未加密不含 Object）、
+ * fc1=0x58（v5 | authMode=2 | registered=0）、capability=0x10（BondAbility=2<<3）。
+ * ⚠️ PSK 型号（驱蚊器 0x040A 等）App 扫描阶段认哪组值从未实测过 —— 用
+ * miot_adv_probe_forms() 的候选表轮播探测，命中形态由 GAP 连接回调打日志。
+ *
+ * @return 帧长（12），负数失败（cap 不足）
+ */
+int miot_beacon_frame_unbound(uint16_t pid, const uint8_t mac_air[6],
+                              uint8_t fc0, uint8_t fc1, uint8_t capability,
+                              uint8_t frame_cnt, uint8_t *out, size_t cap);
+
+/** 一个广播形态：fc1 低 3 位按基线解码 = bit0 registered | bit2..3 authMode */
+typedef struct miot_adv_form {
+    uint8_t       fc0;
+    uint8_t       fc1;
+    uint8_t       capability;
+    const char   *desc;          /* 串口打印用，ASCII */
+} miot_adv_form_t;
+
+/**
+ * PSK 扫描探测候选形态表（按可能性排序，第 0 项是标准认证基线）。
+ * 轮播法：每 5s 换下一项重建广播；App 一旦发起连接，立即在串口打
+ * 「SCANNED-ON: form i」——那一种就是该型号被 App 认可的形态，
+ * 实测后把它固化为默认，其余项从表里删掉。
+ */
+const miot_adv_form_t *miot_adv_probe_forms(size_t *count);
+
 #ifdef __cplusplus
 }
 #endif

@@ -22,6 +22,9 @@ target_link_libraries(test_spec PRIVATE miot-ble-sdk)
 add_executable(test_psk test/test_psk.c)
 target_link_libraries(test_psk PRIVATE miot-ble-sdk)
 
+add_executable(test_adv_probe test/test_adv_probe.c)
+target_link_libraries(test_adv_probe PRIVATE miot-ble-sdk)
+
 # ---- 每台设备一个示例目录（见 README 设备清单） ----
 set(EXAMPLES
     scale_s400
@@ -45,3 +48,4 @@ endforeach()
 enable_testing()
 add_test(NAME spec COMMAND test_spec)
 add_test(NAME psk COMMAND test_psk)
+add_test(NAME adv_probe COMMAND test_adv_probe)

@@ -100,3 +100,44 @@ int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
     n += 4;
     return n;
 }
+
+/* ---------------- 未绑定帧（12B）与 PSK 扫描探测形态表 ---------------- */
+
+int miot_beacon_frame_unbound(uint16_t pid, const uint8_t mac_air[6],
+                              uint8_t fc0, uint8_t fc1, uint8_t capability,
+                              uint8_t frame_cnt, uint8_t *out, size_t cap)
+{
+    if (cap < 12) return -3;
+    out[0] = fc0;
+    out[1] = fc1;
+    out[2] = (uint8_t)(pid & 0xFF);             /* PID LE */
+    out[3] = (uint8_t)(pid >> 8);
+    out[4] = frame_cnt;
+    memcpy(out + 5, mac_air, 6);                /* 空中序：App 扫描归属依据 */
+    out[11] = capability;
+    return 12;
+}
+
+/*
+ * 候选形态（按可能性排序）。解码依据（标准认证型号实测基线 30 58 10）：
+ *   fc1 = version(高 4 位) | authMode(bit2..3) | registered(bit0)
+ *   capability = BondAbility(bit3..4)
+ * 第 0 项是标准认证型号被 App 认可的形态；PSK 型号认哪一项未知，
+ * 排序理由见 docs/psk-auth.md §6.2。
+ */
+static const miot_adv_form_t PROBE_FORMS[] = {
+    { 0x30, 0x58, 0x10, "v5 authMode=2 cap=10 (std baseline)" },
+    { 0x30, 0x48, 0x10, "v4 authMode=2 cap=10 (legacy beacon)" },
+    { 0x30, 0x54, 0x10, "v5 authMode=1 cap=10" },
+    { 0x30, 0x50, 0x10, "v5 authMode=0 cap=10" },
+    { 0x30, 0x5C, 0x10, "v5 authMode=3 cap=10" },
+    { 0x30, 0x58, 0x08, "v5 authMode=2 cap=08 (BondAbility=1)" },
+    { 0x30, 0x58, 0x00, "v5 authMode=2 cap=00" },
+};
+
+const miot_adv_form_t *miot_adv_probe_forms(size_t *count)
+{
+    if (count)
+        *count = sizeof(PROBE_FORMS) / sizeof(PROBE_FORMS[0]);
+    return PROBE_FORMS;
+}
