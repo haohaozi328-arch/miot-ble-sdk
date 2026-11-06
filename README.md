@@ -4,6 +4,11 @@
 > 协议格式来自对米家 App 与 BLE 通信的独立逆向研究，仅作互操作性技术记录。
 > **与小米公司无关联，未获授权或背书**；`MIoT`/`米家` 为其商标，此处仅作描述性指称。
 > 使用前请阅读 [NOTICE.md](NOTICE.md)（用途边界与禁止行为）。
+>
+> **本项目不含、也不需要任何 hook / Xposed / Magisk / LSPatch 模块，不修改、不注入
+> 米家 App。** 设备能否被接受，只取决于设备端协议是否正确；用户路径上只有
+> **官方原版 App**。仓库内没有可烧录工程，固件由你（或你的 AI 助手）按
+> [AGENTS.md](AGENTS.md) 现场构建。
 
 米家（MIoT）BLE Spec v2 设备端 SDK —— 从实测互通验证的 S400 体脂秤模拟固件中抽象而来。
 
@@ -51,10 +56,39 @@ docs/               protocol.md（协议）/ testing.md（逐设备实机验收 
 
 ## 快速开始
 
+### 只想验证协议（不需要硬件）
+
 ```bash
 cmake -B build && cmake --build build && ctest --test-dir build
-./build/example_scale.exe     # S400 全链路演示
+./build/example-thermometer    # 打印一帧 properties_changed
 ```
+
+### 想烧到板子上（AI 代劳，约 20 分钟）
+
+本仓库是 SDK，**不含现成工程**——工程由 AI 现建、编译、烧录。把仓库地址和
+[AGENTS.md](AGENTS.md) 一起丢给 AI 即可，它包含：环境安装、工程脚手架、
+必须实现的 BLE 层规格（服务/特征 UUID、广播两种形态、31B 预算）、验收判据、排障分支。
+
+人类一页纸版本：[QUICKSTART.md](QUICKSTART.md)。
+
+```bash
+idf.py --version                       # 环境就绪判据
+idf.py create-project miot-thermo       # AI 建工程
+idf.py build && idf.py -p <PORT> flash monitor
+```
+
+预期串口（顺序固定）：
+
+```
+ECDH keypair ready
+REGISTER COMPLETE (result 0x11 on 0x0010)
+REGISTER: did stored (utc=...)
+*** STD REGISTER: bind result OK (bound=1) ***
+*** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+```
+
+遇到问题先看 [docs/troubleshooting.md](docs/troubleshooting.md)，
+别改 App、别装模块——那不在本项目的路径上。
 
 ### 最小设备代码
 
@@ -98,6 +132,12 @@ void app_main(void) {
 
 ## 设备清单（11 台，全部米家 Android App 实测通过）
 
+> **先看这一条**：各档案在**官方原版 App（无任何模块、未 root）**下能否添加，
+> 见 [docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
+> 其中**驱蚊器智能版**与**夜灯2 的重新绑定**走 legacy PSK，本 SDK 未实现 PSK，
+> **纯净 App 下无法绑定**——不要把它们当作「开箱即用」演示。
+> 推荐入门档案：**蓝牙温湿度计2**（标准认证、免网关、属性可验证）。
+>
 > 「详情」= 该设备代码的存放位置：`examples/<设备>/main.c`（可运行演示）+
 > `src/miot_profiles.c`（spec 属性表）/ `include/miot_ble/miot_beacon.h`（广播对象表）。
 
@@ -137,6 +177,8 @@ void app_main(void) {
 | S400 抱婴称重 | ❌ 未适配 | 固件未实现婴儿称重语义（低量程/去皮与对应事件字段），本轮不做 |
 | S400 平衡测试 | ❌ 未适配 | 未实现站姿/重心偏移数据 |
 | 驱蚊器定时任务 | ❌ 未适配 | 固件对 `0x0003 TIMER_ID` / `0x0004 TIMER_CONTENT` 只记录不落表，`0x0006 TIMER_INDEXS` 恒返回 11×`0xFF`（空槽）；且设备无 RTC，`0x0005 LINUX_STAMP` 未用于走时 |
+| **legacy PSK 绑定**（驱蚊器 / 夜灯重绑 / 部分老型号） | ❌ 未实现 | 走哪条认证由 App 按型号决定；本 SDK 只实现标准认证（ECDH + HKDF）。这类型号在官方原版 App 下**无法绑定**，不是参数问题 |
+| 「手机网络异常」/ `设备绑定账号失败 (104,did=…)` | ⚠️ 见 FAQ | 云端查不到该 did 的产品档案（自造 did、PID 不符、或 92B 帧未解出）。**与网络无关**，见 [docs/troubleshooting.md](docs/troubleshooting.md) Q1 |
 | 门锁 / security-chip 类 | ❌ 硬墙 | 云端强制 X.509 芯片证书链（`securityChip=1`），无法借壳 |
 | 「未连接蓝牙网关」提示 | ⚠️ 环境侧 | 网关/云端设备缓存问题，插拔网关 + 重启 App 可解；固件侧无拒连记录（多台复现） |
 
@@ -162,6 +204,10 @@ void app_main(void) {
 
 ## 文档
 
+- [AGENTS.md](AGENTS.md) —— **给 AI 的执行手册**：装环境 → 建工程 → 编译烧录 → 验收
+- [QUICKSTART.md](QUICKSTART.md) —— 人类一页纸
+- [docs/troubleshooting.md](docs/troubleshooting.md) —— 排障决策树（104 / 扫不到 / 连不上 / 无数据）
+- [docs/clean-app-matrix.md](docs/clean-app-matrix.md) —— 官方原版 App 可绑定矩阵（标准认证 vs PSK）
 - [docs/protocol.md](docs/protocol.md) —— 协议文档（认证流程 / ag2 / spec v2 帧格式 / S400 数据面）
 - [docs/testing.md](docs/testing.md) —— 逐设备实机验证清单
 - [test/test_spec.c](test/test_spec.c) —— 黄金样本即实测帧

@@ -1,7 +1,8 @@
 # 米家 BLE Spec v2 协议逆向文档
 
 > 来源：S400 体脂秤模拟固件 + 米家 Android App 反汇编（com.miot.spec 包）+ 空中抓包互证。
-> 所有格式均已实测验证（App 端 hook 观察到解析成功与广播转发）。
+> 所有格式均已实测验证：以设备端串口日志与米家 App 的实际行为（绑定完成、属性读写
+> 生效、数值刷新、事件触发）互相印证，不依赖任何对 App 的修改或注入。
 
 ## 1. 总体链路
 
@@ -164,8 +165,13 @@ GATT notify (0x001A)
   → 插件 JS: subscribeReceivedMessage 按 spec topic (siid/eiid) 匹配
 ```
 
-调试路径：App 端 hook `SpecManager` 与解析入口（观察 `EventOccuredPacket` 是否
-生成），再对照插件 JS bundle 的 topic 匹配表。
+调试路径（设备端判据，无需改动 App）：
+
+1. 设备发出帧后，看 App 是否回 ag2 ACK、是否紧接着发下一条请求 —— 回 ACK 说明帧
+   结构正确，无 ACK 则是分帧/长度问题；
+2. 推送属性后，看设备是否收到 App 的 get 回读（串口 `spec req` 行）—— 有回读说明
+   属性已进入 App 缓存；
+3. 插件是否消费，静态对照插件 JS bundle 的 topic 匹配表即可，不必修改运行中的 App。
 
 ## 6. 旧版 beacon 鉴权（token 加密广播）
 

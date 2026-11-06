@@ -2,8 +2,8 @@
  * @file test_spec.c
  * @brief host 单元测试 —— 用空中抓包实证过的帧做黄金样本
  *
- * 样本来源：v62c 固件 + 米家 App（v34 hook）实测解析成功的帧
- * （App 端 ud5 解析器输出 EventOccuredPacket 与本编码逐字节一致）。
+ * 样本来源：v62c 固件 + 米家 App 实测解析成功的帧
+ * （App 侧表现与串口日志互证：事件被解析、页面数值随上报变化）。
  */
 #include <assert.h>
 #include <stdio.h>
