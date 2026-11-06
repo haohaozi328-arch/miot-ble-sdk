@@ -141,3 +141,38 @@ const miot_adv_form_t *miot_adv_probe_forms(size_t *count)
         *count = sizeof(PROBE_FORMS) / sizeof(PROBE_FORMS[0]);
     return PROBE_FORMS;
 }
+
+int miot_adv_parse(const uint8_t *sd, size_t len, miot_adv_info_t *out)
+{
+    if (len < 4) return -1;                     /* 至少 FC(2)+PID(2) */
+    memset(out, 0, sizeof(*out));
+
+    uint16_t frctrl = (uint16_t)(sd[0] | (sd[1] << 8));
+    out->frctrl     = frctrl;
+    out->version    = (uint8_t)(frctrl >> 12);
+    out->encrypted  = (uint8_t)((frctrl >> 3) & 1);
+    out->mac_include= (uint8_t)((frctrl >> 4) & 1);
+    out->cap_include= (uint8_t)((frctrl >> 5) & 1);
+    out->mesh       = (uint8_t)((frctrl >> 7) & 1);
+    out->registered = (uint8_t)((frctrl >> 8) & 1);
+    out->auth_mode  = (uint8_t)((frctrl >> 10) & 3);
+    out->pid        = (uint16_t)(sd[2] | (sd[3] << 8));
+
+    size_t off = 4;
+    if (len < 5) return -2;                     /* frame_cnt 缺失 */
+    out->frame_cnt = sd[off++];
+
+    if (out->mac_include) {
+        if (len < off + 6) return -3;
+        out->mac = sd + off;
+        off += 6;
+    }
+    if (out->cap_include) {
+        if (len < off + 1) return -3;
+        out->capability = sd + off;
+        off += 1;
+    }
+    out->objs = sd + off;
+    out->objs_len = len - off;
+    return 0;
+}

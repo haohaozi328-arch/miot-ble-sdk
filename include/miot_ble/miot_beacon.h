@@ -119,6 +119,38 @@ typedef struct miot_adv_form {
  */
 const miot_adv_form_t *miot_adv_probe_forms(size_t *count);
 
+/**
+ * 解析一段 MiBeacon service data 载荷（嗅探模式用：抓到真机广播后
+ * 逐字段打印，照抄进 miot_adv_probe_forms 首项即可）。
+ *
+ * 位定义（ble_monitor 通用解析与本仓库实测互证）：
+ *   frctrl = sd[0] | sd[1]<<8
+ *   bit3 = 加密     bit4 = 含 MAC   bit5 = 含 capability
+ *   bit6 = 保留     bit7 = mesh     bit8 = registered（已绑定）
+ *   bit10..11 = authMode（0..3，2=标准认证）   bit12..15 = beacon 版本
+ *
+ * @param sd   service data 里 95 FE 之后的帧（不含 UUID）
+ * @return 0 成功；负数失败（长度不足以容纳 FC/PID 或声明的字段）
+ */
+typedef struct miot_adv_info {
+    uint16_t       frctrl;        /* 原始 16bit LE */
+    uint8_t        version;       /* 4 / 5 */
+    uint8_t        encrypted;     /* bit3 */
+    uint8_t        mac_include;   /* bit4 */
+    uint8_t        cap_include;   /* bit5 */
+    uint8_t        mesh;          /* bit7 */
+    uint8_t        registered;    /* bit8 */
+    uint8_t        auth_mode;     /* bit10..11 */
+    uint16_t       pid;
+    uint8_t        frame_cnt;
+    const uint8_t *mac;           /* 帧内 MAC（空中序），无则 NULL */
+    const uint8_t *capability;    /* 无则 NULL */
+    const uint8_t *objs;          /* MAC/capability 之后的剩余字节（对象或密文） */
+    size_t         objs_len;
+} miot_adv_info_t;
+
+int miot_adv_parse(const uint8_t *sd, size_t len, miot_adv_info_t *out);
+
 #ifdef __cplusplus
 }
 #endif

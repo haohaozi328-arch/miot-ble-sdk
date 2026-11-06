@@ -221,13 +221,28 @@ miot_auth_set_psk_options(&auth, 1, MIOT_PSK_SIGN_DEV_APP_RAND);
 前提：**必须未绑定**。NVS 里存有身份就先擦掉；App 设备列表里还挂着这台的先删除——
 否则广播是 `58 59` 已注册帧，App 根本不会把它当「可添加设备」，轮播只产出假阴性。
 
+**已排除的嫌疑（2026-11-06 复核）**：
+
+- **PID 无错**：ble_monitor 设备字典明确 `0x040A: "WX08ZM"`，与 miot-spec 型号
+  `zimi.mosq.v1`（驱蚊器智能版）对应，PID 不是过滤原因。
+- **FC 位定义已复核**（ble_monitor 通用解析 + 本仓库实测互证）：bit3=加密、
+  bit4=MAC、bit5=capability、bit7=mesh、bit8=registered、bit10-11=authMode、
+  bit12-15=version。上表 7 种形态的编码没有写错。
+- **真机广播带设备名**：ESPHome ESP32 实抓 WX08ZM 广播含名字 `MJ_MR_V1`。
+  名字是第 8 个候选差异：第一轮 7 形态都带 `MJ_MR_V1` 再试，无命中再去掉。
+
 判据（串口）：
 
 | 串口输出 | 含义 |
 |---|---|
 | `[adv] form i/7 FC=… cap=… …` | 正在轮播第 i 种（每 5s 一行） |
 | `*** SCANNED-ON: form i (…) ***` | **App 认可的就是第 i 种**，整轮探测结束 |
-| 轮播三整圈仍无 SCANNED-ON | 7 种都被过滤 → 问题不在 FC/capability：查 PID 是否 `0x040A`、App 账号区域、或抓一次真机原装驱蚊器的广播对比 |
+| 轮播三整圈仍无 SCANNED-ON | 走下面的嗅探路径，不再猜 |
+
+**嗅探路径（有真机时一步定案）**：真机在 App 里删绑 → 恢复未绑定态 →
+上电按键触发广播 → 用另一块 ESP32 开嗅探模式（AGENTS.md「扫描嗅探模式」节，
+`miot_adv_parse()` 逐字段打印）→ 照抄真机的 `fc0/fc1/capability` 填进探测表首项。
+真机未绑定态原始帧 hex 整段留档，贴进 PSK issue 模板——稀缺样本。
 
 命中后把该形态固化为默认（表删到只剩它），再回到 §6 的握手实测。
 探测结论同样按 §6.2 记录——这一步和握手是两个独立的未知，别混在一份结论里。

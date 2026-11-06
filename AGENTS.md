@@ -390,8 +390,63 @@ printf("*** SCANNED-ON: form %u (%s) ***\n",
 - **必须未绑定状态**：NVS 里 `store_load` 命中就别开探测——已绑定帧（`58 59` 加密）
   App 不会放进「添加设备」列表，轮播只会得到假阴性。App 设备列表里还挂着这台的先删除。
 - 串口每 5s 一行 `[adv] form i/7 …`；App 扫到并连接 → `*** SCANNED-ON: form i ***`。
+- **设备名是第 8 个候选差异**：真机 WX08ZM 广播带名字 `MJ_MR_V1`（ESPHome ESP32
+  实抓）。第一轮 7 种形态都带名字再试：`fields.name = "MJ_MR_V1";`
+  `fields.include_name = 1;`（12B 帧 + 名字 = 29B ≤ 31B，放得下）。仍无命中就
+  去掉名字再跑一轮，排除「名字反而干扰」。
+- **帧内 MAC 必须等于广播源 MAC**：`mac_air` 用设备真实地址（`BLE_OWN_ADDR_PUBLIC`
+  下即 NimBLE 分配的地址，可用 `ble_hs_id_copy_addr` 取出），对不上 App 不认归属。
+- PID 已排除嫌疑：`0x040A` 与 ble_monitor 设备字典一致，是 WX08ZM 的公认 PID。
 - 命中后：把该形态固化为默认（探测表删到只剩它），再继续 [psk-auth.md](docs/psk-auth.md)
   §6 的握手实测。判据与候选排序见 [psk-auth.md §6.1](docs/psk-auth.md#61-扫描探测app-扫不到时先做这一步必做)。
+
+**扫描嗅探模式：抓真机广播照抄（7+1 种形态全灭后走这条，不再猜）**
+
+如果手上有一台**真 WX08ZM**：把它在 App 里删除绑定（设备恢复未绑定态），
+上电后按配对键触发广播，用同一块 ESP32 当嗅探器抓原始帧——照抄它发什么，
+我们把什么发出去。SDK 侧用 `miot_adv_parse()` 解析（host 已测）：
+
+```c
+/* NimBLE observer：扫描所有 0xFE95 广播并逐字段打印 */
+static int scan_cb(struct ble_gap_event *ev, void *arg)
+{
+    if (ev->type != BLE_GAP_EVENT_DISC) return 0;
+    const struct ble_gap_disc_desc *d = &ev->disc;
+    const uint8_t *p = d->data; size_t n = d->length_data;
+    while (n >= 2) {                            /* 走 AD 结构找 0xFE95 service data */
+        uint8_t l = p[0];
+        if (!l || (size_t)l + 1 > n) break;
+        if (p[1] == BLE_HS_ADV_TYPE_SVC_DATA_UUID16 && l >= 7 &&
+            p[2] == 0x95 && p[3] == 0xFE) {
+            miot_adv_info_t info;
+            if (miot_adv_parse(p + 4, l - 3, &info) == 0) {
+                printf("[sniff] %02X:%02X:%02X:%02X:%02X:%02X rssi=%d "
+                       "frctrl=%04X v%u auth=%u reg=%u enc=%u pid=%04X cap=%s "
+                       "objs=%uB\n",
+                       d->addr.val[5], d->addr.val[4], d->addr.val[3],
+                       d->addr.val[2], d->addr.val[1], d->addr.val[0],
+                       d->rssi, info.frctrl, info.version, info.auth_mode,
+                       info.registered, info.encrypted, info.pid,
+                       info.capability ? "yes" : "no", (unsigned)info.objs_len);
+                printf("[sniff] raw:");
+                for (size_t i = 0; i < (size_t)(l - 3); i++) printf(" %02X", p[4 + i]);
+                printf("\n");
+            }
+        }
+        p += l + 1; n -= (size_t)l + 1;
+    }
+    return 0;
+}
+
+/* 发现参数：主动扫描（能拿到 scan rsp 里的设备名） */
+struct ble_gap_disc_params itp = { .itvl_lo = 0x30, .itvl_hi = 0x50,
+                                   .passive = 0, .filter_policy = 0 };
+ble_gap_disc(BLE_OWN_ADDR_PUBLIC, BLE_HS_FOREVER, &itp, scan_cb, NULL);
+```
+
+判读：`[sniff]` 行里的 `frctrl` 拆开就是 FC 两字节（LE），对照位定义抄出
+`fc0/fc1/capability`，填进 `miot_adv_probe_forms()` **首项**重烧；raw 行整段 hex
+留档（真机未绑定态原始帧是稀缺样本，贴进 PSK issue 模板）。
 
 #### S3.3 `main.c` —— 接线与主循环
 
