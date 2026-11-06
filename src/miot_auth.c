@@ -24,6 +24,13 @@ static void alog(const miot_auth_t *a, const char *fmt, ...)
     printf("[miot-auth] %s\n", buf);
 }
 
+/* ================= legacy PSK 的 HKDF 标签（setup=首绑 / login=重连） =================
+ * 与标准认证的 "mible-setup-info" / "mible-login-info" 同结构，只是标签不同。 */
+static const char k_psk_salt[]       = "smartcfg-setup-salt";
+static const char k_psk_info[]       = "smartcfg-setup-info";
+static const char k_psk_login_salt[] = "smartcfg-login-salt";
+static const char k_psk_login_info[] = "smartcfg-login-info";
+
 /* ================= 底层发送 ================= */
 
 static void n19(const miot_auth_t *a, const uint8_t *d, size_t n)
@@ -251,6 +258,16 @@ static void login_start(miot_auth_t *a)
     a->logged_in = 0;
     a->conf_pending = 0;
     alog(a, "CMD_LOGIN -> wait appRandom(0x0B)");
+
+    /* PSK 重连：App 要先拿到设备公钥才能算 ECDH，所以这里主动发一帧 0x03。
+     * 标准认证由 App 先给公钥，顺序相反，故只在 PSK 侧加这一帧。 */
+    if (a->mode == MIOT_AUTH_MODE_PSK || a->psk_state != MIOT_PSK_IDLE) {
+        miot_auth_prepare(a);
+        if (a->key_ready) {
+            ag_parcel(a, 0x03, a->pubkey64, 64);
+            alog(a, "PSK LOGIN: dev pubkey(0x03) sent, wait app pubkey");
+        }
+    }
 }
 
 static void login_on_app_random(miot_auth_t *a, const uint8_t *app_rand)
@@ -261,7 +278,18 @@ static void login_on_app_random(miot_auth_t *a, const uint8_t *app_rand)
     uint8_t salt[32];
     memcpy(salt, a->app_rand, 16);
     memcpy(salt + 16, a->dev_rand, 16);
-    miot_hkdf_sha256(a->id.token, 12, salt, 32, "mible-login-info", 16, a->session, 64);
+
+    /* PSK 重连：与标准 LOGIN 同构，ikm 从 token(12B) 换成 ECDH 派生的
+     * psk_key(32B)，标签换 smartcfg-login-*。其余字节序照抄标准分支。 */
+    int psk = (a->mode == MIOT_AUTH_MODE_PSK) || (a->psk_ecdh_ok && a->bound);
+    if (psk && a->psk_ecdh_ok) {
+        miot_hkdf_sha256(a->psk_key, 32, salt, 32,
+                         k_psk_login_info, sizeof(k_psk_login_info) - 1,
+                         a->session, 64);
+        alog(a, "LOGIN(PSK): session via smartcfg-login");
+    } else {
+        miot_hkdf_sha256(a->id.token, 12, salt, 32, "mible-login-info", 16, a->session, 64);
+    }
 
     uint8_t body[32];
     memcpy(body, a->dev_rand, 16);          /* devRand 在前 */
@@ -308,10 +336,251 @@ static void login_on_app_confirm(miot_auth_t *a, const uint8_t *d, size_t len)
     alog(a, "*** STD LOGIN COMPLETE (0x21 on 0x0010) ***");
 }
 
+/* ================= legacy PSK =================
+ *
+ * 与标准认证并列的一条链，不是替代：同一 ECDH P-256，只把 HKDF 标签从
+ * "mible-setup-*" 换成 "smartcfg-setup-*"，并在握手末尾多一帧 0x04 dev_sign。
+ * 数据面（session_key / AES-CCM）与标准认证完全一致，直接复用。
+ *
+ * ★ 本段依据 App 静态分析实现，**尚未实机验证**（见 docs/psk-auth.md）。
+ *   三处不确定项全部做成显式变体 + trace，实测一次即可定死，不需要改结构：
+ *     - 0x04 签什么        → psk_sign_variant（默认 DEV_APP_RAND）
+ *     - 启动帧 26B 的布局  → 原样留存并打印，不解析
+ *     - App 公钥何时到达   → 收到 64B 即算，appRand 晚到则重算重发
+ */
+
+/* 原始帧 hex（仅 psk_trace 打开时；实测抓帧靠它，不需要任何 App 侧工具） */
+static void psk_hex(const miot_auth_t *a, const char *tag, const uint8_t *d, size_t n)
+{
+    if (!a->psk_trace) return;
+    char line[96];
+    size_t p = 0;
+    p += (size_t)snprintf(line + p, sizeof(line) - p, "[psk] %s %uB:", tag, (unsigned)n);
+    for (size_t i = 0; i < n && p + 4 < sizeof(line); i++)
+        p += (size_t)snprintf(line + p, sizeof(line) - p, " %02X", d[i]);
+    printf("%s\n", line);
+}
+
+/* PSK 派生：ikm = ECDH 共享密钥。
+ * 首绑用 smartcfg-setup-*；已绑定后的重连用 smartcfg-login-*（同结构换标签）。
+ * ★重连标签是推断（见 docs/psk-auth.md §4.3），实测对不上时改这里一处即可。 */
+static void psk_derive(miot_auth_t *a, const uint8_t secret[32])
+{
+    int relogin = a->bound;   /* 有持久身份 = 重连，用 login 标签 */
+    miot_hkdf_sha256(secret, 32,
+                     (const uint8_t *)(relogin ? k_psk_login_salt : k_psk_salt),
+                     relogin ? sizeof(k_psk_login_salt) - 1 : sizeof(k_psk_salt) - 1,
+                     relogin ? k_psk_login_info : k_psk_info,
+                     relogin ? sizeof(k_psk_login_info) - 1 : sizeof(k_psk_info) - 1,
+                     a->psk_key, 64);
+    alog(a, "PSK: kdf=%s", relogin ? "smartcfg-login" : "smartcfg-setup");
+}
+
+/* dev_sign：三种候选输入变体，实测时用 miot_auth_set_psk_options 切换 */
+static void psk_make_sign(miot_auth_t *a)
+{
+    uint8_t body[80];
+    size_t n;
+    switch (a->psk_sign_variant) {
+    case MIOT_PSK_SIGN_DEV_RAND:
+        memcpy(body, a->psk_dev_rand, 16); n = 16;
+        break;
+    case MIOT_PSK_SIGN_SHARED_RAND:
+        memcpy(body, a->shared, 32);
+        memcpy(body + 32, a->psk_dev_rand, 16);
+        memcpy(body + 48, a->psk_app_rand, 16);
+        n = 64;
+        break;
+    case MIOT_PSK_SIGN_DEV_APP_RAND:
+    default:
+        memcpy(body, a->psk_dev_rand, 16);
+        memcpy(body + 16, a->psk_app_rand, 16);
+        n = 32;
+        break;
+    }
+    if (miot_ecdsa_sign(body, n, a->psk_sign) != 0) {
+        a->psk_sign_len = 0;
+        alog(a, "PSK: ecdsa backend missing -> dev_sign skipped (variant %d)",
+             a->psk_sign_variant);
+        return;
+    }
+    a->psk_sign_len = 64;
+}
+
+/* devConfirm：与标准认证同构（HMAC(dev_key, devRand||appRand)），
+ * ★若实测 App 校验不通过，优先怀疑这里应改用 app_key —— 已留 trace。 */
+static void psk_make_confirm(miot_auth_t *a, uint8_t out[32])
+{
+    uint8_t body[32];
+    memcpy(body, a->psk_dev_rand, 16);
+    memcpy(body + 16, a->psk_app_rand, 16);
+    miot_hmac_sha256(a->psk_key, 32, body, 32, out);
+}
+
+/* 发握手五帧：info(0x00) → devRand(0x0D) → devPub(0x03) → confirm(0x0C) → sign(0x04) */
+static void psk_send_handshake(miot_auth_t *a)
+{
+    uint8_t conf[32];
+    /* 启动帧到达时已回过 device info；App 直接给公钥（跳过启动帧）时才补发 */
+    if (!a->psk_start_len) send_device_info(a);
+    ag_parcel(a, 0x0D, a->psk_dev_rand, 16);
+    ag_parcel(a, 0x03, a->pubkey64, 64);
+    psk_make_confirm(a, conf);
+    ag_parcel(a, 0x0C, conf, 32);
+    if (a->psk_sign_len == 64) ag_parcel(a, 0x04, a->psk_sign, 64);
+    a->psk_state = MIOT_PSK_WAIT_SERVER_PUB;
+    alog(a, "PSK: handshake sent (info/0D/03/0C%s)", a->psk_sign_len ? "/04" : "");
+}
+
+/* 收到 App 公钥：ECDH → 派生 → 出全套握手帧 */
+static void psk_on_app_pubkey(miot_auth_t *a, const uint8_t *pk64)
+{
+    uint8_t secret[32];
+    if (miot_ecdh_shared(pk64, secret) != 0) {
+        alog(a, "PSK: ECDH fail");
+        return;
+    }
+    memcpy(a->shared, secret, 32);
+    a->has_shared = 1;
+    a->ecdh_ok = 1;
+    a->psk_ecdh_ok = 1;
+    psk_derive(a, secret);
+
+    /* 重连：密钥就绪即停，握手帧由 login_on_app_random 统一发，
+     * 否则会和标准 LOGIN 的 devRand/confirm 重发两张皮 */
+    if (a->state == MIOT_AUTH_ST_LOGIN_AWAIT_RAND) {
+        alog(a, "PSK LOGIN: app pubkey received, keys ready");
+        return;
+    }
+
+    auth_random(a, a->psk_dev_rand, 16);
+    psk_make_sign(a);
+    psk_send_handshake(a);
+    alog(a, "PSK: ECDH ok, keys derived (smartcfg-setup)");
+}
+
+/* 启动帧（26B）：原样留存 + 打印，不解析——布局待实测确认 */
+static void psk_on_start(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    a->psk_start_len = len > sizeof(a->psk_start) ? sizeof(a->psk_start) : len;
+    memcpy(a->psk_start, d, a->psk_start_len);
+    a->psk_state = MIOT_PSK_WAIT_START;
+    a->logged_in = 0;              /* bound 保持不动：它决定用 setup 还是 login 标签 */
+    alog(a, "PSK: start frame %uB captured (waiting app pubkey)", (unsigned)len);
+    psk_hex(a, "start", d, a->psk_start_len);
+    send_device_info(a);                       /* 先回 device info，App 才会继续 */
+}
+
+/* 16B：服务端公钥。到达即说明 App 已认可握手，进入等绑定结果 */
+static void psk_on_server_pub(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    memcpy(a->psk_server_pub, d, len > 16 ? 16 : len);
+    a->psk_state = MIOT_PSK_WAIT_BIND;
+    alog(a, "PSK: server pub received -> wait bind result");
+}
+
+/* 13B 绑定结果：尾部可能是 did（ASCII 数字），能认出来就落盘 */
+static void psk_on_bind_result(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    const uint8_t *p = d;
+    size_t n = len;
+    while (n && *p == 0x00) { p++; n--; }
+    while (n && p[n - 1] == 0x00) n--;
+
+    int all_digit = n > 0 && n <= 20;
+    for (size_t i = 0; i < n && all_digit; i++)
+        if (p[i] < '0' || p[i] > '9') all_digit = 0;
+
+    if (all_digit) {
+        memset(a->id.did, 0, sizeof(a->id.did));
+        memcpy(a->id.did, p, n);
+        a->bound = 1;
+        if (a->port.save) a->port.save(a->port.user, &a->id);
+        alog(a, "PSK: *** BOUND, did stored (%uB) ***", (unsigned)n);
+    } else {
+        /* 数字串认不出来时仍按成功处理：did 会在下次 LOGIN/查询时补齐，
+         * 但不能让绑定流程卡死 */
+        a->bound = a->psk_ecdh_ok ? 1 : 0;
+        alog(a, "PSK: bind result %uB (did not parsed, bound=%d)", (unsigned)len, a->bound);
+    }
+    a->psk_state = MIOT_PSK_DONE;
+    result_code(a, MIOT_AUTH_R_REG_OK);        /* 与标准认证同一个 A4 结果通道 */
+}
+
+/* PSK 收帧总入口（已在 0x0019 解出业务载荷后调用） */
+static int psk_on_payload(miot_auth_t *a, const uint8_t *d, size_t len)
+{
+    psk_hex(a, "rx", d, len);
+
+    if (len == 64) { psk_on_app_pubkey(a, d); return 1; }
+    if (len == 16) {
+        if (a->psk_state == MIOT_PSK_WAIT_START) {
+            /* appRand 晚于公钥到达：重算 confirm/sign 并重发，覆盖顺序差异 */
+            memcpy(a->psk_app_rand, d, 16);
+            if (a->psk_ecdh_ok) { psk_make_sign(a); psk_send_handshake(a); }
+            alog(a, "PSK: appRand arrived late -> handshake resent");
+        } else {
+            psk_on_server_pub(a, d, len);
+        }
+        return 1;
+    }
+    if (len == 26 || len == 28) {              /* 启动帧（含/不含 2B 前置头） */
+        if (a->psk_state == MIOT_PSK_IDLE || a->psk_state == MIOT_PSK_WAIT_START) {
+            psk_on_start(a, d, len);
+            return 1;
+        }
+    }
+    if (len == 13) { psk_on_bind_result(a, d, len); return 1; }
+    if (len == 4 && d[0] == 0x13) {            /* 与标准认证共用的 bind ok 短帧 */
+        psk_on_bind_result(a, d, len);
+        return 1;
+    }
+    return 0;
+}
+
+void miot_auth_set_mode(miot_auth_t *a, miot_auth_mode_t mode)
+{
+    a->mode = mode;
+    if (mode == MIOT_AUTH_MODE_PSK) a->psk_state = MIOT_PSK_WAIT_START;
+}
+
+void miot_auth_set_psk_options(miot_auth_t *a, int trace, int sign_variant)
+{
+    a->psk_trace = trace;
+    a->psk_sign_variant = sign_variant;
+}
+
 /* ================= 0x0019 三层解析 ================= */
 
 static void dispatch_payload(miot_auth_t *a, uint8_t pkg, const uint8_t *d, size_t len)
 {
+    /* ---- legacy PSK 优先（它和标准认证用同一批操作码，必须先分流） ---- */
+    if (a->mode == MIOT_AUTH_MODE_PSK) {
+        /* 重连：等的是 App 公钥，不是 appRandom */
+        if (a->state == MIOT_AUTH_ST_LOGIN_AWAIT_RAND && len == 64) {
+            psk_on_app_pubkey(a, d);
+            return;
+        }
+        /* 重连的挑战应答与标准 LOGIN 同构，只换 KDF 的 ikm 与标签，
+         * 所以这两个状态直接落到下面的标准分支（见 login_on_app_random） */
+        if (a->state != MIOT_AUTH_ST_LOGIN_AWAIT_RAND &&
+            a->state != MIOT_AUTH_ST_LOGIN_SENT_CONF) {
+            if (!psk_on_payload(a, d, len))
+                alog(a, "PSK: unhandled %uB (psk_state=%d)", (unsigned)len, (int)a->psk_state);
+            return;
+        }
+    } else if (a->psk_state != MIOT_PSK_IDLE && psk_on_payload(a, d, len)) {
+        return;
+    }
+    /* AUTO：标准流程还没起、突然来了启动帧 → 判定为 PSK 设备 */
+    if (a->mode == MIOT_AUTH_MODE_AUTO && a->psk_state == MIOT_PSK_IDLE &&
+        (len == 26 || len == 28) &&
+        (a->state == MIOT_AUTH_ST_IDLE || a->state == MIOT_AUTH_ST_REG_PUBKEY)) {
+        alog(a, "AUTO: PSK start frame detected -> switch to PSK chain");
+        psk_on_payload(a, d, len);
+        return;
+    }
+
     if (a->state == MIOT_AUTH_ST_REG_PUBKEY ||
         a->state == MIOT_AUTH_ST_REG_ENCDATA ||
         a->state == MIOT_AUTH_ST_REG_CERT) {
@@ -332,6 +601,10 @@ static void dispatch_payload(miot_auth_t *a, uint8_t pkg, const uint8_t *d, size
 
 static void on_ch_data(miot_auth_t *a, uint8_t seq, const uint8_t *d, size_t len)
 {
+    /* legacy PSK：channel data 是它唯一的数据面，全部交给 PSK 判定 */
+    if (a->mode == MIOT_AUTH_MODE_PSK) { psk_on_payload(a, d, len); return; }
+    if (a->psk_state != MIOT_PSK_IDLE && psk_on_payload(a, d, len)) return;
+
     /* 注册：channel data 直达业务层 */
     if (a->state == MIOT_AUTH_ST_REG_PUBKEY && len == 64) { ra_on_data(a, d, len); return; }
     if (a->state == MIOT_AUTH_ST_REG_ENCDATA && len == 16) { ra_on_data(a, d, len); return; }
@@ -359,6 +632,8 @@ static void mng_test_reply(miot_auth_t *a)
 
 void miot_auth_on_0019(miot_auth_t *a, const uint8_t *d, size_t len)
 {
+    psk_hex(a, "0019", d, len);
+
     /* ---- 第 1 层：ag2 控制帧 [00 00][type][...] ---- */
     if (len >= 3 && d[0] == 0x00 && d[1] == 0x00) {
         uint8_t type = d[2];
@@ -428,6 +703,7 @@ void miot_auth_on_0019(miot_auth_t *a, const uint8_t *d, size_t len)
 
 void miot_auth_on_0010(miot_auth_t *a, const uint8_t *d, size_t len)
 {
+    psk_hex(a, "0010", d, len);
     if (len == 1 && d[0] == MIOT_AUTH_CMD_MTU) {
         /* 通道建链入口：回 mng(code=0) [num][dmtu]。
          * ★dmtu 必须给非 0（实测 num=6 dmtu=18），给 0 会算出负长度测试包，
@@ -477,6 +753,9 @@ void miot_auth_init(miot_auth_t *a, const miot_auth_port_t *port)
 {
     memset(a, 0, sizeof(*a));
     a->port = *port;
+    a->mode = MIOT_AUTH_MODE_AUTO;          /* 两种链都会说，由 App 的帧决定走哪条 */
+    a->psk_state = MIOT_PSK_IDLE;
+    a->psk_sign_variant = MIOT_PSK_SIGN_DEV_APP_RAND;
     if (a->port.load) {
         if (a->port.load(a->port.user, &a->id)) a->bound = 1;
     }
@@ -492,4 +771,11 @@ void miot_auth_on_disconnect(miot_auth_t *a)
     a->ag_got = 0;
     a->chan_ready = 0;
     memset(a->session, 0, sizeof(a->session));
+
+    /* PSK 子状态复位：AUTO 下回到 IDLE（下次由启动帧重新判定），
+     * 纯 PSK 模式直接等下一轮启动帧；psk_key / bound 都不动。 */
+    a->psk_state = (a->mode == MIOT_AUTH_MODE_PSK) ? MIOT_PSK_WAIT_START : MIOT_PSK_IDLE;
+    a->psk_sign_len = 0;
+    a->psk_start_len = 0;
+    memset(a->psk_app_rand, 0, sizeof(a->psk_app_rand));
 }

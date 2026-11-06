@@ -3,14 +3,19 @@
  * @brief ESP32 (mbedTLS) 加密后端参考实现
  *
  * 把 SDK 的 miot_crypto_ops_t 对接到 mbedTLS。
- * 任意平台移植照此模式实现五个原语即可：
- *   hmac_sha256 / aes_ccm / ecdh_keygen / ecdh_shared / random
+ * 任意平台移植照此模式实现六个原语即可：
+ *   hmac_sha256 / aes_ccm / ecdh_keygen / ecdh_shared / ecdsa_sign / random
+ *
+ * ecdsa_sign 只被 legacy PSK（驱蚊器 / 夜灯重绑）用到；不实现时标准认证
+ * 完全不受影响，PSK 会退化为「不发 0x04 帧」。
  */
 #include "miot_ble/miot_crypto.h"
 #include "mbedtls/md.h"
 #include "mbedtls/ccm.h"
 #include "mbedtls/ecp.h"
 #include "mbedtls/ecdh.h"
+#include "mbedtls/ecdsa.h"
+#include "mbedtls/sha256.h"
 #include <string.h>
 
 /* ---- ECDH 后端上下文：持有设备私钥 ---- */
@@ -95,12 +100,36 @@ static int esp_ecdh_shared(void *ctx, const uint8_t app_pubkey64[64], uint8_t se
     return rc;
 }
 
+/* legacy PSK 的 0x04 dev_sign：用设备 ECDH 私钥对 SHA256(msg) 签名。
+ * 直接用 mbedtls_ecdsa_sign 拿 r/s 两个 MPI（该 API 在 mbedTLS 2.x / 3.x
+ * 都在，且省掉 DER 编解码往返），再写成 32+32 裸数据 —— PSK 帧要的就是这个格式。 */
+static int esp_ecdsa_sign(void *ctx, const uint8_t *msg, size_t len, uint8_t sig64[64])
+{
+    ecdh_ctx_t *e = (ecdh_ctx_t *)ctx;
+    if (!e->ready || !e->grp.p) return -1;
+
+    uint8_t digest[32];
+    if (mbedtls_sha256(msg, len, digest, 0) != 0) return -1;
+
+    mbedtls_mpi r, s;
+    mbedtls_mpi_init(&r);
+    mbedtls_mpi_init(&s);
+    int rc = mbedtls_ecdsa_sign(&e->grp, &r, &s, &e->d, digest, sizeof(digest),
+                                mbedtls_ctr_drbg_random, NULL);
+    if (rc == 0) rc = mbedtls_mpi_write_binary(&r, sig64, 32);
+    if (rc == 0) rc = mbedtls_mpi_write_binary(&s, sig64 + 32, 32);
+    mbedtls_mpi_free(&r);
+    mbedtls_mpi_free(&s);
+    return rc;
+}
+
 static const miot_crypto_ops_t s_esp_crypto = {
     .ctx          = &s_ecdh,
     .hmac_sha256  = esp_hmac_sha256,
     .aes_ccm      = esp_aes_ccm,
     .ecdh_keygen  = esp_ecdh_keygen,
     .ecdh_shared  = esp_ecdh_shared,
+    .ecdsa_sign   = esp_ecdsa_sign,
 };
 
 void miot_port_esp32_crypto_init(void)

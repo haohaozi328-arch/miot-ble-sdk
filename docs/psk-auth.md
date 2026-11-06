@@ -1,12 +1,12 @@
 # legacy PSK 认证（`ble_psk_*`）帧级底稿
 
-> **状态：逆向进行中，未实现、未实测。** 本文件记录已从米家 Android App
-> （`com.xiaomi.smarthome`，`security/pskauth/` 包）静态分析确认的事实，
-> 以及尚未确定的 4 个字节级细节。
+> **状态：握手已实现（`src/miot_auth.c`），单测通过，尚未实机验证。**
+> 本文件记录从米家 Android App（`com.xiaomi.smarthome`，`security/pskauth/` 包）
+> 静态分析确认的事实、已落地的代码位置，以及只有真机能回答的两个问题。
 >
 > 用途：驱蚊器智能版（WX08ZM）/ 夜灯2 重绑 这类走 legacy PSK 的型号，
-> 在**官方原版 App**下无法用本 SDK 绑定（见 [clean-app-matrix.md](clean-app-matrix.md)）。
-> 本文是补齐这块缺口的底稿。
+> 在**官方原版 App**下绑定（见 [clean-app-matrix.md](clean-app-matrix.md)）。
+> 代码开关与实测步骤见 §6、§7。
 
 ---
 
@@ -16,9 +16,10 @@ PSK 不是「预共享密钥 HMAC 挑战」，而是**和标准认证同构的�
 只是换了 HKDF 标签、换了通道类型号，并多了一步云端签名（`dev_sign`）。
 **全程没有证书链**——这是它和 security-chip 门锁的本质区别，也是它可被模拟的原因。
 
-**关键发现：设备 → App 的 5 种帧里，有 4 种本 SDK 已经在发**（见 §4.3）。
+**关键发现：设备 → App 的 5 种帧里，有 4 种本 SDK 已经在发**（见 §4.2）。
 真正的增量只有一帧 `0x04 dev_sign`。所以这不是「重写一套协议」，
-而是「在现有 REGISTER 状态机上加一个分支 + 换两个 KDF 标签」。
+而是「在现有 REGISTER 状态机上加一个分支 + 换两个 KDF 标签」——
+最终落地约 260 行（含 trace 与重连复用），无新依赖。
 
 ---
 
@@ -109,7 +110,7 @@ App 侧 `onRead` 收到的第三个参数就是下表「设备 → App」一列�
 | `0x03` | `recvDevPubKey` | ✅ 已发（64B 裸点） | `miot_auth.c:162` |
 | `0x0D` | `recvDevRandom` | ✅ 已发（16B） | `miot_auth.c:171` |
 | `0x0C` | `recvDevConfirmation` | ✅ 已发（32B HMAC） | `miot_auth.c:172` |
-| `0x04` | `recvDeviceSignature` | ❌ **未实现（唯一增量）** | — |
+| `0x04` | `recvDeviceSignature` | ✅ 已实现（ECDSA-P256，唯一增量帧） | `psk_make_sign` |
 | App → 设备 | `0x0B` appRandom / `0x0A` appConfirm | ✅ 已在 LOGIN 分支处理 | `miot_auth.c:321-325` |
 
 也就是说：**PSK 的握手骨架 = 本 SDK 现有 REGISTER 那三帧 + 一帧签名。**
@@ -124,7 +125,7 @@ Step 1 ~ Step 7，含 `recvLoginDevicePubKey`、`session_key`，KDF 用
 
 ---
 
-## 5. 尚未确定的 2 项（实现的最后障碍）
+## 5. 只有真机能回答的 2 项（已做成可切换变体）
 
 原先列的「3/4/12/13 分别是什么」已由 §4.2 用现有实现对齐解决。剩下的只有两项：
 
@@ -133,9 +134,18 @@ Step 1 ~ Step 7，含 `recvLoginDevicePubKey`、`session_key`，KDF 用
 | 1 | **`0x04 dev_sign` 签什么、用什么签** | 云端拿 `dev_pub` 验签，签错必然 `ble_psk_bind` 失败。候选：对 `appConfirm` / 对 `devRand‖appRand` / 对 ECDH 共享密钥，算法可能 ECDSA-P256 或 SM2 | 读 `recvDeviceSignature` 分支（`d10_full.txt` 2914380 附近）里 `Base64.encode` 之前的入参来源；或抓一帧真签名用 `dev_pub` 验算 |
 | 2 | `sendRegStart` 那 26B 的确切构成 | 决定要不要校验启动帧、以及第一帧应答时机 | 读 `sendRegStart`（`d10_full.txt` 2914540 附近）的字节赋值；或抓帧 |
 
-**第 1 项是全项目的 go/no-go**：签名的输入和算法定不下来，写出来的状态机一定
-过不了云端验签——这属于「能编译、能跑、必然失败」的假实现，不能进仓库。
-第 2 项只影响兼容性，不影响可行性。
+**第 1 项是全项目的 go/no-go**，所以代码没把它写死成猜测值，而是做成三个
+运行时可切换的候选（`miot_auth_set_psk_options` 的 `sign_variant` 参数）：
+
+| 值 | 签名对象 | 宏 |
+|---|---|---|
+| 0（默认） | `devRand ‖ appRand` | `MIOT_PSK_SIGN_DEV_APP_RAND` |
+| 1 | `devRand` | `MIOT_PSK_SIGN_DEV_RAND` |
+| 2 | `shared ‖ devRand ‖ appRand` | `MIOT_PSK_SIGN_SHARED_RAND` |
+
+三者都是 ECDSA-P256(SHA256)，输出 `r‖s` 64B。实测时逐个换，看 `ble_psk_bind`
+哪次放行——一次真机就能定死，不需要改结构。
+第 2 项（启动帧 26B 布局）代码**不解析、只原样留存并打印**，因此不影响可行性。
 
 **关于第 1 项的一个有利事实**：`recvDeviceSignature` 分支里 App **只做
 `Base64.encode` 后原样上报云端，自己不做任何验签**（`d10_full.txt` 2914360 附近）。
@@ -150,53 +160,63 @@ Step 1 ~ Step 7，含 `recvLoginDevicePubKey`、`session_key`，KDF 用
 
 ---
 
-## 6. 抓帧：最省力的验证法
+## 6. 实测步骤（固件已内置 trace，不需要任何 App 侧工具）
 
-PSK 是 **App 主动发起**的，所以不需要任何 hook，只要固件把收到的原始帧打出来：
+PSK 是 **App 主动发起**的，所以只要把收到的原始帧打出来，就能对照代码看走到哪一步。
+trace 默认关闭，开一行即可：
 
+```c
+miot_auth_init(&auth, &port);
+/* 想强制只走 PSK（不靠自动判定）就加这行；默认 AUTO 收到启动帧会自动切 */
+miot_auth_set_mode(&auth, MIOT_AUTH_MODE_PSK);
+/* trace=1 打印每帧 hex；第二参数是签名输入变体（0/1/2，见 §5） */
+miot_auth_set_psk_options(&auth, 1, MIOT_PSK_SIGN_DEV_APP_RAND);
 ```
-1. 固件用驱蚊器档案（PID 0x040A），加一行：0x0010 / 0x0019 上收什么就打什么（hex）
-2. 官方原版 App，扫到设备，点添加
-3. App 发 PSK 启动帧 → 串口打印 → 这就是 §5 的第 2 项
-4. 之后设备不回，App 超时；但启动帧已经拿到
-5. 按帧内容补第一层应答，再抓第二次 → 拿到第二帧 …… 逐步闭环
-```
 
-**代价：3~4 轮，每轮一次手机操作。** 好处：不需要读 smali，不需要 hook，
-拿到的就是真值（含版本差异）。
+步骤：
 
-同时也回答了「老接口还开着吗」：只要 App 会发 PSK 启动帧，说明这条链在 App 侧还活着；
-接口是否下线要等走到 §3 的第 1 步才知道。
+1. 烧录驱蚊器档案（PID `0x040A`）
+2. `idf.py -p <PORT> monitor`
+3. 官方原版 App 扫描 → 添加设备
+4. 串口按下面这张表读
+
+| 串口输出 | 含义 | 下一步 |
+|---|---|---|
+| `PSK: start frame 26B captured` | 判定成 PSK 设备了，启动帧已留存 | 看下一行 |
+| `PSK: ECDH ok` + `handshake sent (info/0D/03/0C/04)` | 五帧全发出，含签名 | 等 App 反应 |
+| 只有 `(info/0D/03/0C)` 没有 `/04` | 后端没实现 `ecdsa_sign` | 补 `port` 的 `ecdsa_sign` |
+| `PSK: server pub received` | App 认可握手 | 等绑定结果 |
+| `PSK: *** BOUND, did stored` | **成了**，did 已落盘 | 回填矩阵，删掉「待实测」 |
+| `PSK: unhandled <n>B (psk_state=…)` | 有帧没识别 | 看上面 `[psk] 0019` 那行的 hex，按长度归类 |
+| 无任何 `PSK:` 行 | 没被判成 PSK | 确认 PID 是 `0x040A`；看 `[psk] 0019` 是否有 26B 帧 |
+| App 报错但串口走到 `handshake sent` | 云端拒了签名 | 换 `sign_variant` 0→1→2 逐个试 |
+
+**签名变体的试法**：`ble_psk_bind` 失败时，把 `psk_sign_variant` 换成 1 重烧，
+再试 2。三次之内必定覆盖 §5 的候选集。每次只需改一个数字。
+
+**这一步同时回答「老接口还开着吗」**：只要 App 会发启动帧，说明 App 侧这条链还在；
+接口是否下线，要看走到 `ble_psk_auth` 时云端返回什么——那就已经超出设备侧能观测的范围了。
 
 ---
 
-## 7. 实现方案（代码层）
+## 7. 实现位置（已落地）
 
-在 `src/miot_auth.c` 增加并列分支，不改现有标准认证的任何路径：
-
-```
-miot_auth_mode_t { MIOT_AUTH_MODE_STANDARD, MIOT_AUTH_MODE_PSK }
-
-miot_auth_psk_t {
-    uint8_t dev_rand[16];
-    uint8_t dev_key[32], app_key[32];   // HKDF(smartcfg-setup-*)
-    ...
-}
-```
-
-改动面：
-
-| 文件 | 改动 |
+| 部分 | 位置 |
 |---|---|
-| `src/miot_crypto.c` | 无（HKDF 已通用） |
-| `src/miot_auth.c` | 新增 PSK 分支：标签常量 + 4 个新通道类型的分派 + 状态机 |
-| `include/miot_ble/miot_auth.h` | `miot_auth_mode_t`、PSK 上下文 |
-| `docs/clean-app-matrix.md` | 该型号从 ❌ 转 ✅（**实测通过后**才改） |
+| 状态机与帧收发 | `src/miot_auth.c` §`legacy PSK`（`psk_*` 系列函数） |
+| 模式与开关 | `include/miot_ble/miot_auth.h`：`miot_auth_set_mode` / `miot_auth_set_psk_options` |
+| 签名原语 | `include/miot_ble/miot_crypto.h` 的 `ecdsa_sign`（可为 NULL） |
+| ESP32 后端 | `port/esp32/miot_port_esp32.c`：`esp_ecdsa_sign`（mbedTLS） |
+| 单测 | `test/test_psk.c`（帧序列 / 模式分流 / KDF 标签），`ctest` 一条命令跑 |
 
-估算：**约 120~150 行，无新依赖**（因为三帧复用、KDF 复用、session/CCM 复用，
-真正的增量只有签名帧和「等 server pub / bind result」的收尾逻辑）。
+设计要点：
 
----
+- **两种链共存不互斥**：默认 `AUTO`，标准认证路径一行未改；PSK 由启动帧触发。
+- **缺原语也不崩**：后端没有 `ecdsa_sign` 时，PSK 只是不发 `0x04` 帧并打日志，
+  标准认证与已绑定的其他型号完全不受影响。
+- **重连复用 LOGIN**：PSK 重连与标准 LOGIN 的挑战应答同构，只换 ikm（`psk_key`）
+  与 KDF 标签（`smartcfg-login-*`），没有另写一套。
+- **不确定项全是开关**：签名输入 3 变体、启动帧不解析只留证，实测改数字即可。
 
 ## 8. 相关工作与边界
 

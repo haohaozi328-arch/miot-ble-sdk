@@ -134,9 +134,9 @@ void app_main(void) {
 
 > **先看这一条**：各档案在**官方原版 App（无任何模块、未 root）**下能否添加，
 > 见 [docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
-> 其中**驱蚊器智能版**与**夜灯2 的重新绑定**走 legacy PSK，本 SDK 尚未实现 PSK，
-> **纯净 App 下无法绑定**——不要把它们当作「开箱即用」演示。
-> PSK 的协议底稿（已确认的加密构造、云端接口、连接器步骤）见
+> 其中**驱蚊器智能版**与**夜灯2 的重新绑定**走 legacy PSK。PSK 分支已在
+> `miot_auth` 实现（默认 `AUTO` 自动判定），**但尚未实机验证**——首次实测通过前
+> 仍不要把它们当作「开箱即用」演示。帧格式、已实现的状态机与实测开关见
 > [docs/psk-auth.md](docs/psk-auth.md)。
 > 推荐入门档案：**蓝牙温湿度计2**（标准认证、免网关、属性可验证）。
 >
@@ -179,7 +179,7 @@ void app_main(void) {
 | S400 抱婴称重 | ❌ 未适配 | 固件未实现婴儿称重语义（低量程/去皮与对应事件字段），本轮不做 |
 | S400 平衡测试 | ❌ 未适配 | 未实现站姿/重心偏移数据 |
 | 驱蚊器定时任务 | ❌ 未适配 | 固件对 `0x0003 TIMER_ID` / `0x0004 TIMER_CONTENT` 只记录不落表，`0x0006 TIMER_INDEXS` 恒返回 11×`0xFF`（空槽）；且设备无 RTC，`0x0005 LINUX_STAMP` 未用于走时 |
-| **legacy PSK 绑定**（驱蚊器 / 夜灯重绑 / 部分老型号） | ❌ 未实现（底稿已出） | 走哪条认证由 App 按型号决定；本 SDK 只实现标准认证（ECDH + HKDF）。这类型号在官方原版 App 下**无法绑定**，不是参数问题。PSK 与标准认证**同构**（同一 ECDH，只换 HKDF 标签 + 通道类型号），帧级底稿与剩余未知项见 [docs/psk-auth.md](docs/psk-auth.md) |
+| **legacy PSK 绑定**（驱蚊器 / 夜灯重绑 / 部分老型号） | ⚠️ 已实现·未实测 | 与标准认证**同构**（同一 ECDH P-256，换 `smartcfg-*` HKDF 标签，多一帧 `0x04 dev_sign`）。代码在 `miot_auth`（`MIOT_AUTH_MODE_PSK`，默认 `AUTO` 由启动帧自动判定），`test/test_psk.c` 覆盖状态流转。**缺的是一次真机验证**：`dev_sign` 签什么、云端 `ble_psk_*` 是否仍开放，只能实测回答 → [docs/psk-auth.md](docs/psk-auth.md) |
 | 「手机网络异常」/ `设备绑定账号失败 (104,did=…)` | ⚠️ 见 FAQ | 云端查不到该 did 的产品档案（自造 did、PID 不符、或 92B 帧未解出）。**与网络无关**，见 [docs/troubleshooting.md](docs/troubleshooting.md) Q1 |
 | 门锁 / security-chip 类 | ❌ 硬墙 | 云端强制 X.509 芯片证书链（`securityChip=1`），无法借壳 |
 | 「未连接蓝牙网关」提示 | ⚠️ 环境侧 | 网关/云端设备缓存问题，插拔网关 + 重启 App 可解；固件侧无拒连记录（多台复现） |
@@ -210,10 +210,11 @@ void app_main(void) {
 - [QUICKSTART.md](QUICKSTART.md) —— 人类一页纸
 - [docs/troubleshooting.md](docs/troubleshooting.md) —— 排障决策树（104 / 扫不到 / 连不上 / 无数据）
 - [docs/clean-app-matrix.md](docs/clean-app-matrix.md) —— 官方原版 App 可绑定矩阵（标准认证 vs PSK）
-- [docs/psk-auth.md](docs/psk-auth.md) —— legacy PSK 帧级底稿（加密构造 / 云端接口 / 步骤，实现进行中）
+- [docs/psk-auth.md](docs/psk-auth.md) —— legacy PSK（帧格式 / 已实现的状态机 / 实测开关）
 - [docs/protocol.md](docs/protocol.md) —— 协议文档（认证流程 / ag2 / spec v2 帧格式 / S400 数据面）
 - [docs/testing.md](docs/testing.md) —— 逐设备实机验证清单
 - [test/test_spec.c](test/test_spec.c) —— 黄金样本即实测帧
+- [test/test_psk.c](test/test_psk.c) —— PSK 状态机单测（帧序列 / 模式分流 / KDF 标签）
 
 ## License
 

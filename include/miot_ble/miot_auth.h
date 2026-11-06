@@ -79,9 +79,33 @@ typedef enum {
     MIOT_AUTH_ST_LOGIN_SENT_CONF,  /* 登录：devConfirm 已发，等 appConfirm(0x0A) */
 } miot_auth_state_t;
 
+/** 认证模式。走哪条由 App 按型号决定，固件只能「两种都会说」。 */
+typedef enum {
+    MIOT_AUTH_MODE_AUTO = 0,   /* 默认：标准认证为主，PSK 启动帧到达时自动切入 */
+    MIOT_AUTH_MODE_STANDARD,   /* 只走标准认证（ECDH + REGISTER/LOGIN） */
+    MIOT_AUTH_MODE_PSK,        /* 只走 legacy PSK（驱蚊器 / 夜灯重绑） */
+} miot_auth_mode_t;
+
+/** PSK 子状态（仅 mode=AUTO|PSK 时有效） */
+typedef enum {
+    MIOT_PSK_IDLE = 0,
+    MIOT_PSK_WAIT_START,        /* 等 App 启动帧 / 公钥 */
+    MIOT_PSK_WAIT_SERVER_PUB,   /* 握手 5 帧已发完，等 16B server pub */
+    MIOT_PSK_WAIT_BIND,         /* 等 13B 绑定结果 */
+    MIOT_PSK_DONE,              /* 绑定完成 */
+} miot_psk_state_t;
+
+/** 0x04 dev_sign 的签名输入变体（见 docs/psk-auth.md §5，实测时切换） */
+#define MIOT_PSK_SIGN_DEV_APP_RAND  0   /* SHA256(devRand || appRand) */
+#define MIOT_PSK_SIGN_DEV_RAND      1   /* SHA256(devRand) */
+#define MIOT_PSK_SIGN_SHARED_RAND   2   /* SHA256(shared || devRand || appRand) */
+
 typedef struct miot_auth {
     /* 配置 */
     miot_auth_port_t port;
+    miot_auth_mode_t mode;             /* 默认 AUTO */
+    int      psk_trace;                /* 1 = 打印 0x0010/0x0019 原始帧（实测用） */
+    int      psk_sign_variant;         /* MIOT_PSK_SIGN_*，默认 0 */
 
     /* 对外状态 */
     miot_auth_state_t    state;
@@ -110,6 +134,18 @@ typedef struct miot_auth {
     size_t   ag_len;
     uint8_t  ag_pkg, ag_expect, ag_got;
     int      chan_ready;
+
+    /* 内部：legacy PSK（与标准认证互不影响） */
+    miot_psk_state_t psk_state;
+    uint8_t  psk_key[64];              /* dev_key(32) || app_key(32) */
+    uint8_t  psk_dev_rand[16];
+    uint8_t  psk_app_rand[16];
+    uint8_t  psk_server_pub[16];
+    uint8_t  psk_start[32];            /* 启动帧原样留存（供 trace 与实测比对） */
+    size_t   psk_start_len;
+    uint8_t  psk_sign[64];             /* 已发出的 dev_sign */
+    int      psk_ecdh_ok;
+    int      psk_sign_len;             /* 0 = 未发（后端无 ECDSA） */
 } miot_auth_t;
 
 void miot_auth_init(miot_auth_t *a, const miot_auth_port_t *port);
@@ -136,6 +172,21 @@ static inline const miot_auth_identity_t *miot_auth_identity(const miot_auth_t *
 
 /** 断连时调用：清会话（保留绑定身份与 ECDH 密钥） */
 void miot_auth_on_disconnect(miot_auth_t *a);
+
+/* ---- legacy PSK ---- */
+
+/** 设定认证模式（默认 AUTO）。须在 init 之后、首次连接之前调用。 */
+void miot_auth_set_mode(miot_auth_t *a, miot_auth_mode_t mode);
+
+/** PSK 调试选项：trace=1 打印 0x0010/0x0019 全部原始帧；
+ *  sign_variant 见 MIOT_PSK_SIGN_*（实测时逐个试）。 */
+void miot_auth_set_psk_options(miot_auth_t *a, int trace, int sign_variant);
+
+static inline miot_psk_state_t miot_auth_psk_state(const miot_auth_t *a) { return a->psk_state; }
+/** PSK 是否走完（did 已由云端下发并落盘） */
+static inline int miot_auth_psk_done(const miot_auth_t *a) {
+    return a->psk_state == MIOT_PSK_DONE;
+}
 
 #ifdef __cplusplus
 }

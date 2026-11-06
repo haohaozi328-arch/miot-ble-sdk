@@ -437,6 +437,20 @@ App 侧：`+` → 扫到「蓝牙温湿度计2」→ 绑定 → 设备页出现�
 | `LOGIN: app confirm MISMATCH` | devConfirm 是否重发 | 时间/重发逻辑 |
 | 绑定成功但页面空白 | 属性 siid/piid 是否与档案一致 | 用 `thermometer_init` 不要自造 |
 | 「未连接蓝牙网关」 | 网关缓存 | 插拔网关 + 重启 App，非固件问题 |
+| 串口只有 `PSK:` 行、App 走不下去 | `psk_trace` 是否打开 | PSK 分支已实现但未实测，按 [psk-auth.md](docs/psk-auth.md) §6 读日志 |
+
+### 遇到走 PSK 的型号怎么办
+
+驱蚊器（`0x040A`）/ 夜灯重绑走 legacy PSK。SDK **已经实现**这条链
+（默认 `AUTO`，收到 26B 启动帧自动切），但**没有实机验证过**。要试就按这个顺序：
+
+```c
+miot_auth_init(&auth, &port);
+miot_auth_set_psk_options(&auth, 1, MIOT_PSK_SIGN_DEV_APP_RAND);  /* trace=1 */
+```
+
+然后照 [docs/psk-auth.md](docs/psk-auth.md) §6 的串口判据表走。
+**不要**为了让它「先能用」而去改 App、装模块或伪造 did——那对别人无效。
 
 完整决策树：[docs/troubleshooting.md](docs/troubleshooting.md)。
 纯净 App 下各档案能否绑定：[docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
@@ -458,5 +472,6 @@ App 侧：`+` → 扫到「蓝牙温湿度计2」→ 绑定 → 设备页出现�
 
 1. 这是**协议研究/互操作性验证**用途，不是可售产品（见 [NOTICE.md](NOTICE.md)）；
 2. 设备能被米家接受的前提是**真实 PID + 国区账号 + 官方原版 App**，云端策略由小米控制；
-3. 换其他设备档案前先看 [clean-app-matrix.md](docs/clean-app-matrix.md)，
-   有些型号走 legacy PSK，本 SDK 不支持，纯净 App 下无法绑定。
+3. 换其他设备档案前先看 [clean-app-matrix.md](docs/clean-app-matrix.md)。
+   走 legacy PSK 的型号（驱蚊器 / 夜灯重绑）**代码已实现但未实机验证**，
+   不要对用户承诺"能加"；要验证按 [psk-auth.md](docs/psk-auth.md) §6 开 trace 走一遍。

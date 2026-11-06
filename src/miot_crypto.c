@@ -96,6 +96,17 @@ int miot_ecdh_shared(const uint8_t app_pubkey64[64], uint8_t secret[32])
     return s_ops->ecdh_shared(s_ops->ctx, app_pubkey64, secret);
 }
 
+int miot_ecdsa_available(void)
+{
+    return (s_ops && s_ops->ecdsa_sign) ? 1 : 0;
+}
+
+int miot_ecdsa_sign(const uint8_t *msg, size_t len, uint8_t sig64[64])
+{
+    if (!s_ops || !s_ops->ecdsa_sign) return -2;   /* -2 = 后端未实现 */
+    return s_ops->ecdsa_sign(s_ops->ctx, msg, len, sig64);
+}
+
 /* ---------------- spec 通道 k61 帧加解密 ----------------
  * 帧 = [seq16 LE][ct][tag4]；nonce = iv(4) || 00 00 00 00 || seq32 LE */
 

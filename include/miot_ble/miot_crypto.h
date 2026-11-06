@@ -36,6 +36,12 @@ typedef struct miot_crypto_ops {
     int (*ecdh_keygen)(void *ctx, uint8_t pubkey64[64]);
     /** 用 App 公钥（64B X||Y）算共享密钥。返回 0 成功 */
     int (*ecdh_shared)(void *ctx, const uint8_t app_pubkey64[64], uint8_t secret[32]);
+
+    /* ---- legacy PSK：ECDSA P-256 签名（可为 NULL，见下） ---- */
+    /** 用设备 ECDH 私钥对 msg 做 SHA256 摘要后签名，输出 r||s 共 64B。
+     *  ★这是 PSK 唯一需要的新原语；后端不实现时 PSK 分支会自动
+     *    退化为「不发 0x04 帧」并打标记，标准认证完全不受影响。 */
+    int (*ecdsa_sign)(void *ctx, const uint8_t *msg, size_t len, uint8_t sig64[64]);
 } miot_crypto_ops_t;
 
 void miot_crypto_set_ops(const miot_crypto_ops_t *ops);
@@ -61,6 +67,10 @@ int miot_hmac_sha256(const uint8_t *key, size_t klen,
                      const uint8_t *data, size_t dlen, uint8_t out[32]);
 int miot_ecdh_keygen(uint8_t pubkey64[64]);
 int miot_ecdh_shared(const uint8_t app_pubkey64[64], uint8_t secret[32]);
+/** ECDSA P-256 签名（legacy PSK 的 0x04 帧用）。后端未实现返回 -2 */
+int miot_ecdsa_sign(const uint8_t *msg, size_t len, uint8_t sig64[64]);
+/** 后端是否提供 ecdsa_sign（1 有 / 0 无） */
+int miot_ecdsa_available(void);
 
 /* ---------- 4. spec 通道 k61 帧加解密 ---------- */
 
