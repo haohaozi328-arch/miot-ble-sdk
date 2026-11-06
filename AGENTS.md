@@ -452,6 +452,10 @@ miot_auth_set_psk_options(&auth, 1, MIOT_PSK_SIGN_DEV_APP_RAND);  /* trace=1 */
 然后照 [docs/psk-auth.md](docs/psk-auth.md) §6 的串口判据表走。
 **不要**为了让它「先能用」而去改 App、装模块或伪造 did——那对别人无效。
 
+实测完把结果记下来（[§6.1](docs/psk-auth.md#61-记录结果) 有填空模板，
+仓库也有 [PSK 实测 issue 模板](.github/ISSUE_TEMPLATE/psk-field-test.yml)）。
+**串口日志是必填的**：只说「试了不行」等于没试，下一次还得从变体 0 重来。
+
 完整决策树：[docs/troubleshooting.md](docs/troubleshooting.md)。
 纯净 App 下各档案能否绑定：[docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
 

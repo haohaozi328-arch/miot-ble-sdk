@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 先读 AGENTS.md（AI 自建工程手册）
+    url: https://github.com/haohaozi328-arch/miot-ble-sdk/blob/main/AGENTS.md
+    about: 编译烧录、验收判据、失败分支都在这里，90% 的问题读完就有答案。
+  - name: 绑定失败 / 卡在连接中
+    url: https://github.com/haohaozi328-arch/miot-ble-sdk/blob/main/docs/troubleshooting.md
+    about: 「设备绑定账号失败 (104,did=…)」等常见现象的对症表。
+  - name: 某个型号在纯净 App 下能不能绑
+    url: https://github.com/haohaozi328-arch/miot-ble-sdk/blob/main/docs/clean-app-matrix.md
+    about: 逐型号的验证状态矩阵，含走 legacy PSK 的型号说明。

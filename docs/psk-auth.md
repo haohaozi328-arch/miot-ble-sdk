@@ -197,6 +197,40 @@ miot_auth_set_psk_options(&auth, 1, MIOT_PSK_SIGN_DEV_APP_RAND);
 **这一步同时回答「老接口还开着吗」**：只要 App 会发启动帧，说明 App 侧这条链还在；
 接口是否下线，要看走到 `ble_psk_auth` 时云端返回什么——那就已经超出设备侧能观测的范围了。
 
+### 6.1 记录结果
+
+一次实测的价值在于**能排除一个变体**，所以无论成没成都记下来，别只在成功的留下。
+
+- GitHub 仓库：打开 [新建 issue](https://github.com/haohaozi328-arch/miot-ble-sdk/issues/new/choose) →
+  选「PSK 实机实测记录」。串口日志是必填项，没贴日志的报告一律当无效。
+- 不走 GitHub（在对话里报给 AI）：直接贴下面这段填空，AI 会按 §5 的变体表继续推。
+
+```
+型号 / PID     : 驱蚊器智能版 / 0x040A
+结论           : BOUND 成功 | 握手完成但云端拒 | 只发出一部分 | 没进 PSK 分支
+sign_variant   : 0 | 1 | 2
+固件           : <commit> / ESP-IDF <ver> / <chip>
+App            : 官方原版 <版本号>，国区账号，未修改
+
+--- 串口（从第一条 PSK: 到结束，包含 [psk] 0019 的 hex）---
+PSK: start frame 26B captured ...
+[psk] 0010 > ...
+[psk] 0019 < ...
+PSK: ECDH ok
+handshake sent (info/0D/03/0C/04)
+PSK: server pub received
+PSK: *** BOUND, did stored
+-----------------------------------------------------------
+
+App 侧原文     : 卡在 60%，弹「…」，一字不改
+云端返回       : ble_psk_auth code=? / ble_psk_bind code=? / prov_done 未到达
+其他           : 换变体重试的时间线、换过 App 版本等
+```
+
+填完把结论回写到 [testing.md](testing.md) 的结果汇总表第 4 行，
+以及 [clean-app-matrix.md](clean-app-matrix.md) 里该型号那一格——
+这两处是别人判断「能不能买这台来试」的唯一依据。
+
 ---
 
 ## 7. 实现位置（已落地）

@@ -1,0 +1,141 @@
+name: PSK 实机实测记录
+description: 驱蚊器(0x040A) / 夜灯重绑 等走 legacy PSK 的型号，跑完一轮实测后回报结果
+title: "[PSK 实测] <型号> <结果> <日期>"
+labels: ["psk", "field-test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这个模板只为一件事服务：**把 `0x04 dev_sign` 与三个老接口的真相定下来**
+        （见 [docs/psk-auth.md](https://github.com/haohaozi328-arch/miot-ble-sdk/blob/main/docs/psk-auth.md) §5/§6）。
+
+        请先把 [§6 实测步骤](https://github.com/haohaozi328-arch/miot-ble-sdk/blob/main/docs/psk-auth.md#6-实测步骤固件已内置-trace不需要任何-app-侧工具)
+        完整走一遍再填。**串口日志那一段是必填的**——没有它，任何结论都只是猜测。
+        失败的报告同样有价值：一次失败就能排除一个签名变体。
+
+  - type: input
+    id: device
+    attributes:
+      label: 设备型号与 PID
+      description: 米家 App 里显示的名称 + 广播里的 PID（十六进制）。如「驱蚊器智能版 / 0x040A」
+      placeholder: 驱蚊器智能版 / 0x040A
+    validations:
+      required: true
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: 结论
+      description: 只选串口实际走到的那一步，不要选「觉得应该能行」的那一步
+      options:
+        - ✅ BOUND —— App 绑定成功，did 已落盘
+        - ⚠️ 握手走完但云端拒绝（App 报错 / ble_psk_bind 失败）
+        - ⚠️ 握手只发出一部分（缺 0x04 帧，或 App 无反应）
+        - ❌ 没进入 PSK 分支（串口无任何 `PSK:` 行）
+        - ❌ 没扫到 / 连不上（还没到认证阶段）
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: preconditions
+    attributes:
+      label: 前置条件（全部勾选才有效）
+      options:
+        - label: App 是**官方原版**，未装任何模块、未修改、未注入、未 root
+          required: true
+        - label: 国区小米账号（海外账号 PID 映射不同，结论不可比）
+          required: true
+        - label: 已按 §6 打开 trace（`miot_auth_set_psk_options(&auth, 1, ...)`）
+          required: true
+        - label: 固件由本仓库当前代码编译（不是历史 bin）
+          required: true
+
+  - type: dropdown
+    id: sign_variant
+    attributes:
+      label: 本轮用的签名变体（`sign_variant`）
+      description: 0 = devRand‖appRand（默认）／1 = devRand／2 = shared‖devRand‖appRand
+      options:
+        - "0 —— devRand‖appRand（MIOT_PSK_SIGN_DEV_APP_RAND）"
+        - "1 —— devRand（MIOT_PSK_SIGN_DEV_RAND）"
+        - "2 —— shared‖devRand‖appRand（MIOT_PSK_SIGN_SHARED_RAND）"
+        - 同一天内把 0/1/2 都试过了
+    validations:
+      required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: 固件来源
+      description: 本仓库 commit（`git rev-parse --short HEAD`）+ ESP-IDF 版本 + 芯片型号
+      placeholder: be6a42f / ESP-IDF v6.0 / ESP32-C3
+    validations:
+      required: true
+
+  - type: textarea
+    id: serial
+    attributes:
+      label: 串口日志（必填，原样粘贴，不要删行）
+      description: |
+        从第一条 `PSK:` 行开始贴到结束，包含 `[psk] 0019` 的 hex 行。
+        关键的五行判据如下，缺哪行就说明卡在哪：
+        `PSK: start frame 26B captured` → `PSK: ECDH ok` →
+        `handshake sent (info/0D/03/0C/04)` → `PSK: server pub received` →
+        `PSK: *** BOUND, did stored`
+      render: shell
+      placeholder: |
+        PSK: start frame 26B captured 01 02 03 ...
+        [psk] 0010 > ...
+        [psk] 0019 < ...
+        PSK: ECDH ok
+        handshake sent (info/0D/03/0C/04)
+        PSK: server pub received
+        PSK: *** BOUND, did stored
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: serial_marks
+    attributes:
+      label: 串口实际出现了哪几行（按日志如实勾，不要猜）
+      options:
+        - label: "`PSK: start frame 26B captured` —— 收到了 26B 启动帧"
+        - label: "`PSK: ECDH ok` —— 密钥协商完成"
+        - label: "`handshake sent (info/0D/03/0C/04)` —— 五帧全发出，含签名"
+        - label: "`handshake sent (info/0D/03/0C)` —— **没有 /04**，说明后端缺 `ecdsa_sign`"
+        - label: "`PSK: server pub received` —— 拿到了 16B 服务端公钥"
+        - label: "`PSK: *** BOUND, did stored` —— 绑定成功"
+        - label: "`PSK: unhandled <n>B (psk_state=…)` —— 有帧没识别"
+        - label: 一条 `PSK:` 都没有
+
+  - type: textarea
+    id: app_side
+    attributes:
+      label: App 侧表现（原文照抄，不要转述）
+      description: 卡在第几步、报错文案一字不改、有无错误码（如「设备绑定账号失败 (…)」）
+      placeholder: |
+        扫描 → 点「添加」→ 进度条走到 60% 停住 → 弹「设备绑定账号失败 (-8, cant find did)」
+    validations:
+      required: true
+
+  - type: textarea
+    id: cloud
+    attributes:
+      label: 云端接口返回（有就填，没有写「无法观测」）
+      description: |
+        `ble_psk_auth` / `ble_psk_bind` / `ble_psk_prov_done` 若有 code 或 msg，
+        原样贴出。这三条老接口是否还开着，是 §5 之外唯一没被回答的问题。
+      placeholder: |
+        ble_psk_auth  → code:0
+        ble_psk_bind  → code:-8 msg:sign verify failed
+        ble_psk_prov_done → 未到达
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他观察（可选）
+      description: 换变体重试的时间线、换 App 版本、是否换了手机、网关是否插拔等
+    validations:
+      required: false

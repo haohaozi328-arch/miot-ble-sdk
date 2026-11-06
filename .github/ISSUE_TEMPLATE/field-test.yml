@@ -1,0 +1,84 @@
+name: 设备实测记录（标准认证）
+description: 走标准认证的型号，绑定/属性/广播实测后回报结果
+title: "[实测] <型号> <结果> <日期>"
+labels: ["field-test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        用于 [docs/testing.md](https://github.com/haohaozi328-arch/miot-ble-sdk/blob/main/docs/testing.md) 里除驱蚊器之外的型号。
+        驱蚊器 / 夜灯重绑走 legacy PSK，请用「PSK 实机实测记录」模板。
+
+        只填事实：串口日志 + App 原文报错。**不要**写「应该没问题」这类判断。
+
+  - type: input
+    id: device
+    attributes:
+      label: 设备型号与 PID
+      placeholder: 蓝牙温湿度计2 / 0x0576
+    validations:
+      required: true
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: 结论
+      options:
+        - ✅ 通过 —— 绑定 + 页面数据 + 云端持久化都正常
+        - ⚠️ 部分通过 —— 绑定成功但某些功能不对
+        - ❌ 绑定失败
+        - ❌ 扫不到 / 连不上
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: preconditions
+    attributes:
+      label: 前置条件
+      options:
+        - label: App 是**官方原版**（未修改、未注入、未 root）
+          required: true
+        - label: 国区小米账号
+          required: true
+        - label: 固件由本仓库当前代码编译
+          required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: 固件来源
+      description: 本仓库 commit + ESP-IDF 版本 + 芯片型号
+      placeholder: be6a42f / ESP-IDF v6.0 / ESP32-C3
+    validations:
+      required: true
+
+  - type: textarea
+    id: serial
+    attributes:
+      label: 串口日志（从连接开始贴到断开）
+      description: 至少包含认证结果行（`REGISTER COMPLETE` / `BOND confirmed` / `LOGIN COMPLETE`）与后续 spec 或广播帧
+      render: shell
+      placeholder: |
+        ECDH keypair ready
+        device info sent (did=0B)
+        REGISTER COMPLETE (result 0x11 on 0x0010)
+        REGISTER: did stored (utc=...)
+        *** STD REGISTER: bind result OK (bound=1) ***
+    validations:
+      required: true
+
+  - type: textarea
+    id: app_side
+    attributes:
+      label: App 侧表现（原文照抄）
+      description: 绑定是否一次过、设备页显示什么、有没有报错文案或错误码
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他观察（可选）
+      description: 异常现象、重试次数、与 testing.md 记录的差异
+    validations:
+      required: false
