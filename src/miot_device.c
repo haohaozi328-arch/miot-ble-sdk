@@ -161,6 +161,19 @@ static void handle_get(miot_device_t *d, const miot_spec_packet_t *pkt)
         fill_value(&vals[i], siid, piid, 0, 1, NULL);   /* result=1 不认识 */
     }
     uint8_t pt[192];
+    /* 把 App 实际请求的 siid.piid 打出来：页面缺读数时能一眼看出
+     * 是「App 要的属性没注册」还是「注册了但值没上报」。 */
+    char trace[160];
+    int tn = 0;
+    trace[0] = 0;
+    for (int i = 0; i < pkt->argc; i++) {
+        if (tn < (int)sizeof(trace) - 20) {
+            tn += snprintf(trace + tn, sizeof(trace) - (size_t)tn, "%s%u.%u=%s",
+                           i ? " " : "", pkt->args[i].siid, pkt->args[i].piid,
+                           vals[i].result ? "ERR" : "ok");
+        }
+    }
+    dev_log(d, MIOT_LOG_INFO, "spec GET %s", trace);
     int n = miot_spec_build_get_reply(pkt->tid, vals, pkt->argc, pt, sizeof(pt));
     if (n > 0) spec_reply(d, pt, (size_t)n);
 }

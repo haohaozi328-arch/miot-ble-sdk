@@ -23,6 +23,16 @@ size_t miot_beacon_obj_u16(uint8_t *p, uint16_t obj_id, uint16_t v)
     return 5;
 }
 
+size_t miot_beacon_obj_u24(uint8_t *p, uint16_t obj_id, uint32_t v)
+{
+    p[0] = (uint8_t)(obj_id & 0xFF); p[1] = (uint8_t)(obj_id >> 8);
+    p[2] = 3;
+    p[3] = (uint8_t)(v & 0xFF);
+    p[4] = (uint8_t)((v >> 8) & 0xFF);
+    p[5] = (uint8_t)((v >> 16) & 0xFF);
+    return 6;
+}
+
 size_t miot_beacon_obj_i16(uint8_t *p, uint16_t obj_id, int16_t v)
 {
     return miot_beacon_obj_u16(p, obj_id, (uint16_t)v);
@@ -55,6 +65,25 @@ size_t miot_beacon_obj_bytes(uint8_t *p, uint16_t obj_id, const uint8_t *v, size
 /* ---------------- v5 加密帧 ----------------
  * FC(2) | PID(2) | cnt(1) | MAC(6) | ct(N) | counter_ext(3) | MIC(4)
  * nonce = MAC(6) | pid_le(2) | cnt_le(4)；aad = 0x11；tag 4B 放帧尾 */
+
+/* ---------------- 未绑定身份心跳帧 ----------------
+ * FC(2) | PID(2) | cnt(1) | MAC(6) | Capability(1) = 12B，不加密、无对象。
+ * App 在「添加设备」里就靠这一帧把设备列出来：缺 Capability 或 registered
+ * 位为 1，整帧会被静默丢弃，表现为「手机怎么扫都找不到」。 */
+int miot_beacon_frame_hello(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
+                            uint8_t bond_ability, uint8_t *out, size_t cap)
+{
+    if (cap < 12) return -3;
+
+    out[0] = 0x30;              /* bit4 MAC Include | bit5 Capability Include */
+    out[1] = 0x58;              /* bit8 registered=0 | authMode=2 | version=5 */
+    out[2] = (uint8_t)(cfg->pid & 0xFF);
+    out[3] = (uint8_t)(cfg->pid >> 8);
+    out[4] = (uint8_t)(frame_cnt & 0xFF);
+    memcpy(out + 5, cfg->mac_air, 6);
+    out[11] = (uint8_t)((bond_ability & 0x03) << 3);   /* bit3~4 BondAbility */
+    return 12;
+}
 
 int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
                          const uint8_t *objs, size_t objs_len,

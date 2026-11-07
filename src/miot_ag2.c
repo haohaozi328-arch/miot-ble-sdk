@@ -43,6 +43,12 @@ void miot_ag2_rx(miot_ag2_t *a, const uint8_t *d, size_t len)
             a->rx_len = len - 4;
             memcpy(a->rx, d + 4, a->rx_len);
             ag_ack(a, 0);
+            /* 单帧即完整一帧：这里必须直接上交，不能落到下面的
+             * DATA 分支判断再 return —— 那样 k61 帧永远到不了解密层，
+             * 表现为 App 发了 get_properties，设备一声不响。 */
+            a->rx_expect = 0;
+            a->rx_got = 0;
+            if (a->on_frame) a->on_frame(a->user, a->rx, a->rx_len);
         }
         return;
     }

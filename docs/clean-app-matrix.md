@@ -19,7 +19,7 @@
 | # | 设备 | PID | 路径 | 纯净 App 能否添加 | 依据 |
 |---|---|---|---|---|---|
 | 1 | 米家体脂秤 S400 | `0x30D9` | 标准 | ✅ 能 | 全流程含云端入库 |
-| 2 | 蓝牙温湿度计2 | `0x055B` | 标准 | ✅ 能 | 标准认证 + LOGIN 实测 |
+| 2 | 蓝牙温湿度计2 | `0x055B` | 标准 | ✅ 能（**2026-11-07 纯净 App 实测**） | 见下方「实测记录 ①」 |
 | 3 | 夜灯2 | 未记录（见 `src/miot_profiles.c` §5） | 标准（首绑） | ✅ 能（**仅首次**） | 重绑切 PSK |
 | 4 | 夜灯2（重新绑定） | 同上 | **legacy PSK** | ⚠️ 待实测 | PSK 已实现（`AUTO` 自动判定） |
 | 5 | 驱蚊器智能版 WX08ZM | `0x040A` | **legacy PSK** | ⚠️ 待实测 | 绑定阶段即走 PSK，代码已实现 |
@@ -36,6 +36,42 @@
 **推荐做「开箱即用」演示的三台**：温湿度计2（第 2）、体脂秤 S400（第 1）、
 温湿度计3 mini（第 12）。它们不依赖任何 App 修改，也不受重绑限制。
 
+## 实测记录（官方原版 App，无 hook / 无模块）
+
+### ① 蓝牙温湿度计2 `0x055B` — 2026-11-07 通过
+
+固件：ESP32-C3，本 SDK 自建 GATT 工程；App：米家国区原版，未装任何模块。
+
+广播帧（Moto G 蓝牙嗅探实测）：
+
+```
+30 58 | 5b 05 | 13 | 10 00 3b ce 4d 02 | 10
+FC      PID     cnt   MAC                Capability(bit3~4=2 后绑定)
+FC bit5=1 含 Capability、bit8=0 未注册 —— 这两个位缺一个，App 就不列设备
+```
+
+串口完整序列（两段连接，中间自然断开是正常的）：
+
+```
+--- 第 1 段：REGISTER ---
+connected conn=1 mtu=23
+subscribe attr=19 notify=1 / subscribe attr=16 notify=1
+wr 0010 #1 cmd=A2        → CMD_REGISTER(0xA2) -> register flow
+wr 0010 #2 cmd=15        → pubkey + devRandom + devConfirm sent
+wr 0010 #3 cmd=13        → REGISTER: did stored (utc=1794014291)
+                           REGISTER COMPLETE (result 0x11 on 0x0010)
+disconnected reason=0x213
+
+--- 第 2 段：LOGIN ---
+wr 0010 #1 cmd=24        → spec session ready (keys set)
+                           *** session established: spec channel ready ***
+                           spec properties pushed (25.6C / 58.0% / batt 88%)
+```
+
+判据说明：`result 0x11` 是标准认证成功码；`did stored` 证明 did 来自云端而非本地伪造；
+第二段的 `0x24` 是 LOGIN 命令，之后属性推送成功即 spec 通道可用。
+全程没有 PSK 类包，也没有 `dispatch: no consumer`。
+
 ## 本表的口径说明（重要）
 
 - 矩阵按**认证路径**静态判定：标准认证由设备端本地完成，App 原版即可；
@@ -43,6 +79,8 @@
   所以第 4、5 项只能标「待实测」而不是「能」。实测开关见 [psk-auth.md](psk-auth.md) §6。
 - 历史实机记录（`docs/testing.md`）的测试环境曾带有调试辅助模块，
   **不能直接作为"纯净 App 可绑定"的证据**。因此第 7 项标「待复核」。
+- 上方「实测记录」章节的每一条都在**无 hook、无模块**的原版 App 下取得，
+  带完整串口序列，可直接引用；后续每验一台就往里加一条。
 - 上表第 1~3、6 项之所以标"能"，是因为它们的绑定完成标志
   （`REGISTER COMPLETE` / `BOND confirmed`）出现在**设备端**串口，
   且认证流程不含 PSK 步骤。

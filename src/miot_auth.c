@@ -197,8 +197,13 @@ static void register_on_encrypted_did(miot_auth_t *a, const uint8_t *d, size_t l
             memcpy(a->id.did, out, 20);
             memcpy(a->id.sign, out + 20, 64);
             memcpy(&a->id.utc, out + 84, 4);
+            /* 云端已下发 did = 设备身份有效。★必须当场置 bound：
+             * 否则本次上电一直是 bound=0，广播继续发未绑定心跳帧（无属性），
+             * App/网关照收不到任何读数，要等重启从 NVS 重新 load 才恢复。 */
+            a->bound = a->ecdh_ok ? 1 : 0;
             if (a->port.save) a->port.save(a->port.user, &a->id);
-            alog(a, "REGISTER: did stored (utc=%u)", (unsigned)a->id.utc);
+            alog(a, "REGISTER: did stored (utc=%u) bound=%d",
+                 (unsigned)a->id.utc, a->bound);
             return;
         }
     }
@@ -724,6 +729,15 @@ void miot_auth_on_0010(miot_auth_t *a, const uint8_t *d, size_t len)
         alog(a, "CMD_REGISTER(0x%02X) -> register flow", d[0]);
         if (a->state == MIOT_AUTH_ST_IDLE) register_start(a);
         else { a->state = MIOT_AUTH_ST_REG_PUBKEY; send_device_info(a); }
+        return;
+    }
+    if (len == 4 && d[0] == 0x13 && d[1] == 0 && d[2] == 0 && d[3] == 0) {
+        /* bind result 成功。★真机 App 把它发在 0x0010 上（不是 0x0019），
+         * 只认 0x0019 会让这一步被静默丢弃，bound 永远不置位 */
+        a->bound = a->ecdh_ok ? 1 : 0;
+        if (a->port.save) a->port.save(a->port.user, &a->id);
+        alog(a, "*** STD REGISTER(0x0010): bind result OK (bound=%d) ***", a->bound);
+        a->state = MIOT_AUTH_ST_REG_CERT;
         return;
     }
 }

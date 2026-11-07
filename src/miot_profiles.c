@@ -108,6 +108,7 @@ void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2)
  * 属性表两份都注册，插件用哪个 spec 都能读。 */
 
 static float    th_temp  = 25.0f;    /* ℃ */
+static float    th_hum   = 56.0f;    /* %RH（cgdk3 spec 是 float） */
 static uint8_t  th_hum_t9 = 56;      /* t9 spec 湿度是 uint8 % */
 static uint8_t  th_battery = 88;
 
@@ -125,8 +126,9 @@ static bool th_get(void *user, uint8_t siid, uint16_t piid, miot_spec_value_t *o
     if ((siid == 2 && piid == 1001) || (siid == 3 && piid == 1001)) {
         out->type = MIOT_TYPE_FLOAT; out->val.f = th_temp; return true;   /* 温度 float */
     }
-    if (siid == 2 && piid == 1008) { out->type = MIOT_TYPE_FLOAT; out->val.f = (float)th_hum_t9; return true; }
-    if (siid == 2 && piid == 1002) { out->type = MIOT_TYPE_FLOAT; out->val.f = (float)th_hum_t9; return true; } /* dk1 兼容 */
+    if (siid == 2 && piid == 1008) { out->type = MIOT_TYPE_FLOAT; out->val.f = th_hum; return true; }
+    if (siid == 2 && piid == 1002) { out->type = MIOT_TYPE_FLOAT; out->val.f = th_hum; return true; } /* dk1 兼容 */
+    if (siid == 2 && piid == 3)    { out->type = MIOT_TYPE_U8;    out->val.u8 = th_battery; return true; } /* t2 标准电量 */
     if (siid == 2 && piid == 1003) { out->type = MIOT_TYPE_U8; out->val.u8 = th_battery; return true; }
     if (siid == 2 && piid == 1)    { out->type = MIOT_TYPE_FLOAT; out->val.f = th_temp; return true; }
     if (siid == 2 && piid == 2)    { out->type = MIOT_TYPE_FLOAT; out->val.f = (float)th_hum_t9; return true; }
@@ -152,15 +154,22 @@ void thermometer_init(miot_device_t *dev, miot_port_t *port,
 
 void thermometer_report(miot_device_t *dev, float temp_c, float hum_pct, uint32_t ts)
 {
-    th_temp = temp_c;
+    th_temp   = temp_c;
+    th_hum    = hum_pct;
     th_hum_t9 = (uint8_t)(hum_pct + 0.5f);
 
-    /* properties_changed：温度 float（2.1001）+ 湿度 uint8（3.1002） */
-    miot_spec_value_t pc[2];
+    /* miaomiaoce.sensor_ht.t2 的官方 spec 就是 siid 2 下的三个属性：
+     *   2.1 temperature        float ℃
+     *   2.2 relative-humidity  float %
+     *   2.3 battery-level      uint8 %
+     * 旧实现发的 2.1001/2.1008/3.1002 属于 cgdk3 / t9 等其它型号的私有 spec，
+     * 这个 model 里根本不存在，App 全部丢弃 —— 页面就是空的。 */
+    miot_spec_value_t pc[3];
     memset(pc, 0, sizeof(pc));
-    pc[0].siid = 2; pc[0].piid = 1001; pc[0].type = MIOT_TYPE_FLOAT; pc[0].val.f = temp_c;
-    pc[1].siid = 3; pc[1].piid = 1002; pc[1].type = MIOT_TYPE_U8;   pc[1].val.u8 = th_hum_t9;
-    miot_device_send_props_changed(dev, pc, 2);
+    pc[0].siid = 2; pc[0].piid = 1; pc[0].type = MIOT_TYPE_FLOAT; pc[0].val.f  = temp_c;
+    pc[1].siid = 2; pc[1].piid = 2; pc[1].type = MIOT_TYPE_FLOAT; pc[1].val.f  = hum_pct;
+    pc[2].siid = 2; pc[2].piid = 3; pc[2].type = MIOT_TYPE_U8;    pc[2].val.u8 = th_battery;
+    miot_device_send_props_changed(dev, pc, 3);
     (void)ts;
 }
 

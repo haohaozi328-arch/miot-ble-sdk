@@ -7,9 +7,17 @@
  *
  * 帧格式（真机 btsnoop/ESPHome 互证实测）：
  *   FC(2,LE) | PID(2,LE) | frame_cnt(1) | MAC(6,空中序)
- *   | 对象密文(N) | counter_ext(3) | MIC(4)
- *   FC byte0 = 0x58: obj(0x40)|mac(0x10)|enc(0x08)
- *   FC byte1 = 0x59: version=5|registered=1（0x58=未注册被 App 无视！）
+ *   | Capability(1,仅未绑定) | 对象密文(N) | counter_ext(3) | MIC(4)
+ *
+ * FC 是 2 字节位图，位号跨字节连续（官方 ble-mibeacon.md §Frame Control）：
+ *   bit3 isEncrypted | bit4 MAC Include | bit5 Capability Include
+ *   bit6 Object Include | bit7 Mesh
+ *   bit8 registered | bit9 solicited | bit10~11 authMode | bit12~15 version
+ *
+ * 已绑定上报帧 FC = 58 59（enc|mac|obj / v5|auth=2|registered=1）。
+ * **未绑定必须用 hello 形态**：bit5 官方原文「设备未绑定前，这一位强制为 1」，
+ * 且 bit8 必须为 0，否则 App 认为设备已被别家绑定，不进待添加列表。
+ * 旧版这里写死 58/59（缺 Capability、声明已注册），是 App 扫不到的直接原因。
  *   加密：AES-CCM(beaconkey 16B)，nonce = MAC(6)|pid_le(2)|cnt_le(4)，
  *         aad = 0x11，tag 4B 放帧尾（SDK 解析：先取末 4B 为 MIC，再往前 3B 为 counter）
  *   帧内必须带 MAC 字段：App 按帧内 MAC 做设备归属判定。
@@ -47,6 +55,14 @@ extern "C" {
 #define MB_OBJ_BTN_DOUBLE     0x4E0D  /* 1B：双击 */
 #define MB_OBJ_BTN_HOLD       0x4E0E  /* 1B：长按 */
 
+/* ---- 花花草草监测仪 HHCCJCY01（PID 0x0098），花盆/户外款同构 ----
+ * 四个传感器对象里 0x1007 是**三字节** uint24（不是 uint32），必须用
+ * miot_beacon_obj_u24；写成 4B 会让后续对象全部错位，App 静默丢弃整帧。
+ * 0x1008 是土壤湿度，别和 0x1006（空气湿度）混；两者在同一设备上并存。 */
+#define MB_OBJ_ILLUM_U24      0x1007  /* 3B：uint24 LE，1 lx（与 0x000F 的移动+光照不同构） */
+#define MB_OBJ_SOIL_MOIST_U8  0x1008  /* 1B：uint8 % */
+#define MB_OBJ_SOIL_EC_U16    0x1009  /* 2B：uint16 LE µS/cm，与 spec soil-ec 同量纲 */
+
 /** beacon 广播配置（认证/绑定阶段获得，需持久化） */
 typedef struct miot_beacon_cfg {
     uint16_t pid;                    /* 产品 ID（米家后台分配，如 S400=0x30D9） */
@@ -58,6 +74,8 @@ typedef struct miot_beacon_cfg {
 
 size_t miot_beacon_obj_u8(uint8_t *p, uint16_t obj_id, uint8_t v);
 size_t miot_beacon_obj_u16(uint8_t *p, uint16_t obj_id, uint16_t v);
+/** 3 字节小端（光照对象 0x1007 专用；v 只用低 24 位） */
+size_t miot_beacon_obj_u24(uint8_t *p, uint16_t obj_id, uint32_t v);
 size_t miot_beacon_obj_i16(uint8_t *p, uint16_t obj_id, int16_t v);
 size_t miot_beacon_obj_u32(uint8_t *p, uint16_t obj_id, uint32_t v);
 size_t miot_beacon_obj_f32(uint8_t *p, uint16_t obj_id, float v);
@@ -150,6 +168,29 @@ typedef struct miot_adv_info {
 } miot_adv_info_t;
 
 int miot_adv_parse(const uint8_t *sd, size_t len, miot_adv_info_t *out);
+
+/* ---------- 12B 身份心跳帧（本仓库 esp32/thermo_gatt 用的形态） ---------- */
+
+/**
+ * 构造「未绑定」身份心跳帧（MiBeacon v5，12B）。
+ *
+ * 帧 = FC(2) | PID(2) | cnt(1) | MAC(6) | Capability(1)，不含 Object、不加密。
+ * 为什么长这样：
+ *   - 没有 bind_key 就加不了密，未绑定态的加密只会让 App 拿到一堆废字节；
+ *   - 官方强制 bit5（Capability Include）=1，因为 App 要靠 BondAbility 决定
+ *     走哪种绑定流程，缺了这字节整帧被丢弃；
+ *   - bit8 registered 必须为 0，1 表示「已被别的账号绑定」，App 直接不显示。
+ *
+ * Capability 取 BondAbility=2（后绑定：扫描后直连，设备侧本地确认），
+ * 对应本仓库的 0xFE95 GATT 直连认证路径。
+ * 与上面的 miot_beacon_frame_unbound() 等价，只是把 fc0/fc1 固化成实测基线
+ * （fc0=0x30 / fc1=0x58），调用方少传三个参数。
+ *
+ * @param bond_ability 0=无绑定 1=前绑定 2=后绑定 3=Combo
+ * @return 12，或负值（cap 不足）
+ */
+int miot_beacon_frame_hello(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
+                            uint8_t bond_ability, uint8_t *out, size_t cap);
 
 #ifdef __cplusplus
 }

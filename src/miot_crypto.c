@@ -114,9 +114,12 @@ int miot_spec_frame_encrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t
                             const uint8_t *pt, size_t len, uint8_t *out)
 {
     if (!s_ops || !s_ops->aes_ccm) return -1;
-    uint8_t nonce[12];
+    /* nonce 是 12 字节：iv(4) + 四个零 + seq16 + **两个零**。
+     * 早先只 memset 到 nonce+4 那 4 字节，末尾 2 字节从未赋值 —— 栈上残留值
+     * 会让同一条帧的 tag 每次都不一样，对端校验随机通过/失败。
+     * 这类 bug 不报错、不复现，只是"偶尔连不上"。必须整块清零。 */
+    uint8_t nonce[12] = { 0 };
     memcpy(nonce, iv, 4);
-    memset(nonce + 4, 0, 4);
     nonce[8] = (uint8_t)(seq & 0xFF);
     nonce[9] = (uint8_t)(seq >> 8);
     return s_ops->aes_ccm(s_ops->ctx, 1, key, nonce, NULL, 0, pt, len, out, out + len);
@@ -126,12 +129,16 @@ int miot_spec_frame_decrypt(const uint8_t key[16], const uint8_t iv[4], uint16_t
                             const uint8_t *in, size_t len, uint8_t *pt)
 {
     if (!s_ops || !s_ops->aes_ccm) return -1;
-    uint8_t nonce[12];
+    uint8_t nonce[12] = { 0 };
     memcpy(nonce, iv, 4);
-    memset(nonce + 4, 0, 4);
     nonce[8] = (uint8_t)(seq & 0xFF);
     nonce[9] = (uint8_t)(seq >> 8);
-    return s_ops->aes_ccm(s_ops->ctx, 0, key, nonce, NULL, 0, in, len, pt, pt + len);
+    /* 解密与加密的 tag 语义相反：加密时 tag 是输出（写到 out+len），
+     * 解密时 tag 是**输入**，必须是发送方给出的那 4 字节，放在密文之后。
+     * 传 pt+len（未初始化）会让人拿随机数去校验，永远失败。 */
+    uint8_t tag[4];
+    memcpy(tag, in + len, 4);
+    return s_ops->aes_ccm(s_ops->ctx, 0, key, nonce, NULL, 0, in, len, pt, tag);
 }
 
 /* ---------------- 通用 AES-CCM（带 AAD） ---------------- */
@@ -150,6 +157,9 @@ int miot_ccm_decrypt(const uint8_t key[16], const uint8_t nonce[12],
                      const uint8_t *in, size_t len, uint8_t *pt)
 {
     if (!s_ops || !s_ops->aes_ccm) return -1;
+    /* 同 miot_spec_frame_decrypt：期望 tag 在密文之后，4 字节 */
+    uint8_t tag[4];
+    memcpy(tag, in + len, 4);
     return s_ops->aes_ccm(s_ops->ctx, 0, key, nonce, aad, aad_len,
-                          in, len, pt, pt + len);
+                          in, len, pt, tag);
 }
