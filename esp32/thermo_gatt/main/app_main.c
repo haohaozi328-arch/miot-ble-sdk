@@ -1,16 +1,16 @@
 /**
  * @file app_main.c
- * @brief 花花草草监测仪 HHCCJCY01 —— 可绑定版固件（ESP32-C3）
+ * @brief 蓝牙温湿度计2（LYWSD03MMC / 0x055B）—— 可绑定版固件（ESP32-C3）
  *
- * 与 plant_monitor_adv 的区别：那一版只发广播，这一版补上 GATT 与认证，
- * 目标是让米家 App 能真的走完「添加设备 → 注册绑定 → 连上读属性」。
+ * 一个完整可用的最小示例：米家 App 能走完「添加设备 → 注册绑定 → 连上读属性」，
+ * 顶部实时读数、历史曲线都能出（曲线是云端按小时聚合，见 README 的 FAQ）。
  *
  * 链路（docs/protocol.md）：
- *   广播         MiBeacon v5（0xFE95 service data）+ 0x038F V2 信标帧
+ *   广播         MiBeacon v5（0xFE95 service data，绑定前后帧不同）+ 0x038F V2 信标帧
  *   GATT 0xFE95  0x0010 命令/结果码 · 0x0019 认证 · 0x001A spec · 0x001B 第二写通道
  *   绑定         CMD_REGISTER(0xA2) → ECDH → 云下发 did(92B) → 云证书 → 回 0x11
  *   会话         CMD_LOGIN(0x24) → appRand/devRand → devConfirm/appConfirm → 0x21
- *   数据         k61 加密 spec 帧跑在 0x001A 的 ag2 上
+ *   数据         spec 属性帧推在 0x0010 上（App 只订阅 0x0010/0x0019，推 0x001A 页面收不到）
  *
  * 与门锁那类 securityChip 设备的根本差异：这里的 did 是**云端在绑定时下发**
  * （92B 加密帧里带 cloud_sign），设备不需要自证身份，所以不存在证书链那堵墙。

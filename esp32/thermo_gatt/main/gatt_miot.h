@@ -10,7 +10,8 @@
  * 通道分工（docs/protocol.md §1）：
  *   0x0010  App→设备：0xA4 建链 / 0xA2 注册 / 0x24 登录；设备→App：结果码 0x11/0x21
  *   0x0019  认证数据，ag2 分帧（公钥、devRandom、devConfirm、appConfirm）
- *   0x001A  spec 数据，ag2 + k61 加密帧
+ *   0x001A  spec 数据第二通道（App 只订阅 0x0010/0x0019，往这里推页面收不到；
+ *           实测保留仅供观察，真正上报走 0x0010）
  *   0x001B  App→设备第二写通道（米家部分版本用它补发）
  */
 #ifndef GATT_MIOT_H
