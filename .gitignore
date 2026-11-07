@@ -16,3 +16,7 @@ Makefile
 Thumbs.db
 .vscode/
 .idea/
+
+# ESP-IDF 本地生成物（各人 chip/端口不同，不入库；模板见 sdkconfig.defaults）
+sdkconfig
+sdkconfig.old
