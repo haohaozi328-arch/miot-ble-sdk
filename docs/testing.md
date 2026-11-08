@@ -19,6 +19,28 @@
 
 结论同时回写本文末尾的结果汇总表；失败的报告同样有价值——一次失败就排除一个签名变体。
 
+## 0. 免手机的 spec 层回归（host 测试）
+
+不接 BLE、不接 App，直接在电脑上跑编解码与属性表，用于快速回归协议层。
+
+| 测试 | 覆盖点 | 命令（仓库根目录，容器内 gcc） |
+|------|--------|------------------------------|
+| `test/host_repeller_frame.c` | 设备→App 属性上报帧的 siid/piid/类型码（`BOOL=0 / UINT8=1`） | `gcc -I include src/*.c test/host_repeller_frame.c -o /tmp/t && /tmp/t` |
+| `test/host_spec_set.c` | App→设备 `SET` 全链路：可写属性落值、只读属性拒绝、未注册属性拒绝、`SET_REPLY` 的 tid/siid/piid/result；以及 `GET` 回包的对象编码 | 同上，换文件名 |
+
+`host_spec_set.c` 的实测输出（2026-11-08，repeller 档案）：
+
+```
+① SET 4.1=true   → reply result=0，repeller_power()=1
+② SET 2.1=5      → reply result=1（只读属性被拒，值不变）
+③ SET 9.9=1      → reply result=1（未注册被拒）
+④ SET 4.1=false  → reply result=0，repeller_power()=0
+⑤ GET 2.1/3.1/4.1 → 三对象 result=0，类型 uint8/uint8/bool 全对
+```
+
+> 注意：`SET` 请求的对象格式是 `[siid][piid16][type16=纯类型号][len][value]`，
+> 与设备→App 方向的 `type16=(type<<12)|len` **不同**，改动时别混。
+
 ## A. spec 连接型
 
 ### 1. 米家体脂秤 S400（`scale_s400`）—— 基准设备

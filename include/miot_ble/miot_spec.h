@@ -36,13 +36,29 @@
 extern "C" {
 #endif
 
-/* ---- 线上数据类型码（type16 高 4 位）---- */
-#define MIOT_TYPE_BOOL   1u
-#define MIOT_TYPE_U8     2u
+/* ---- 线上数据类型码（type16 高 4 位）----
+ * ★必须与 miot-spec 的 DataType 枚举一致：
+ *   BOOL=0 UINT8=1 INT8=2 UINT16=3 INT16=4 UINT32=5 INT32=6
+ *   UINT64=7 INT64=8 FLOAT32=9 STRING=10（没有 FLOAT64，枚举到 10 就结束）
+ * 此前这里写成 BOOL=1 / U8=2（整体错位），App 侧 gyb 解析器于是把 4.1 开关
+ * 解成 UINT8、把 2.1/3.1 解成 INT8（logcat [PARSE] 实证），页面按云端 spec
+ * 校验类型对不上就丢属性，卡在「设备初始化中」。UINT16=3 与 FLOAT=9 恰好
+ * 与标准重合，所以温湿度计一直能通，掩盖了这个问题。 */
+#define MIOT_TYPE_BOOL   0u
+#define MIOT_TYPE_U8     1u
+#define MIOT_TYPE_I8     2u
 #define MIOT_TYPE_U16    3u
-#define MIOT_TYPE_U32    4u
-#define MIOT_TYPE_I32    5u
+#define MIOT_TYPE_I16    4u
+#define MIOT_TYPE_U32    5u
+#define MIOT_TYPE_I32    6u
+#define MIOT_TYPE_U64    7u
+#define MIOT_TYPE_I64    8u
 #define MIOT_TYPE_FLOAT  9u
+/* ★STRING=10，中间没有 FLOAT64。协议枚举只有 0..10 共 11 个类型
+ * （bool/uint8/int8/uint16/int16/uint32/int32/uint64/int64/float/string），
+ * 早期这里多塞了一个 F64=10，把 STRING 顶到 11 —— 体脂秤 8.1/8.2 事件
+ * 的 type16 因此是 0xB0xx，App 按未知类型整帧丢弃，页面永远停在「上秤」
+ * （23:10 实测：发出去 03 b0，而抓包样本是 03 a0）。 */
 #define MIOT_TYPE_STRING 10u
 
 /* ---- opcode ---- */
@@ -58,7 +74,10 @@ extern "C" {
 
 #define MIOT_SPEC_VER       2u      /* 协议版本（len16 高 4 位） */
 #define MIOT_SPEC_MAX_ARGS  4       /* 单包最大参数/对象数 */
-#define MIOT_SPEC_MAX_STR   40      /* 字符串参数最大长度 */
+/* 字符串参数最大长度。★别调小：体脂秤 8.2 结果帧是 28 字段 CSV，
+ * 实测 66 字符（含 10 位时间戳）。原来是 40，载荷被静默截断，
+ * App 解析不出字段，页面就一直停在「上秤」（23:07 实测）。 */
+#define MIOT_SPEC_MAX_STR   128     /* 字符串参数最大长度 */
 
 /** 规范值：类型标签 + 联合体载荷（argc 展开用） */
 typedef struct miot_spec_value {

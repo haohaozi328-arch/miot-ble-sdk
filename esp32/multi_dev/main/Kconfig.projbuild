@@ -1,0 +1,28 @@
+menu "MIoT 设备档案"
+
+    config MIOT_DEV_DEFAULT_INDEX
+        int "默认型号序号（0-10，串口 dev N 可随时切换）"
+        range 0 10
+        default 1
+        help
+            固件内置 11 个档案，启动时用这个序号（或 NVS 里上次 dev 命令
+            保存的序号）决定模拟哪台。串口命令：
+              dev         打印当前型号与全部序号
+              dev N       切换到序号 N（自动擦 NVS 身份并重启）
+              info        打印运行状态（绑定/登录/广播）
+              factory     擦除 NVS 并重启（回到未绑定）
+
+            序号表：
+              0 夜灯2 MUE4094RT           0x07F6  spec
+              1 蓝牙温湿度计2 LYWSD03MMC  0x055B  spec
+              2 体脂秤 S400               0x30D9  spec
+              3 无线开关 双键 XMWXKG01YL   0x1949  spec
+              4 无线开关 单键 XMWXKG01CM   0x2387  spec
+              5 驱蚊器 WX08ZM             0x040A  spec(PSK)
+              6 甲醛检测仪 JQJCY01YM       0x02DF  广播
+              7 门窗传感器2 MCCGQ02HL      0x098B  广播
+              8 人体传感器2 RTCGQ02LM      0x0A8D  广播
+              9 水浸传感器 SJWS01LM        0x0863  广播
+             10 温湿度计3 mini MJWSD06MMC  0x55B5  广播
+
+endmenu

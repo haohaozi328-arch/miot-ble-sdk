@@ -105,9 +105,11 @@ static void test_props_changed(void)
     CHECK(n == 24, "props_changed length");
     CHECK(out[4] == MIOT_OP_PROP_CHANGED, "opcode=4");
     CHECK(out[5] == 2, "leading count byte");
-    /* 第一个对象：siid=11, piid=2 (16LE), type16=(4<<12)|4=0x4004, value 4B */
+    /* 第一个对象：siid=11, piid=2 (16LE), type16=(UINT32<<12)|4=(5<<12)|4=0x5004, value 4B
+     * ★UINT32 的线上类型号是 5，不是 4（4 是 INT16）。曾经整体错位 1，
+     *   App 把 uint32 当 int16 解析，时间戳 1793491239 变成 -32353。 */
     CHECK(out[6] == 11 && out[7] == 0x02 && out[8] == 0x00, "obj1 siid/piid");
-    CHECK(out[9] == 0x04 && out[10] == 0x40, "obj1 type16");
+    CHECK(out[9] == 0x04 && out[10] == 0x50, "obj1 type16");
     CHECK(out[11] == 0x56 && out[12] == 0x34 && out[13] == 0x12, "obj1 value LE");
 }
 

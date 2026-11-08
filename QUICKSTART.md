@@ -16,28 +16,40 @@
 
 ## 2. 装环境（一次）
 
-跟着官方装 ESP-IDF **v5.5.x**，目标选 `esp32c3`：
+装 ESP-IDF **v6.0**：
 
-- Windows：ESP-IDF Installer 离线包
-- macOS / Linux：`git clone -b v5.5.4 --recursive https://github.com/espressif/esp-idf.git` → `./install.sh esp32c3`
+- Windows：官方 ESP-IDF Installer 离线包，装完桌面会生成一个 ESP-IDF 6.0 的命令行快捷方式
+- macOS / Linux：`git clone -b v6.0 --recursive https://github.com/espressif/esp-idf.git`
+  → `./install.sh esp32c3` → `. ./export.sh`
 
-装完打开 "ESP-IDF PowerShell/Terminal"，输入 `idf.py --version` 能出版本号就行。
+目标芯片**不用选**：工程里的 `sdkconfig.defaults` 已经写死 `esp32c3`。
+装完打开 ESP-IDF 的终端，`idf.py --version` 能出版本号就行。
 
-## 3. 让 AI 干活
+## 3. 编译烧录（三条命令）
 
-把仓库地址和这句话丢给 AI：
-
+```bash
+git clone https://github.com/haohaozi328-arch/miot-ble-sdk.git
+cd miot-ble-sdk/esp32/multi_dev
+idf.py build
+idf.py -p COM5 flash monitor        # Windows: COM5；macOS/Linux: /dev/tty.usbmodem*
 ```
-读 miot-ble-sdk/AGENTS.md，按里面的 S1~S5 做完：
-建工程、写 ble_link/store/main、编译、烧到 COM口，把串口日志贴给我。
-只用官方原版米家 App，不要用 hook/root/改 App。
-```
 
-AI 会自己建工程、编译、烧录。你只需要插上板子、告诉它串口号。
+- 串口不确定？Windows 在设备管理器看「USB JTAG/serial debug unit」那一行；macOS 用 `ls /dev/tty.usb*`
+- 烧不进去？按住板子上的 **BOOT** 键，点一下 **RST**，再松开 BOOT，然后重跑最后一条命令
+- `idf.py build` 报 `CMake Error`，多半是 IDF 版本不对（必须是 v6.0）
+
+默认启动的是**体脂秤 S400**。想换成温湿度计2 等其他设备，烧完之后在 `monitor` 里
+直接敲 `dev` 看序号表，`dev 1` 切过去（设备会擦身份自动重启）。
 
 ## 4. 验收
 
-**串口应该看到这几行（顺序固定）：**
+**烧完先看串口这一行**（每 5 秒一次；`bound=0` 表示「未绑定、可被添加」，这是正常状态）：
+
+```
+I (405) MIOT: host synced, 米家体脂秤 S400  PID=0x30D9  MAC 10:00:3B:CE:42:03  bound=0
+```
+
+**然后在米家里「添加设备」，绑定过程中串口会出现下面几行（顺序固定）：**
 
 ```
 ECDH keypair ready
@@ -49,9 +61,12 @@ REGISTER: did stored (utc=...)          ← 最关键的一行
 
 **手机（官方原版米家 App，国区账号）：**
 
-1. 首页「+」→ 添加设备 → 扫到「蓝牙温湿度计2」
+1. 首页「+」→ 添加设备 → 扫到「米家体脂秤 S400」（蓝牙名 `MJJ`）
 2. 点它 → 绑定 → 出现设备页
-3. 页面上有温度/湿度数值 → 成功
+3. 点页面上的「测量」，提示上秤时**短按一下板载 BOOT 键** → 页面出现体重并跳报告页
+
+> 换过型号的人看这里：`dev 1` 是蓝牙温湿度计2，添加时扫到的是它，页面上看温湿度。
+> 每台设备的验收点见 [docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
 
 ## 5. 不成怎么办
 

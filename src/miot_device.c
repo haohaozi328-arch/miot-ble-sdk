@@ -63,6 +63,20 @@ static int spec_reply(miot_device_t *d, const uint8_t *pt, size_t pt_len)
         }
         return -3;
     }
+
+    /* ★明文 trace：页面不刷新时，先确认发出去的 spec 包本身对不对
+     * （siid/piid/类型/值）。加密后的字节看不出来，出问题只能靠这段对照 spec。 */
+    static uint32_t n_reply;
+    if (n_reply < 40) {
+        char hex[3 * 40 + 4];
+        size_t n = pt_len > 40 ? 40 : pt_len, o = 0;
+        for (size_t i = 0; i < n; i++)
+            o += (size_t)snprintf(hex + o, sizeof(hex) - o, "%02X ", pt[i]);
+        hex[o] = 0;
+        dev_log(d, MIOT_LOG_INFO, "tx#%lu pt=%uB wire=%uB: %s%s",
+                (unsigned long)++n_reply, (unsigned)pt_len, (unsigned)(pt_len + 6),
+                hex, pt_len > 40 ? "..." : "");
+    }
     out[0] = (uint8_t)(d->tx_seq & 0xFF);
     out[1] = (uint8_t)(d->tx_seq >> 8);
     d->tx_seq++;
@@ -112,6 +126,21 @@ void miot_device_session_reset(miot_device_t *d)
 
 void miot_device_on_rx(miot_device_t *d, const uint8_t *data, size_t len)
 {
+    /* ★调试用 rx trace：App 在设备页初始化时会先发一串请求（0x001A/0x001B
+     * 上的 ag2 帧或 0x0010 上的明文 spec 包）。这些包如果不打印，设备侧看起来
+     * 就是「App 连上后什么都不做，页面一直转圈」，无法定位它到底在等什么。
+     * 只在长度有意义时打印，避免 CCCD 之类的空写刷屏。 */
+    static uint32_t n_rx;
+    if (len >= 4 && len <= 64 && n_rx < 400) {
+        char hex[3 * 32 + 4];
+        size_t n = len > 32 ? 32 : len, o = 0;
+        for (size_t i = 0; i < n; i++)
+            o += (size_t)snprintf(hex + o, sizeof(hex) - o, "%02X ", data[i]);
+        hex[o] = 0;
+        dev_log(d, MIOT_LOG_INFO, "rx#%lu len=%u: %s%s",
+                (unsigned long)++n_rx, (unsigned)len, hex,
+                len > 32 ? "..." : "");
+    }
     miot_ag2_rx(&d->ag2, data, len);
 }
 
@@ -201,6 +230,10 @@ static void handle_set(miot_device_t *d, const miot_spec_packet_t *pkt)
         } else if (d->on_set && d->on_set(d->user, in->siid, in->piid, in)) {
             result = 0;
         }
+        dev_log(d, MIOT_LOG_INFO, "spec SET %u.%u type=%u val=%u%s",
+                in->siid, in->piid, in->type,
+                in->type == MIOT_TYPE_STRING ? 0u : (unsigned)in->val.u32,
+                result ? " -> ERR" : "");
         memset(&res[i], 0, sizeof(res[i]));
         res[i].siid = in->siid;
         res[i].piid = in->piid;
@@ -213,12 +246,37 @@ static void handle_set(miot_device_t *d, const miot_spec_packet_t *pkt)
 
 /* ---------------- 明文请求分派 ---------------- */
 
+/* 固件可选接管 App 的 ACTION：体脂秤页面进「测量」时会发 ACTION siid=10 aiid=1，
+ * 这就是设备端唯一能看到的「用户点了测量」信号（23:57 实测成对出现）。 */
+__attribute__((weak)) void miot_demo_app_action_hook(uint8_t siid, uint16_t aiid)
+{
+    (void)siid; (void)aiid;
+}
+
+
+/* 解析失败时把明文打出来：App 的 SET 里可能出现我们没实现的类型
+ * （i16/u64/i64）或超长字符串，静默丢弃会让它无限重发、页面一直转圈。 */
+static void dump_hex(miot_device_t *d, const uint8_t *p, size_t len)
+{
+    char line[16 * 3 + 4];
+    for (size_t off = 0; off < len; off += 16) {
+        size_t n = len - off;
+        if (n > 16) n = 16;
+        int k = 0;
+        for (size_t i = 0; i < n; i++) k += snprintf(line + k, sizeof(line) - (size_t)k, "%02X ", p[off + i]);
+        dev_log(d, MIOT_LOG_WARN, "  pt[%02u] %s", (unsigned)off, line);
+    }
+}
+
+
 void miot_device_dispatch_plain(miot_device_t *d, const uint8_t *pt, size_t len)
 {
     miot_spec_packet_t pkt;
     int rc = miot_spec_parse(pt, len, &pkt);
     if (rc != 0) {
-        dev_log(d, MIOT_LOG_WARN, "spec parse fail rc=%d len=%uB", rc, (unsigned)len);
+        dev_log(d, MIOT_LOG_WARN, "spec parse fail rc=%d len=%uB op=%02x tid=%u",
+                rc, (unsigned)len, len > 4 ? pt[4] : 0, len > 3 ? (unsigned)(pt[2] | (pt[3] << 8)) : 0);
+        dump_hex(d, pt, len > 128 ? 128 : len);
         return;
     }
     switch (pkt.op) {
@@ -230,6 +288,7 @@ void miot_device_dispatch_plain(miot_device_t *d, const uint8_t *pt, size_t len)
         break;
     }
     case MIOT_OP_ACTION: {
+        miot_demo_app_action_hook(pkt.siid, pkt.piid);
         /* 应答格式仅 [op=6][respCode16=0]，带 siid/aiid 会被 App 解析为失败并无限重发 */
         uint8_t r[7];
         int n = miot_spec_build_action_reply(pkt.tid, 0, r, sizeof(r));
@@ -256,7 +315,8 @@ int miot_device_send_event(miot_device_t *d, uint8_t siid, uint16_t eiid,
                            const miot_spec_value_t *args, size_t argc)
 {
     if (!d->session_ok) return -1;
-    uint8_t pt[128];
+    /* 8.2 结果帧是 28 字段 CSV（pt≈78B），128 够但余量太小，统一放 256 */
+    uint8_t pt[256];
     uint16_t tid = d->tid++;
     int n = miot_spec_build_event(tid, siid, eiid, args, argc, pt, sizeof(pt));
     if (n <= 0) return n;
@@ -268,7 +328,7 @@ int miot_device_send_props_changed(miot_device_t *d,
                                    const miot_spec_value_t *props, size_t count)
 {
     if (!d->session_ok) return -1;
-    uint8_t pt[128];
+    uint8_t pt[256];
     uint16_t tid = d->tid++;
     int n = miot_spec_build_props_changed(tid, props, count, pt, sizeof(pt));
     if (n <= 0) return n;

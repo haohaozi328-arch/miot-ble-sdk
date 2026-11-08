@@ -21,9 +21,15 @@ extern "C" {
  * （事件被 App 解析并广播到插件；插件出数需匹配其订阅 topic，进行中） */
 void scale_s400_init(miot_device_t *dev, miot_port_t *port,
                      miot_prop_t **tbl, size_t *cnt);
-/** 完整测量上报序列：过程流(8.1×4) → 结果(8.2) → 11.1022 → 属性变更(11.2/11.3) */
+/** 完整测量上报序列：过程流(8.1×4) → 结果(8.2) → 11.1022 → 属性变更(11.2/11.3)
+ *  host/示例用：一坨全发。真机上必须**按步分帧、帧间留空**，
+ *  因为 App 的 ag2 接收窗口同一毫秒只吃第一帧（docs/testing.md 关键要点 2）。 */
 void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
                        uint32_t impedance_01, uint32_t ts);
+/** 分步版：step = 0..SCALE_S400_STEPS-1，每步只发一帧，由调用方按 gap 表节流 */
+#define SCALE_S400_STEPS 7
+int  scale_s400_report_step(miot_device_t *dev, int step,
+                            uint32_t weight_01g, uint32_t impedance_01, uint32_t ts);
 /** siid 扫射（私有 spec 事件 siid 未知时探查） */
 void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2);
 
@@ -47,9 +53,16 @@ void night_light_init(miot_device_t *dev, miot_port_t *port,
                       miot_prop_t **tbl, size_t *cnt);
 
 /* ============ 6. 驱蚊器智能版（WX08ZM，PID 0x040A） ============
- * 验证状态：绑定 + 开关下发/回报 + 电量 ✓（0x1012 开关 / 0x1013 驱蚊片余量） */
+ * 验证状态：绑定 + 认证 + spec 上报 ✓（zimi.mosq.v1：2.1 药量 / 3.1 电量 / 4.1 开关） */
 void repeller_init(miot_device_t *dev, miot_port_t *port,
                    miot_prop_t **tbl, size_t *cnt);
+/** 上报 2.1 药量 + 3.1 电量 + 4.1 开关，一帧三条。
+ *  ⚠️ PID 0x040A 对应 zimi.mosq.v1，不是 v2：开关在 4.1(bool)，药量在 2.1(uint8)，
+ *  且 v1 没有 mode 属性。报错 siid/piid 或类型会让 App 卡在「设备初始化」。 */
+void repeller_report(miot_device_t *dev, uint8_t power, uint8_t battery,
+                     uint8_t margin, uint32_t ts);
+/** 设备侧当前开关状态（App 下发 set 后立即更新），上报前先读它做镜像 */
+uint8_t repeller_power(void);
 
 /* ============ 4. 无线按钮（XMWXKG01LM） ============
  * 验证状态：绑定 + 按钮配置属性读写(3.1020) ✓ */

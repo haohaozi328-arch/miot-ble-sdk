@@ -7,8 +7,8 @@
 >
 > **本项目不含、也不需要任何 hook / Xposed / Magisk / LSPatch 模块，不修改、不注入
 > 米家 App。** 设备能否被接受，只取决于设备端协议是否正确；用户路径上只有
-> **官方原版 App**。仓库内没有可烧录工程，固件由你（或你的 AI 助手）按
-> [AGENTS.md](AGENTS.md) 现场构建。
+> **官方原版 App**。仓库内已含可编译烧录的 ESP32 工程
+> （[`esp32/multi_dev`](esp32/multi_dev)，三条命令烧完），无需任何模块。
 
 米家（MIoT）BLE Spec v2 设备端 SDK —— 从实测互通验证的 S400 体脂秤模拟固件中抽象而来。
 
@@ -63,28 +63,43 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ./build/example-thermometer    # 打印一帧 properties_changed
 ```
 
-### 想烧到板子上（AI 代劳，约 20 分钟）
+### 想烧到板子上（自带工程，三条命令）
 
-本仓库是 SDK，**不含现成工程**——工程由 AI 现建、编译、烧录。把仓库地址和
-[AGENTS.md](AGENTS.md) 一起丢给 AI 即可，它包含：环境安装、工程脚手架、
-必须实现的 BLE 层规格（服务/特征 UUID、广播两种形态、31B 预算）、验收判据、排障分支。
+仓库里已经有一个**可直接编译烧录**的 ESP-IDF 工程：[`esp32/multi_dev`](esp32/multi_dev)，
+内置 11 台设备的档案（默认启动体脂秤 S400），`sdkconfig.defaults` 已把目标芯片、
+NimBLE、mbedTLS、栈大小等全部预设好，克隆下来直接 build 就行，不需要改配置。
 
-人类一页纸版本：[QUICKSTART.md](QUICKSTART.md)。
+装好 ESP-IDF **v6.0**（`idf.py --version` 能出版本号），然后：
 
 ```bash
-idf.py --version                       # 环境就绪判据
-idf.py create-project miot-thermo       # AI 建工程
-idf.py build && idf.py -p <PORT> flash monitor
+cd miot-ble-sdk/esp32/multi_dev
+idf.py build                            # 首次约 3~5 分钟
+idf.py -p COM5 flash monitor            # Windows 写 COM5，macOS/Linux 写 /dev/tty.usbmodem*
 ```
 
-预期串口（顺序固定）：
+就这三条。烧完串口会每 5 秒打印一次运行状态，接下来在官方米家里「添加设备」：
 
 ```
-ECDH keypair ready
-REGISTER COMPLETE (result 0x11 on 0x0010)
-REGISTER: did stored (utc=...)
+I (405) MIOT: host synced, 米家体脂秤 S400  PID=0x30D9  MAC 10:00:3B:CE:42:03  bound=0
+```
+
+`bound=0` → 设备处于未绑定广播状态，App 能扫到；绑定成功后变 `bound=1`，
+App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](docs/troubleshooting.md)。
+
+**换一台设备**：串口发 `dev` 看 11 个序号，`dev 1` 切到温湿度计2，设备会擦身份自动重启。
+**板载 BOOT 键**：短按 = 触发一次称重（等价于真机上「人踩上去」）；长按 5 秒 = 清 NVS 恢复出厂。
+
+人类一页纸版本：[QUICKSTART.md](QUICKSTART.md)；让 AI 代劳的版本：[AGENTS.md](AGENTS.md)。
+
+绑定 + 会话建立时，串口按这个顺序打印（每一行都对应一个协议阶段，缺哪行就卡在哪）：
+
+```
+ECDH keypair ready                       ← 开机预生成 P-256 密钥
+REGISTER COMPLETE (result 0x11 on 0x0010) ← App 下发的绑定请求已被接受
+REGISTER: did stored (utc=...)            ← 身份写入 NVS，重启也不丢
 *** STD REGISTER: bind result OK (bound=1) ***
-*** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+*** STD LOGIN COMPLETE (0x21 on 0x0010) *** ← 会话密钥就绪，spec 通道打通
+*** session established: spec channel ready ***
 ```
 
 遇到问题先看 [docs/troubleshooting.md](docs/troubleshooting.md)，

@@ -26,14 +26,18 @@ static int send_event_str(miot_device_t *dev, uint8_t siid, uint16_t eiid,
 
 static uint8_t  s400_battery = 92;      /* 3.1003 电量 % */
 static uint8_t  s400_unit    = 0;       /* 0=kg 1=lb */
-static uint32_t s400_weight  = 0;       /* 最近体重 0.01kg */
-static uint32_t s400_imp     = 0;      /* 最近阻抗 0.1Ω */
+static uint8_t  s400_mode    = 0;       /* 10.1 work-mode: 0=normal 1=baby 2=balance 3=visitor 4=single */
+static uint32_t s400_weight  = 0;       /* 最近体重，0.1kg 单位（页面直接显示） */
+static uint32_t s400_imp     = 0;       /* 最近阻抗 0.1Ω */
 
 static miot_prop_t s400_props[] = {
     { 3, 1003, MIOT_TYPE_U8,  MIOT_PROP_R,  1, &s400_battery, 0, 0,   NULL, "battery"   },
     { 3, 1004, MIOT_TYPE_U8,  MIOT_PROP_RW, 1, &s400_unit,    0, 1,   NULL, "unit"      },
     { 3, 1005, MIOT_TYPE_U32, MIOT_PROP_R,  4, &s400_weight,  0, 0,   NULL, "weight"    },
     { 3, 1006, MIOT_TYPE_U32, MIOT_PROP_R,  4, &s400_imp,     0, 0,   NULL, "impedance" },
+    /* 10.1 必须注册：插件开屏会 GET 一次 work-mode，未注册拿到 result=1（不认识），
+     * 页面按「不支持」处理，测量入口点不动（docs/protocol.md §11）。 */
+    { 10, 1,   MIOT_TYPE_U8,  MIOT_PROP_RW, 1, &s400_mode,    0, 4,   NULL, "work-mode" },
 };
 
 static bool s400_get(void *user, uint8_t siid, uint16_t piid, miot_spec_value_t *out)
@@ -45,7 +49,11 @@ static bool s400_get(void *user, uint8_t siid, uint16_t piid, miot_spec_value_t 
 
 static bool s400_set(void *user, uint8_t siid, uint16_t piid, const miot_spec_value_t *in)
 {
-    (void)user; (void)siid; (void)piid; (void)in;
+    (void)user;
+    /* 云端 access 是 []，插件 setProps 会被 JS 框架拦掉，一般到不了这里；
+     * 但 native 通道仍有直接写 10.1 的情况，接受比拒绝安全 —— 拒绝会让页面
+     * 停在「上秤」不动。 */
+    if (siid == 10 && piid == 1) { s400_mode = in->val.u8; return true; }
     return false;
 }
 
@@ -59,39 +67,79 @@ void scale_s400_init(miot_device_t *dev, miot_port_t *port,
     if (cnt) *cnt = sizeof(s400_props) / sizeof(s400_props[0]);
 }
 
-void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
-                       uint32_t impedance_01, uint32_t ts)
+/* 单位换算（★全链路最容易错的一处，2026-11-08 卡在「上秤」就是它）：
+ *   入参 weight_01g 是「克」，App 侧要 kg×10（插件 keyNeedDivide10，÷10 得 kg）。
+ *   旧实现直接塞克（64500）→ 插件算成 6450kg，超量程丢弃 → 页面停在「上秤」。 */
+static uint32_t s400_kg10(uint32_t grams) { return grams / 100u; }
+
+/* 一帧一步：0..3 = 8.1 过程流，4 = 8.2 结果，5 = 11.1022，6 = 11.2/11.3 属性变更。
+ * ★必须由调用方节流（App 的 ag2 接收窗口同一毫秒只吃一帧，连发会整帧丢）。*/
+int scale_s400_report_step(miot_device_t *dev, int step,
+                           uint32_t weight_01g, uint32_t impedance_01, uint32_t ts)
 {
-    char s[48];
+    char s[160];
+    uint32_t w = s400_kg10(weight_01g);
 
-    /* ① 过程流（「双脚上秤」）：上秤 → 波动中 → 稳定 → 离秤标记 */
-    send_event_str(dev, 8, 1, 1, "0,0");
-    snprintf(s, sizeof(s), "%u,0", (unsigned)(weight_01g * 90 / 100));
-    send_event_str(dev, 8, 1, 1, s);
-    snprintf(s, sizeof(s), "%u,1", (unsigned)weight_01g);
-    send_event_str(dev, 8, 1, 1, s);
-    send_event_str(dev, 8, 1, 1, "0,6");
+    if (step < 0 || step >= SCALE_S400_STEPS) return -1;
 
-    /* ② 完整结果：九参 CSV（App 实测解析通过） */
-    snprintf(s, sizeof(s), "0,0,0,%u,%u,0,0,0,0",
-             (unsigned)weight_01g, (unsigned)impedance_01);
-    send_event_str(dev, 8, 2, 1, s);
+    if (step <= 2) {
+        s400_weight = w;
+        s400_imp = impedance_01;
+        /* 8.1（piid=1）"体重(kg×10),状态"：
+         *   0=weighting 1=bodyWeight 2=weighingHeart 3=overweight
+         *   4=timeout   5=smallWeight 6=done */
+        switch (step) {
+        case 0: strcpy(s, "0,0"); break;
+        case 1: snprintf(s, sizeof(s), "%u,0", (unsigned)(w * 9 / 10)); break;
+        default: snprintf(s, sizeof(s), "%u,1", (unsigned)w); break;
+        }
+        return send_event_str(dev, 8, 1, 1, s);
+    }
 
-    /* ③ 11.1022 BLE 专用事件：duid(1B) + 复合字段(4B) + 时间戳(4B) */
-    uint32_t metrics = (weight_01g & 0x7FF) | ((impedance_01 & 0x3FFF) << 18);
-    miot_spec_value_t a3[3];
-    memset(a3, 0, sizeof(a3));
-    a3[0].piid = 1; a3[0].type = MIOT_TYPE_U8;  a3[0].val.u8  = 1;
-    a3[1].piid = 2; a3[1].type = MIOT_TYPE_U32; a3[1].val.u32 = metrics;
-    a3[2].piid = 3; a3[2].type = MIOT_TYPE_U32; a3[2].val.u32 = ts;
-    miot_device_send_event(dev, 11, 1022, a3, 3);
+    if (step == 3) {
+        /* 8.2（★piid=1，以 docs/protocol.md §4.4 的抓包样本为准：
+         *   07 08 02 00 01 01 00 16 a0 → eiid=2, argc=1, piid=1, type=10, len=22）
+         * ★保持 28 字段完整版：23:12 实测这一版能出数（type16 修正为 0xA0.. 之后）。
+         *   插件 uploadBodyDataObj 按下标取：
+         *   [3]=weight(kg×10) [4]=heartRate [5]=weightDoneStatus(0=正常)
+         *   [6]=设备时间(unix 秒) [7]=bfp 体脂率 [8]=slm 骨骼肌 */
+        snprintf(s, sizeof(s),
+                 "0,0,0,%u,0,0,%u,185,275,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+                 (unsigned)w, (unsigned)ts);
+        return send_event_str(dev, 8, 2, 1, s);
+    }
 
-    /* ④ properties_changed 11.2 / 11.3（双保险） */
+    if (step == 4) {
+        /* done 必须放在结果之后：真机是「稳定 → 出结果 → 结束称重」，
+         * 先发 done 插件会提前收掉称重流程，后面的 8.2 就没人接了。 */
+        return send_event_str(dev, 8, 1, 1, "0,6");
+    }
+
+    uint32_t metrics = (w & 0x7FF) | ((impedance_01 & 0x3FFF) << 18);
+
+    if (step == 5) {
+        /* 11.1022 收尾事件：duid(1B) + 复合字段(4B) + 时间戳(4B) */
+        miot_spec_value_t a3[3];
+        memset(a3, 0, sizeof(a3));
+        a3[0].piid = 1; a3[0].type = MIOT_TYPE_U8;  a3[0].val.u8  = 1;
+        a3[1].piid = 2; a3[1].type = MIOT_TYPE_U32; a3[1].val.u32 = metrics;
+        a3[2].piid = 3; a3[2].type = MIOT_TYPE_U32; a3[2].val.u32 = ts;
+        return miot_device_send_event(dev, 11, 1022, a3, 3);
+    }
+
+    /* 11.2 / 11.3 双保险 */
     miot_spec_value_t pc[2];
     memset(pc, 0, sizeof(pc));
     pc[0].siid = 11; pc[0].piid = 2; pc[0].type = MIOT_TYPE_U32; pc[0].val.u32 = metrics;
     pc[1].siid = 11; pc[1].piid = 3; pc[1].type = MIOT_TYPE_U32; pc[1].val.u32 = ts;
-    miot_device_send_props_changed(dev, pc, 2);
+    return miot_device_send_props_changed(dev, pc, 2);
+}
+
+void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
+                       uint32_t impedance_01, uint32_t ts)
+{
+    for (int i = 0; i < SCALE_S400_STEPS; i++)
+        scale_s400_report_step(dev, i, weight_01g, impedance_01, ts);
 }
 
 void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2)
@@ -272,19 +320,32 @@ void night_light_init(miot_device_t *dev, miot_port_t *port,
 }
 
 /* ================= 6. 驱蚊器智能版（WX08ZM，PID 0x040A） =================
- * 2.1 开关（唯一可写）/ 3.1 电量。真机行为：set 后立刻回报 0x1012。 */
+ * PID 0x040A = 十进制 1034，就是米家驱蚊器智能版，对应 spec
+ *   urn:miot-spec-v2:device:mosquito-dispeller:0000A065:zimi-v1:1  (zimi.mosq.v1)
+ * ★★ 2026-11-07 实测踩坑：早前照 zimi.mosq.v2 抄的四属性表（2.1 on / 2.2 mode /
+ *   4.1 repellent-left-level / 3.1 battery）在这个 PID 上全错位 —— v1 里
+ *   2.1 是「驱蚊片余量(uint8 只读)」、4.1 才是「开关(bool 读写)」、根本没有 2.2。
+ *   于是 App 收到的第一帧就是「2.1=bool」，类型与 spec 不符，解析直接失败，
+ *   设备页永远停在「设备初始化 / 蓝牙连接中」，即使认证、加密、推包全部正常。
+ *   对照 v1 官方 spec 只有三个属性：
+ *     2.1 repellent-left-level  uint8 只读 0~100   ← 驱蚊片余量
+ *     3.1 battery-level         uint8 只读 0~100   ← 电量
+ *     4.1 on                    bool  读写        ← 开关
+ * 真机行为：set 4.1 后立刻回报 properties_changed(4.1)。 */
 
 static uint8_t rp_on      = 0;
+static uint8_t rp_margin  = 76;
 static uint8_t rp_battery = 65;
 
 static void rp_on_power(const struct miot_prop *p)
 {
-    (void)p;    /* 真机：置 pending 标志，下一拍发 properties_changed(2.1) */
+    (void)p;    /* 真机：置 pending 标志，下一拍发 properties_changed(4.1) */
 }
 
 static miot_prop_t rp_props[] = {
-    { 2, 1, MIOT_TYPE_BOOL, MIOT_PROP_RW, 1, &rp_on,      0, 0, rp_on_power, "power"   },
-    { 3, 1, MIOT_TYPE_U8,   MIOT_PROP_R,  1, &rp_battery, 0, 0, NULL,        "battery" },
+    { 2, 1, MIOT_TYPE_U8,   MIOT_PROP_R,  1, &rp_margin,  0, 100, NULL,        "margin"  },
+    { 3, 1, MIOT_TYPE_U8,   MIOT_PROP_R,  1, &rp_battery, 0, 100, NULL,        "battery" },
+    { 4, 1, MIOT_TYPE_BOOL, MIOT_PROP_RW, 1, &rp_on,      0, 1,   rp_on_power, "power"   },
 };
 
 void repeller_init(miot_device_t *dev, miot_port_t *port,
@@ -295,6 +356,30 @@ void repeller_init(miot_device_t *dev, miot_port_t *port,
                        NULL, NULL, NULL);
     if (tbl) *tbl = rp_props;
     if (cnt) *cnt = sizeof(rp_props) / sizeof(rp_props[0]);
+}
+
+uint8_t repeller_power(void)
+{
+    return rp_on ? 1 : 0;
+}
+
+void repeller_report(miot_device_t *dev, uint8_t power, uint8_t battery,
+                     uint8_t margin, uint32_t ts)
+{
+    rp_on      = power ? 1 : 0;
+    rp_battery = battery;
+    rp_margin  = margin;
+
+    /* 按 zimi.mosq.v1 真实 spec 报全三个属性：2.1 药量 / 3.1 电量 / 4.1 开关。
+     * 一帧 3 条 = 24B 明文（wire 30B），ag2 自动拆 18B+12B 两片，
+     * 与温湿度计已验证的同款路径一致（它一帧 33B 也是这么过的）。 */
+    miot_spec_value_t pc[3];
+    memset(pc, 0, sizeof(pc));
+    pc[0].siid = 2; pc[0].piid = 1; pc[0].type = MIOT_TYPE_U8;   pc[0].val.u8 = rp_margin;
+    pc[1].siid = 3; pc[1].piid = 1; pc[1].type = MIOT_TYPE_U8;   pc[1].val.u8 = rp_battery;
+    pc[2].siid = 4; pc[2].piid = 1; pc[2].type = MIOT_TYPE_BOOL; pc[2].val.u8 = rp_on ? 1 : 0;
+    miot_device_send_props_changed(dev, pc, 3);
+    (void)ts;
 }
 
 /* ================= 通用：auth ↔ device 标准接线 ================= */

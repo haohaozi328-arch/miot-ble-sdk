@@ -136,7 +136,12 @@ int miot_spec_build_event(uint16_t tid, uint8_t siid, uint16_t eiid,
                           const miot_spec_value_t *args, size_t argc,
                           uint8_t *out, size_t cap)
 {
-    if (argc > MIOT_SPEC_MAX_ARGS || cap < 8 + argc * (MIOT_SPEC_MAX_STR + 4)) return -1;
+    /* ★只校验参数个数与最小头部空间。原来按「每个参数都是最长字符串」做
+     * 最坏情况预检（cap < 8 + argc*(MAX_STR+4)），argc=3 时要求 140B，
+     * 而调用方缓冲是 128B，于是 11.1022 事件永远返回 -1 —— 收尾事件缺失，
+     * App 报告页永远等不到完成信号（23:07 实测 step 5/7 rc=-1）。
+     * 真正的容量检查在下面逐参数做（n + 2 + en > cap）。 */
+    if (argc > MIOT_SPEC_MAX_ARGS || cap < 8) return -1;
     size_t n = hdr_begin(out, tid, MIOT_OP_EVENT);
     out[n++] = siid;
     put16(out + n, eiid); n += 2;
@@ -180,17 +185,27 @@ static int parse_object(const uint8_t *p, size_t remain, miot_spec_value_t *v)
     switch (vtype) {
     case MIOT_TYPE_BOOL:
     case MIOT_TYPE_U8:   v->val.u8  = val[0]; break;
-    case MIOT_TYPE_U16:  v->val.u16 = get16(val); break;
+    case MIOT_TYPE_U16:
+    case MIOT_TYPE_I16:  v->val.u16 = get16(val); break;
     case MIOT_TYPE_U32:
     case MIOT_TYPE_I32:  memcpy(&v->val.u32, val, 4); break;
+    case MIOT_TYPE_U64:
+    case MIOT_TYPE_I64:  memcpy(&v->val.u32, val, 4); break;   /* 只取低 32 位 */
     case MIOT_TYPE_FLOAT: memcpy(&v->val.f, val, 4); break;
-    case MIOT_TYPE_STRING:
-        if (vlen > MIOT_SPEC_MAX_STR) return -2;
-        memcpy(v->val.str, val, vlen);
-        v->val.str[vlen] = 0;
+    case MIOT_TYPE_STRING: {
+        /* ★超长字符串不再让整包失败：App 会把整段配置/CSV 塞进 SET，
+         * 一旦返回 -2，miot_device_dispatch_plain 就整帧丢弃，App 无限重发，
+         * 页面永远等不到 set_reply（23:47 实测 spec parse fail rc=-4）。
+         * 这里截断保留，至少能把 set_reply 回过去，让流程继续。 */
+        size_t n = vlen > MIOT_SPEC_MAX_STR ? MIOT_SPEC_MAX_STR : vlen;
+        memcpy(v->val.str, val, n);
+        v->val.str[n] = 0;
         break;
+    }
     default:
-        return -2;
+        /* 未知类型也不要整包失败，置 0 继续解析后面的对象 */
+        memset(&v->val, 0, sizeof(v->val.str));
+        break;
     }
     return (int)(6 + vlen);
 }
