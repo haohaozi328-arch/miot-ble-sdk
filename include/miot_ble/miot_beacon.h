@@ -103,6 +103,19 @@ int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
                          const uint8_t *objs, size_t objs_len,
                          uint8_t *out, size_t cap);
 
+/**
+ * 同上，但走「无 MAC 形态」：FC 0x48/0x59，帧里不带 6B MAC。
+ *
+ * 专给 GATT notify 用 —— App 的 ATT MTU 固定 23（单包 20B），带 MAC 的形态
+ * 光帧头+尾部就 18B，只剩 2B，连一个 u8 对象都放不下；去掉 MAC 后 13+objs_len，
+ * 一个 3B 对象 = 19B。GATT 上接收方靠连接识别设备，MAC 冗余。
+ *
+ * @return 帧长（13+objs_len），负数失败
+ */
+int miot_beacon_frame_v5_nomac(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
+                               const uint8_t *objs, size_t objs_len,
+                               uint8_t *out, size_t cap);
+
 /* ---------- 未绑定（可被 App 发现）广播帧与扫描探测 ---------- */
 
 /**

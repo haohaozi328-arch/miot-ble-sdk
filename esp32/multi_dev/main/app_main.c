@@ -39,6 +39,7 @@
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
+#include "host/ble_gatt.h"
 #include "host/util/util.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
@@ -84,7 +85,10 @@ static const char *const sn_motion[] = { "motion", "no_motion", "button", "batte
 static const char *const sn_leak[]   = { "leak", "battery" };
 
 static const dev_desc_t k_devs[] = {
-    { "NIGHTL",   "MUE4094RT",  "夜灯2 (MUE4094RT)",          0x07F6, 0, 0, 1, sn_batt,   night_light_init },
+    /* ★PID 必须是 0x03DD：2026-10-31 实测（LIGHT_SHELL）App 认这个号，
+     * 显示「米家夜灯2」并可进设备页。早前误填 0x07F6（那是只走网关的
+     * 执行器壳），App 绑完只给一个通用「夜灯」页、无控件且要求蓝牙网关。 */
+    { "NIGHTL",   "MUE4094RT",  "夜灯2 (MUE4094RT)",          0x03DD, 0, 0, 1, sn_batt,   night_light_init },
     { "THERMO",   "LYWSD03MMC", "蓝牙温湿度计2 (LYWSD03MMC)",  0x055B, 0, 1, 3, sn_thb,    thermometer_init },
     { "SCALE",    "MJJ",        "米家体脂秤 S400",             0x30D9, 0, 0, 1, sn_batt,   scale_s400_init  },
     { "BTN2",     "XMWXKG01YL", "无线开关 双键 (XMWXKG01YL)",  0x1949, 0, 0, 1, sn_batt,   button_dev_init  },
@@ -109,13 +113,59 @@ static const char       *TAG = "MIOT";
 #define DEV_BEACON_KIND (D->beacon_kind)
 #define DEV_SLOTS       (D->slots)
 
+/* BondAbility（广播帧最后一个字节的 bit3~4）：
+ *   1 = 旧版绑定（App 下发 12B token，走 RC4 挑战应答）
+ *   2 = 标准认证（ECDH P-256 + HKDF）
+ * ★夜灯2（0x03DD）必须发 1。实测对比：
+ *   发 2 时 App 认为「已按标准认证绑过」，于是跳过 INIT/token 协商，
+ *   冷启写一条 GETRAND，1 秒后判失败、退订 CCCD 主动断开
+ *   （旧工程 serial_rebind2.log 成功那次广播的正是 0x08，即 BondAbility=1）。
+ *   而发 1 时 App 会走完整流程：INIT(静默) → 下发 12B token → GETRAND →
+ *   LOGIN，token 由 App 指定，不存在两边派生不一致的问题。 */
+#define DEV_BOND_ABILITY ((DEV_PID == 0x03DD) ? 1 : 2)
+
+/* 未绑定广播的 FC 高字节（bit8 registered | bit9 solicited | bit10~11 authMode | bit12~15 version）
+ *   0x22 = v2 | solicited=1 | authMode=0   ← 旧工程跑通那次用的就是它
+ *   0x58 = v5 | solicited=0 | authMode=2   ← 我们原来
+ * 串口 `fc 58` / `fc 22` 可运行时切换，避免为这一个字节反复烧录。 */
+static uint8_t s_fc_hi;   /* 0 = 按档案自动（旧版绑定 0x22，其余 0x58） */
+/* 强制以「待绑定」形态广播（即使 NVS 里 bound=1）。
+ * 现场唯一的全链路成功轮（AUTH_INIT → token → BOND → DeviceID → GETRAND →
+ * LOGIN 全过）就发生在设备广播待绑定帧的时候；广播已绑定帧的每一次连接，
+ * App 都在订阅完 0x0001 后 1 秒主动放弃。串口 `advu 1` 打开。 */
+static uint8_t s_adv_unbound;
+
 #define ADV_PERIOD_MS  1500
+/* 未绑定时不要每 1.5s 停一次广播：每次 adv_refresh 都是 stop+start，
+ * 空档里手机的连接请求会落空（夜灯2 表现为「扫得到、点了没反应」）。
+ * 未绑定 hello 帧的 frame counter 对 App 无意义，拉长周期即可。 */
+#define ADV_PERIOD_UNBOUND_MS 5000
+/* 真机夜灯2 的「蓝牙设定按钮」按一下 = 唤醒广播一段时间。BOOT 短按等价：
+ * 30s 内用 20~30ms 的快广播，手机更容易连上，App 也会看到广播变密。 */
+#define ADV_FAST_MS    30000
+#define ADV_FAST_ITVL_MIN 32
+#define ADV_FAST_ITVL_MAX 48
 #define SPEC_PERIOD_MS 5000
 #define NVS_NS         "miot"
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
 #define NVS_KEY_PID    "devpid"
 #define NVS_KEY_SEL    "devsel"
+/* MAC 版本号：每 +1 末字节 +2，换一个全新 BLE 地址。
+ * 米家/MIUI 会把「反复绑定失败过的地址」写进 DeviceBlackList（仓库里已有该结论），
+ * 同一地址反复失败后就再也不会走完整绑定流程——App 只做「连上→订阅→1 秒后断开」
+ * 的试探循环，且写的是 GETRAND（登录）而不是 INIT（绑定）。串口 `newmac` 递增。 */
+#define NVS_KEY_MACV   "macv"
+
+/* ★每个档案一个独立命名空间（2026-11-11 22:xx）：
+ *   sel=0 -> "miot"（沿用旧数据），sel>0 -> "miot<sel>"。
+ * 动机：以前 `dev N` 会 nvs_flash_erase() 把身份清空，设备变成"全新未绑定"，
+ * 重新绑定时米家云端就多建一条设备记录（实测出现两台「飞利浦蓝牙夜灯」）。
+ * 改成每档案独立后，各档案的 token/bind_key/fcnt/macv 互不覆盖，
+ * 切换档案不再丢绑定、也不会再诱导米家重复添加。
+ * devsel 本身必须放在全局命名空间，否则"先有鸡还是先有蛋"。 */
+#define NVS_NS_GLOBAL  "miotcfg"   /* 只放 devsel */
+static char s_ns[16] = "miot";     /* 当前档案的命名空间 */
 
 /* ---------------- 模拟读数 ----------------
  * 值必须缓慢波动：网关对「没变化」的属性只上报一次，写死会让云端曲线永远空白。 */
@@ -152,6 +202,29 @@ static int      s_logged_in;
 static uint32_t s_login_ms;         /* 会话建立时刻，用来排除握手期误触发 */
 static int      s_was_bound;
 static volatile int s_weigh_req;    /* BOOT 短按置位，主循环消费 */
+static volatile int s_adv_req;      /* BOOT 短按：请求一次「配对唤醒」广播 */
+static uint32_t s_fast_until;       /* 快广播截止时刻（ms） */
+
+/* 夜灯2 的传感器上报（米家自动化唯一的数据来源）。
+ * 这个型号是「条件设备」：只能当触发源，不能被小爱控制（官方 FAQ 明确写不支持）。
+ * 网关把它当人体/光线传感器用，靠的正是 MiBeacon 的 0x000F 对象；
+ * 没有网关、或广播里不带这个对象，米家「智能场景」里就不会出现以它为条件的选项。 */
+static uint8_t  s_nl_motion;            /* 0x000F b1：0=无人 1=有人 */
+static uint8_t  s_nl_light = 1;         /* 0x000F b2：0=暗 1=亮 */
+static uint32_t s_nl_motion_until;      /* 有人状态保持到何时（ms），到点自动回落 */
+static volatile int s_nl_motion_req;    /* CLI 置位，主循环消费（跨任务不直接碰广播） */
+
+/* 无线开关（XMWXKG01YL / XMWXKG01CM）的按键事件。
+ * 这个型号是纯「事件源」：设备页没有任何控件，米家自动化完全依赖 MiBeacon 的
+ * 0x4E0C(单击) / 0x4E0D(双击) / 0x4E0E(长按) 三个对象。
+ * ★之前的固件里这三个对象只在 miot_beacon.h 定义过、代码一次都没发过
+ *   （build_frame 对 BTN 档案走 default 分支只发电量），所以按键事件永远上不了云。
+ * 事件必须重复广播一段时间：网关按「同一对象连续若干帧」确认一次事件，
+ * 只发一帧大概率被当成广播抖动丢掉。 */
+static uint16_t s_btn_obj;              /* 0=空闲；否则 0x4E0C/0x4E0D/0x4E0E */
+static uint8_t  s_btn_key = 1;          /* 载荷 = 按键号：1=左键 2=右键（双键版语义） */
+static uint32_t s_btn_until;            /* 事件保持到何时（ms），到点回落电量帧 */
+static volatile int s_btn_req;          /* 1=单击 2=双击 3=长按，主循环消费 */
 /* 称重序列的分帧状态机（见 scale_s400_report_step：一帧一步，必须节流） */
 static int      s_wstep = -1;
 static uint32_t s_wnext, s_ww, s_wimp, s_wts;
@@ -277,7 +350,7 @@ static void id_save(void *user, const miot_auth_identity_t *id)
 {
     (void)user;
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_open(s_ns, NVS_READWRITE, &h) != ESP_OK) return;
     esp_err_t err = nvs_set_blob(h, NVS_KEY_ID, id, sizeof(*id));
     if (err == ESP_OK) err = nvs_commit(h);
     nvs_close(h);
@@ -289,7 +362,7 @@ static bool id_load(void *user, miot_auth_identity_t *id)
 {
     (void)user;
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) return false;
+    if (nvs_open(s_ns, NVS_READONLY, &h) != ESP_OK) return false;
     size_t len = sizeof(*id);
     esp_err_t err = nvs_get_blob(h, NVS_KEY_ID, id, &len);
     nvs_close(h);
@@ -299,10 +372,154 @@ static bool id_load(void *user, miot_auth_identity_t *id)
     return true;
 }
 
-static void fcnt_load(void)
+/* ---------------- legacy（App 下发 token）绑定完成回调 ----------------
+ * 由 gatt_miot.c 在解出 BOND（cipher(token, 0xFA54AB92)）后调用。
+ *
+ * 旧工程 mi_beacon v121 的实机日志里，BOND 一确认广播立刻切成
+ * 「bound kind=2 cnt=49 len=24」；不切的话 App 这边认证虽然过了，但回到
+ * 设备列表仍然找不到已绑定的设备，加设备流程最终仍报「连接超时」。
+ * token 是 App 指定的（不是 ECDH 派生的），所以直接当本机身份用；
+ * bind_key 必须与广播加密用的是同一份，首次随机生成后就不再变。 */
+/* 收到 12B token 立刻落盘（gatt_miot.c 在 ACK 之后调用）。
+ * 只更新 token，不动 bound、不切广播 —— 绑定判定仍由 BOND 那一帧决定。 */
+void miot_legacy_token_hook(const uint8_t token[12])
 {
-    nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) { s_fcnt = 1; return; }
+    if (memcmp(s_auth.id.token, token, 12) == 0) return;
+    memcpy(s_auth.id.token, token, 12);
+    id_save(NULL, &s_auth.id);
+    ESP_LOGW(TAG, "*** legacy token 落盘: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X ***",
+             token[0], token[1], token[2], token[3], token[4], token[5],
+             token[6], token[7], token[8], token[9], token[10], token[11]);
+}
+
+void miot_legacy_bound_hook(const uint8_t token[12])
+{
+    memcpy(s_auth.id.token, token, 12);
+    /* ★bind_key 的初始化必须和 token 是否变化解耦。
+     * 12B token 一到就先落盘（miot_legacy_token_hook），等 BOND 走到这里时
+     * memcmp 已经相等，原来嵌在「token 变了」分支里的 bkey 初始化就被跳过，
+     * 留下全 0 的 bind_key —— 广播帧和 0x001A 数据帧全按全 0 加密，跨设备
+     * 复用同一把空密钥，页面要么解不开、要么直接判定不匹配。 */
+    bool zero = true;
+    for (int i = 0; i < 16; i++) {
+        if (s_auth.id.bind_key[i]) { zero = false; break; }
+    }
+    if (zero) esp_fill_random(s_auth.id.bind_key, 16);
+    s_auth.bound = 1;
+    id_save(NULL, &s_auth.id);
+    ESP_LOGW(TAG, "*** legacy BOND: token 入库 -> 切已绑定广播 (bkey %02X%02X%02X%02X) ***",
+             s_auth.id.bind_key[0], s_auth.id.bind_key[1],
+             s_auth.id.bind_key[2], s_auth.id.bind_key[3]);
+}
+
+/* ---------------- 页面模式：0x0001 主动推帧 ----------------
+ *
+ * logcat 实证（12:27 那轮）：App 打开详情页后 订阅 0x001B/001A/0001，
+ * 之后整 1000ms 零收包，随即**主动退订三个通道再干净断开**，隔 4~6s 重来。
+ * 这不是异常超时，是「订阅后等设备推帧」的页面模式：真机订阅完立刻推一帧
+ * MiBeacon（v5 加密），之后每 2s 心跳。不推 → 界面一直「连接超时」。
+ * 参考工程 mi_beacon 的注释也写明：「页面模式 App 在登录前就等设备推帧，
+ * 缺了它 App 1s 超时断开（页面连接超时根因之一）」。 */
+static volatile uint8_t s_push_req;
+/* 数据推送总开关（`push 0/1` 现场切）。0=连上后不推任何 MiBeacon 帧，
+ * 用于判定「订阅后推帧」这一步是不是把 App 的认证/会话状态机顶坏了：
+ * 页面重连时我们在认证应答后 190ms 就往同一条 0x0001 塞 16B 数据帧，
+ * App 有可能把它当成认证应答吃掉，随后 600ms 就退订走人。 */
+volatile uint8_t s_push_on = 0;
+
+/** 从属性表里读一个 uint8（找不到时返回 dflt） */
+static uint8_t prop_u8(uint8_t siid, uint16_t piid, uint8_t dflt)
+{
+    if (!s_tbl) return dflt;
+    miot_prop_t *p = miot_props_find(s_tbl, s_tbl_cnt, siid, piid);
+    if (!p || !p->ptr) return dflt;
+    return (p->size == 1) ? *(uint8_t *)p->ptr : (uint8_t)(*(uint32_t *)p->ptr);
+}
+
+static volatile uint32_t s_sub_ms;
+
+void miot_token_subscribed_hook(void)
+{
+    s_sub_ms = now_ms();
+    s_push_req = 1;          /* 不在 NimBLE host 栈里做加密，交给 push_task */
+}
+
+static void push_token_frame(void)
+{
+    if (!s_push_on) return;                 /* `push 1` 才推，见 s_push_on 注释 */
+    if (!s_auth.bound || !gatt_miot_is_connected()) return;
+
+    miot_beacon_cfg_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.pid = DEV_PID;
+    memcpy(cfg.mac_air, s_mac_air, 6);
+    memcpy(cfg.beacon_key, s_auth.id.bind_key, 16);
+
+    /* ★2026-11-10 19:45 定论（对照 mi_beacon v121 夜灯壳）：
+     * 数据帧只发「电量」一个对象。0x000F「有人移动」每 2s 推一次会让云端
+     * 每 2s 刷一条移动事件；参考工程专门为此只推电量。
+     * 无 MAC 形态帧长 = 12 + 对象长，电量对象 2+1+1=4 → 16B，稳过 ATT 20B。 */
+    uint8_t objs[8];
+    size_t n = miot_beacon_obj_u8(objs, MB_OBJ_BATTERY, prop_u8(3, 1, 80));
+
+    uint8_t out[32];
+    /* ★计数器必须与广播共用同一个递增序列：单独从 0 开始会被 App 的
+     * 重放保护当成回退帧直接丢弃（实测收到帧后 25ms 就断开）。 */
+    int fl = miot_beacon_frame_v5_nomac(&cfg, s_fcnt++, objs, n, out, sizeof(out));
+    if (fl <= 0) {
+        ESP_LOGW(TAG, "push v5 build rc=%d (crypto backend?)", fl);
+        return;
+    }
+    /* ★只发 0x0001（Token 通道）。这是唯一被真机/参考工程证实的数据通道：
+     *   0x001B 是 spec/ag2 通道，App 把所有 notify 当 ag2 帧解析，
+     *          裸 v5 帧会被判 invalid 并污染状态机（实测订阅后 20ms 即断）；
+     *   0x001A 是标准认证 v2 的 sa_notify 通道，同样不吃裸 v5 帧。 */
+    int rc = gatt_miot_notify_token(out, (size_t)fl);
+    ESP_LOGI(TAG, "push v5 %dB -> 0x0001 rc=%d", fl, rc);
+}
+
+static void push_task(void *arg)
+{
+    (void)arg;
+    uint32_t next_hb = 0;
+    uint32_t first_at = 0;
+    for (;;) {
+        uint32_t now = now_ms();
+
+        if (s_push_req) {
+            s_push_req = 0;
+            /* ★真机行为（mi_beacon: 「App 订阅数据通道后设备立即推一帧」）：
+             * 订阅完 0x0001 后 App 立刻写 GETRAND，我们不推数据它 1.02s 就
+             * 退订断开（实测每一轮都是 subscribe+1020ms，与 GETRAND 无关）。
+             * 但 GETRAND 的 4B 应答必须先到 —— 那是认证状态机在等同一条通道
+             * 上的包。所以：认证应答 180ms 发，数据帧排在订阅后 400ms。 */
+            first_at = now + 400;
+            next_hb = 0;
+        }
+        if (gatt_miot_is_connected() && first_at &&
+            (int32_t)(now - first_at) >= 0 &&
+            (int32_t)(now - gatt_miot_rx_ms()) >= 300) {
+            first_at = 0;
+            push_token_frame();
+            next_hb = now_ms() + 2000;
+        }
+        /* 连接期间每 2s 心跳一帧，保持页面「在线」。next_hb=0 表示还没推过，
+         * 不能当成「到期」（旧写法 0 会被判为已到期，导致一连上就野推一帧）。
+         * 同样要求「认证静默 300ms」：App 正在写 GETRAND/LOGIN 时数据帧会
+         * 抢同一条 0x0001 通道，被它的认证状态机当成应答吃掉。 */
+        if (gatt_miot_is_connected() && next_hb &&
+            (int32_t)(now - next_hb) >= 0 &&
+            (int32_t)(now - gatt_miot_rx_ms()) >= 300) {
+            next_hb = now + 2000;
+            push_token_frame();
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
+static void fcnt_load(void)
+{    nvs_handle_t h;
+    if (nvs_open(s_ns, NVS_READONLY, &h) != ESP_OK) { s_fcnt = 1; return; }
     uint32_t v = 0;
     if (nvs_get_u32(h, NVS_KEY_FCNT, &v) != ESP_OK) v = 1;
     nvs_close(h);
@@ -312,21 +529,22 @@ static void fcnt_load(void)
 static void fcnt_save(void)
 {
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_open(s_ns, NVS_READWRITE, &h) != ESP_OK) return;
     nvs_set_u32(h, NVS_KEY_FCNT, s_fcnt);
     nvs_commit(h);
     nvs_close(h);
 }
 
-/** 型号切换守卫：NVS 里的身份属于别的 PID 时自动整片擦除。
+/** 型号切换守卫：当前命名空间里的身份属于别的 PID 时擦掉它。
  *  否则换型号后 App 会拿旧 did 当「已绑定设备」，永远进不了添加流程。
- *  devpid 没记录过但存在身份 blob（旧固件留下）同样视为不匹配。 */
+ *  devpid 没记录过但存在身份 blob（旧固件留下）同样视为不匹配。
+ *  只擦当前档案的命名空间，不再整片 erase —— 其它档案的绑定要保留。 */
 static void ensure_pid_match(void)
 {
     uint16_t stored = 0;
     bool has_pid = false, has_ident = false;
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
+    if (nvs_open(s_ns, NVS_READONLY, &h) == ESP_OK) {
         has_pid = (nvs_get_u16(h, NVS_KEY_PID, &stored) == ESP_OK);
         size_t sz = 0;
         has_ident = (nvs_get_blob(h, NVS_KEY_ID, NULL, &sz) == ESP_OK && sz > 0);
@@ -334,11 +552,15 @@ static void ensure_pid_match(void)
     }
     if ((has_pid && stored != DEV_PID) || (!has_pid && has_ident)) {
         ESP_LOGW(TAG, "NVS 身份与本型号不符 (devpid %s, 存在身份=%d, 当前 PID=0x%04X)"
-                      " -> 擦除 NVS", has_pid ? "已记录且不同" : "未记录", has_ident, DEV_PID);
-        nvs_flash_erase();
-        nvs_flash_init();
+                      " -> 只擦当前档案 [%s]", has_pid ? "已记录且不同" : "未记录",
+                 has_ident, DEV_PID, s_ns);
+        if (nvs_open(s_ns, NVS_READWRITE, &h) == ESP_OK) {
+            nvs_erase_all(h);
+            nvs_commit(h);
+            nvs_close(h);
+        }
     }
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
+    if (nvs_open(s_ns, NVS_READWRITE, &h) == ESP_OK) {
         nvs_set_u16(h, NVS_KEY_PID, DEV_PID);
         nvs_commit(h);
         nvs_close(h);
@@ -441,10 +663,31 @@ static int build_frame(int idx)
     cfg.pid = DEV_PID;
     memcpy(cfg.mac_air, s_mac_air, 6);
 
-    if (!s_auth.bound) {
-        int fl = miot_beacon_frame_hello(&cfg, s_fcnt, 2 /* 后绑定 */,
+    if (!s_auth.bound || s_adv_unbound) {
+        int fl = miot_beacon_frame_hello(&cfg, s_fcnt, (uint8_t)DEV_BOND_ABILITY,
                                          s_frame, sizeof(s_frame));
         if (fl < 0) { ESP_LOGE(TAG, "hello rc=%d", fl); return fl; }
+        /* ★配对唤醒窗口内置 FC bit9(solicited)：官方位定义里这一位表示
+         * 「设备请求被连接」。夜灯2 配网时 App 会停在「请按设备按钮」，
+         * 真机按下按钮后广播才会带上这个「我准备好了」的信号，App 据此发起
+         * 连接。只改广播间隔/帧计数（我们之前做的）App 完全看不见，
+         * 所以按了十几次 BOOT 都没反应。窗口结束后再清掉这一位。 */
+        /* ★2026-11-10 20:0x 根因：待绑定帧的 FC 高字节被按 BondAbility 写成 0x22，
+         * 而 0x22 解出来是 version=2 / authMode=0 —— App 把这台设备当成「二代老设备」，
+         * 于是**永远走 legacy p21 挑战应答**（0x0010 AUTH_INIT + 0x0001 12B token），
+         * 根本不进标准认证。这正是文档里「重绑走 legacy PSK」那条死路：
+         * 绑定能过、登录能过，但页面会话没有 spec 通道，订阅完 1s 就断（界面「连接超时」）。
+         * FC 位定义：bit12..15=version，bit10..11=authMode，bit8=registered，bit9=待连接。
+         * 正确形态是 0x58（version5 | authMode2 标准认证 | registered0），BondAbility
+         * 只应出现在 capability 字节里（bit3..4），不能影响 FC。 */
+        /* ★2026-11-10 21:0x 再次纠正（这次有参考工程真机实测做依据）：
+         *   V2 明文未绑定帧的 FC 高字节 = 0x20（平时）/ 0x22（bit9=设备请求被连接）。
+         *   0x58 是「v5 + registered=0」的畸形组合，App 直接无视；
+         *   0x59 才是真机**已绑定**设备发的（v5|registered=1|authMode=2）。
+         *   我们上一步把未绑定帧写成 0x58，等于既不是待绑定、也不是已注册，
+         *   App 连上后什么都不写、1 秒退订——现场就是 -55。
+         *   现在未绑定一律发 0x22（一直请求连接，真机按键后同款）。 */
+        s_frame[1] = s_fc_hi ? s_fc_hi : 0x22;
         s_flen = (uint8_t)fl;
         return fl;
     }
@@ -455,6 +698,39 @@ static int build_frame(int idx)
     size_t n;
     if (DEV_KIND == 1) {
         n = build_objs_beacon(idx, objs, sizeof(objs));
+    } else if (s_sel == 0) {
+        /* 夜灯2：移动 / 光照 / 电量 三个 1B 对象轮换。
+         *
+         * ★为什么不能照抄真机的 3B 0x000F：主广播包 = uuids16 列表(AD头2+UUID2=4)
+         *   + svc_data(AD头2 + UUID2 + 帧 N)，合计 8+N ≤ 31 → 帧长上限 23B。
+         *   帧 = 11(FC2+PID2+cnt1+MAC6) + 对象(2+1+值) + ctr 3 + MIC 4 = 21+值，
+         *   所以值最多 2B。真机 3B 形态是 24B，实测直接 rc=4(EMSGSIZE)，整帧发不出去
+         *   （之前只发电量帧 22B，恰好卡在上限内，所以一直没暴露这个约束）。
+         *
+         *   因此 0x000F 用 2B（b1=移动 b2=光照；真机第 3 字节是保留位，去掉不影响解析）。
+         *   另两帧轮换 0x1018(光照明暗) / 0x100A(电量)，都是 22~23B。 */
+        int nl_kind = (int)(s_fcnt % 3);
+        if (s_nl_motion) nl_kind = 0;   /* 有人移动期间优先发移动帧，别被轮换吃掉这次事件 */
+        switch (nl_kind) {
+        case 0: {
+            uint8_t v[2] = { s_nl_motion ? 1 : 0, s_nl_light ? 1 : 0 };
+            n = miot_beacon_obj_bytes(objs, MB_OBJ_MOTION_LIGHT, v, 2);
+            break;
+        }
+        case 1: {
+            uint8_t v[1] = { s_nl_light ? 1 : 0 };
+            n = miot_beacon_obj_bytes(objs, MB_OBJ_LIGHT, v, 1);
+            break;
+        }
+        default:
+            n = miot_beacon_obj_u8(objs, MB_OBJ_BATTERY, v_batt);
+            break;
+        }
+    } else if (s_sel == 3 || s_sel == 4) {
+        /* 无线开关：有按键事件时发事件对象（载荷恒 1，与真机一致），
+         * 空闲时发心跳电量。两者的帧长都是 22B，落在 23B 上限内。 */
+        if (s_btn_obj) n = miot_beacon_obj_u8(objs, s_btn_obj, s_btn_key);
+        else           n = miot_beacon_obj_u8(objs, MB_OBJ_BATTERY, v_batt);
     } else if (DEV_BEACON_KIND == 1) {
         switch (idx) {
         case 0:  n = miot_beacon_obj_i16(objs, MB_OBJ_TEMP_I16, v_temp); break;
@@ -470,6 +746,12 @@ static int build_frame(int idx)
         ESP_LOGE(TAG, "frame rc=%d (crypto backend?)", fl);
         return fl;
     }
+    /* 已绑定形态的 FC 高字节也允许现场覆盖（`fc 58` / `fc 59`）：
+     *  0x59 = v5|registered=1|authMode=2 —— 真机已注册设备的形态；
+     *  0x58 = v5|registered=0|authMode=2 —— 实测 App 会退回去走 legacy GETRAND 登录。
+     * 夜灯2 是 legacy p21 绑的（0x0010 上 AUTH_INIT/BOND/GETRAND），
+     * 页面会话能不能起来，就看 App 认哪种。 */
+    if (s_fc_hi) s_frame[1] = s_fc_hi;
     s_flen = (uint8_t)fl;
     return fl;
 }
@@ -505,7 +787,7 @@ static void adv_start(void)
     int m = 0;
     mfr[m++] = 0x8F; mfr[m++] = 0x03;
     mfr[m++] = 0x30;
-    mfr[m++] = (uint8_t)(s_auth.bound ? 0x00 : 0x20);
+    mfr[m++] = (uint8_t)(s_auth.bound ? 0x29 : 0x20);   /* 参考工程：未绑定 0x20 / 已绑定 0x29 */
     mfr[m++] = (uint8_t)(DEV_PID & 0xFF);
     mfr[m++] = (uint8_t)(DEV_PID >> 8);
     mfr[m++] = (uint8_t)s_fcnt;
@@ -523,10 +805,28 @@ static void adv_start(void)
 
     struct ble_gap_adv_params p;
     memset(&p, 0, sizeof(p));
-    p.conn_mode = BLE_GAP_CONN_MODE_UND;
+    /* ★连接态只能发「非连接」广播：NimBLE 在 MAX_CONNECTIONS=1 时对
+     * connectable adv 直接返回 ENOMEM（ble_gap_ext_adv_params_validate:
+     * `params->connectable && !ble_hs_conn_can_alloc()`）。真机连接期间发的
+     * 本来也只是非连接 beacon 帧（让 App 扫描管线知道设备「在身边」），
+     * 不影响已建立的 GATT 连接。断开后走 DISCONNECT 分支重启为可连接。 */
+    p.conn_mode = gatt_miot_is_connected() ? BLE_GAP_CONN_MODE_NON
+                                           : BLE_GAP_CONN_MODE_UND;
     p.disc_mode = BLE_GAP_DISC_MODE_GEN;
-    p.itvl_min = s_auth.bound ? 800 : 160;
-    p.itvl_max = s_auth.bound ? 800 : 320;
+    /* 配对唤醒窗口内用快广播（20~30ms），其余按绑定状态。
+     * 已绑定固定 160=100ms，与真机一致（参考工程实测真机恒定 160）。
+     * 之前用 800=500ms：App 详情页只有约 1s 判定窗口，500ms 间隔下扫描管线
+     * 大概率一帧都收不到，设备就被判成「不在身边」。 */
+    if (s_fast_until && (int32_t)(now_ms() - s_fast_until) < 0) {
+        p.itvl_min = ADV_FAST_ITVL_MIN;
+        p.itvl_max = ADV_FAST_ITVL_MAX;
+    } else if (s_auth.bound) {
+        p.itvl_min = 160;
+        p.itvl_max = 160;
+    } else {
+        p.itvl_min = 160;
+        p.itvl_max = 320;
+    }
 
     rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &p,
                            gap_event_cb, NULL);
@@ -541,6 +841,19 @@ static void adv_refresh(void)
 }
 
 /* ---------------- GAP 事件 ---------------- */
+/* 设备侧主动发起的 ATT MTU 交换回调（Android App 不会主动 requestMtu） */
+static int nl_mtu_cb(uint16_t conn_handle, const struct ble_gatt_error *error,
+                     uint16_t mtu, void *arg)
+{
+    (void)conn_handle; (void)arg;
+    if (error && error->status == 0) {
+        ESP_LOGI(TAG, "MTU exchange done -> %u", mtu);
+    } else {
+        ESP_LOGW(TAG, "MTU exchange failed status=%d", error ? error->status : -1);
+    }
+    return 0;
+}
+
 static int gap_event_cb(struct ble_gap_event *event, void *arg)
 {
     (void)arg;
@@ -548,8 +861,37 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
             gatt_miot_on_connect(event->connect.conn_handle, BLE_ATT_MTU_DFLT);
-            ble_gap_adv_stop();
-            ESP_LOGI(TAG, "phone connected -> adv stopped");
+            /* ★连接态必须继续广播（真机行为，参考工程实测结论）：
+             * App 的扫描管线靠 MiBeacon 帧把设备标记为「在身边/在线」，
+             * 详情页那句「正在连接…」等的就是这个信号。我们在 connect 时
+             * 停播 → App 扫不到设备 → 约 1s 后自己 cancelOpen 并断开(0x213)，
+             * 表现为「连接超时」。停播是之前一直连不上的直接原因之一。 */
+            if (s_auth.bound) {
+                if (ble_gap_adv_active()) ble_gap_adv_stop();
+                adv_start();
+                ESP_LOGI(TAG, "phone connected -> adv KEPT (bound, beacon alive)");
+            } else {
+                ble_gap_adv_stop();
+                ESP_LOGI(TAG, "phone connected -> adv stopped (unbound, 握手期间静默)");
+            }
+            /* ★连接间隔压到 7.5~15ms。logcat 实证：App 从 connect 到 cancelOpen
+             * 只有约 1 秒，而服务发现（12 特征 + 描述符，约 40 个 ATT 请求）
+             * 在 interval=24(30ms) 下要 600~900ms，订阅完预算就没了 —— 表现为
+             * 「订阅成功后 20ms 主动断开」。压到 7.5ms 可把这段降到 300ms 内。 */
+            struct ble_gap_upd_params up;
+            memset(&up, 0, sizeof(up));
+            up.itvl_min = 6;              /* 7.5ms */
+            up.itvl_max = 12;             /* 15ms  */
+            up.latency = 0;
+            up.supervision_timeout = 400; /* 4s */
+            int urc = ble_gap_update_params(event->connect.conn_handle, &up);
+            ESP_LOGI(TAG, "conn itvl -> 7.5~15ms, req rc=%d", urc);
+            /* ★设备主动发起 MTU 交换（参考工程实测：Android App 从不自己
+             * requestMtu，默认 23 会把 spec/插件命令截断成 20B；真机在连接
+             * 建立后由设备以 GATT client 角色先发 Exchange MTU Request）。
+             * 之前我们一直停在 mtu=23，App 侧可能因预算不足以推进认证。 */
+            int mrc = ble_gattc_exchange_mtu(event->connect.conn_handle, nl_mtu_cb, NULL);
+            ESP_LOGI(TAG, "MTU exchange initiated rc=%d", mrc);
         } else {
             ESP_LOGW(TAG, "connect failed status=%d", event->connect.status);
             adv_start();
@@ -565,8 +907,11 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             s_was_bound = s_auth.bound;
             build_frame(s_idx);
         }
+        /* 连接态是「非连接」广播，这里必须强行重启一次才能换回可连接形态，
+         * 否则 adv_start 会因「已在广播」直接 return，手机再也连不上。 */
+        if (ble_gap_adv_active()) ble_gap_adv_stop();
         adv_start();
-        ESP_LOGI(TAG, "disconnected reason=0x%02x -> adv resumed", event->disconnect.reason);
+        ESP_LOGI(TAG, "disconnected reason=0x%02x -> adv resumed (connectable)", event->disconnect.reason);
         return 0;
 
     case BLE_GAP_EVENT_MTU:
@@ -578,8 +923,12 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         return 0;
 
     case BLE_GAP_EVENT_SUBSCRIBE:
-        ESP_LOGI(TAG, "subscribe attr=%u notify=%d",
-                 event->subscribe.attr_handle, event->subscribe.cur_notify);
+        ESP_LOGI(TAG, "subscribe attr=%u notify=%d indicate=%d",
+                 event->subscribe.attr_handle, event->subscribe.cur_notify,
+                 event->subscribe.cur_indicate);
+        gatt_miot_on_subscribe(event->subscribe.attr_handle,
+                               event->subscribe.cur_notify,
+                               event->subscribe.cur_indicate);
         return 0;
 
     default:
@@ -652,11 +1001,45 @@ static void do_report(uint32_t ts)
 #define DEV_DEFAULT_INDEX  2      /* 体脂秤 S400 */
 #endif
 
+static uint8_t s_macv;     /* MAC 版本号（NVS） */
+
+static void macv_load(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(s_ns, NVS_READONLY, &h) == ESP_OK) {
+        nvs_get_u8(h, NVS_KEY_MACV, &s_macv);
+        nvs_close(h);
+    }
+}
+
+static void macv_set(uint8_t v)
+{
+    s_macv = (uint8_t)(v & 0x3F);
+    nvs_handle_t h;
+    if (nvs_open(s_ns, NVS_READWRITE, &h) == ESP_OK) {
+        nvs_set_u8(h, NVS_KEY_MACV, s_macv);
+        nvs_commit(h);
+        nvs_close(h);
+    }
+}
+
+static void macv_bump(void)
+{
+    macv_set((uint8_t)(s_macv + 1));
+}
+
 static void sel_load(void)
 {
     int sel = DEV_DEFAULT_INDEX;
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
+    bool got = false;
+    if (nvs_open(NVS_NS_GLOBAL, NVS_READONLY, &h) == ESP_OK) {
+        uint8_t v = 0;
+        if (nvs_get_u8(h, NVS_KEY_SEL, &v) == ESP_OK) { sel = v; got = true; }
+        nvs_close(h);
+    }
+    if (!got && nvs_open("miot", NVS_READONLY, &h) == ESP_OK) {
+        /* 旧固件把 devsel 存在 "miot" 里，读一次做向后兼容 */
         uint8_t v = 0;
         if (nvs_get_u8(h, NVS_KEY_SEL, &v) == ESP_OK) sel = v;
         nvs_close(h);
@@ -666,10 +1049,17 @@ static void sel_load(void)
     D = &k_devs[s_sel];
 }
 
+/** 按当前档案构造命名空间名（必须在 sel_load 之后、任何身份读写之前调用）。 */
+static void ns_build(void)
+{
+    if (s_sel == 0) snprintf(s_ns, sizeof(s_ns), "%s", NVS_NS);
+    else            snprintf(s_ns, sizeof(s_ns), "miot%d", s_sel);
+}
+
 static void sel_store(int sel)
 {
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
+    if (nvs_open(NVS_NS_GLOBAL, NVS_READWRITE, &h) == ESP_OK) {
         nvs_set_u8(h, NVS_KEY_SEL, (uint8_t)sel);
         nvs_commit(h);
         nvs_close(h);
@@ -701,10 +1091,11 @@ static void cli_task(void *arg)
             if (*arg2) {
                 int n = atoi(arg2);
                 if (n >= 0 && n < DEV_COUNT) {
-                    ESP_LOGW(TAG, "switch -> [%d] %s (erase NVS, restart)", n, k_devs[n].label);
+                    /* 不再擦 NVS：每个档案有独立命名空间，切回去还是原来的绑定。
+                     * 以前这里整片 erase，导致每次切档案都变成"新设备"，
+                     * 米家云端会因此多建一条设备记录。 */
+                    ESP_LOGW(TAG, "switch -> [%d] %s (keep identity, restart)", n, k_devs[n].label);
                     vTaskDelay(pdMS_TO_TICKS(50));
-                    nvs_flash_erase();
-                    nvs_flash_init();
                     sel_store(n);
                     vTaskDelay(pdMS_TO_TICKS(100));
                     esp_restart();
@@ -722,6 +1113,128 @@ static void cli_task(void *arg)
             ESP_LOGI(TAG, "sel=%d tag=%s pid=0x%04X kind=%d bound=%d login=%d conn=%d heap=%u",
                      s_sel, D->tag, D->pid, D->kind, s_auth.bound, s_auth.logged_in,
                      gatt_miot_is_connected(), (unsigned)esp_get_free_heap_size());
+        } else if (!strcmp(line, "tok")) {
+            /* 现场核对 token：我们手里的 vs App 下发的。GETRAND 应答用的是它，
+             * 两边不一致时 App 会静默丢弃回来的一秒就断（界面上就是「连接超时」）。 */
+            gatt_miot_dump_token();
+        } else if (!strncmp(line, "btn", 3)) {
+            /* btn [1|2|3]  1=单击 2=双击 3=长按（默认单击）
+             * 对应 MiBeacon 0x4E0C / 0x4E0D / 0x4E0E，仅对档案 [3][4] 有意义。
+             * 打开串口会复位芯片，所以量产验证请用 BOOT 短按。 */
+            const char *a = line + 3;
+            while (*a == ' ') a++;
+            int k = (*a) ? atoi(a) : 1;
+            int key = 1;
+            const char *sp = strchr(a, ' ');
+            if (sp) { key = atoi(sp + 1); }
+            if (key < 1 || key > 2) key = 1;
+            if (k < 1 || k > 3) {
+                ESP_LOGW(TAG, "用法: btn [1=单击 2=双击 3=长按] [1=左 2=右]");
+            } else {
+                s_btn_key = (uint8_t)key;
+                s_btn_req = k;
+                ESP_LOGW(TAG, "btn: 已请求 %s %s键",
+                         (k == 2) ? "双击" : (k == 3) ? "长按" : "单击",
+                         (key == 2) ? "右" : "左");
+            }
+        } else if (!strcmp(line, "motion")) {
+            /* 模拟「有人移动」。这是米家自动化里唯一能用的触发条件，
+             * 前提：设备已绑定（bound=1，广播为已注册形态）且账号下有蓝牙网关。
+             * 没有网关时米家根本不会出现这个条件，串口照样会打出广播帧。 */
+            s_nl_motion_req = 1;
+            ESP_LOGW(TAG, "sensor: 已请求一次「有人移动」，下一轮广播 0x000F");
+        } else if (!strncmp(line, "lux", 3)) {
+            /* lux 0 -> 环境光暗（自动化条件「环境光较暗时」成立）
+             * lux 1 -> 环境光亮 */
+            const char *a = line + 3;
+            while (*a == ' ') a++;
+            s_nl_light = (*a == '0') ? 0 : 1;
+            ESP_LOGW(TAG, "sensor: light=%u (0=暗 1=亮)", s_nl_light);
+        } else if (!strncmp(line, "nlstat", 6)) {
+            /* 打印 nlight 文本协议的设备侧状态（亮度/时长/场景/已收命令数） */
+            gatt_miot_nl_dump();
+        } else if (!strncmp(line, "nl ", 3)) {
+            /* nl <text>  —— 本机模拟一条插件命令，用来在没有手机时自测解析与应答：
+             *   nl get_prop power bright lux snm dur
+             *   nl set_bright 58
+             *   nl apply_fixed_scene 2
+             * 应答仍从 NUS TX 发出（没连接时会打印 no conn）。 */
+            gatt_miot_nl_input(line + 3);
+        } else if (!strncmp(line, "grd", 3)) {
+            /* grd         -> 查看 GETRAND 回包首帧延时
+             * grd <ms>    -> 设置（默认 40ms）。无 hook 时靠它抢在 App 断连前送达，
+             *                现场可 20/40/80 扫一轮，看哪档 App 能接住。 */
+            const char *a = line + 3;
+            while (*a == ' ') a++;
+            if (*a) {
+                gatt_miot_set_gr_delay(atoi(a));
+            }
+            ESP_LOGW(TAG, "GETRAND 回包首帧延时 = %d ms", gatt_miot_get_gr_delay());
+        } else if (!strncmp(line, "nus", 3)) {
+            /* nus             -> 打印说明
+             * nus <hex>       -> 从 NUS TX(6E400003) 回一帧，给 philips 插件做实验
+             * 2026-11-11 现场：插件页面只调 service=6E400001/char=6E400003，
+             * 补齐该服务后先用这条命令试回包，确认插件是否认账。 */
+            const char *a = line + 3;
+            while (*a == ' ') a++;
+            if (!*a) {
+                ESP_LOGI(TAG, "用法: nus <hex>   从 6E400003 回一帧（例: nus 0102）");
+            } else {
+                uint8_t buf[64];
+                size_t n = 0;
+                while (a[0] && a[1] && n < sizeof(buf)) {
+                    char b[3] = { a[0], a[1], 0 };
+                    buf[n++] = (uint8_t)strtoul(b, NULL, 16);
+                    a += 2;
+                    while (*a == ' ') a++;
+                }
+                int rc = gatt_miot_nus_notify(buf, n);
+                ESP_LOGW(TAG, "nus 手工回包 len=%u rc=%d", (unsigned)n, rc);
+            }
+        } else if (!strncmp(line, "key", 3)) {
+            /* key             -> 查询现有 token
+             * key <24hex>     -> 手工写入 12B token 并立刻切「已绑定」形态广播。
+             *
+             * ★2026-11-10 20:0x 现场取证（设备端日志 + 手机 logcat 对照）：
+             *   bound=1 的会话：App 依次 subscribe 001B / 001A，然后 **往 0x0010
+             *   写 4B AUTH_INIT**，再 subscribe 0001，我们回 12B token ACK……
+             *   bound=0 的会话：App 订阅完 001B/001A/0001 后**一个字节都不写**，
+             *   1.02 秒退订断开（每 3.5s 重来）。手机侧同一时刻报 BLE -55。
+             * 也就是说：广播必须是「已绑定」形态，App 才肯发起 legacy 认证。
+             * NVS 被清后广播回到 hello 形态 → 认证永远不开始。
+             * 这条命令就是把这个状态临时顶起来：先随便给个 token 让广播变成
+             * 已绑定形态，App 连上后会在 AUTH_INIT 之后下发**真正的** token，
+             * 固件照单采纳（legacy_adopt_token），密钥就对齐了。 */
+            const char *a = line + 3;
+            while (*a == ' ') a++;
+            if (!*a) {
+                gatt_miot_dump_token();
+            } else if (strlen(a) >= 24) {
+                uint8_t t[12];
+                for (int i = 0; i < 12; i++) {
+                    char b[3] = { a[i * 2], a[i * 2 + 1], 0 };
+                    t[i] = (uint8_t)strtoul(b, NULL, 16);
+                }
+                miot_legacy_token_hook(t);
+                miot_legacy_bound_hook(t);
+                ESP_LOGW(TAG, "手工 token 入库，bound=%d -> 已绑定形态广播", s_auth.bound);
+                build_frame(s_idx);
+                adv_refresh();
+            } else {
+                ESP_LOGW(TAG, "用法: key <24 位十六进制 token>");
+            }
+        } else if (!strcmp(line, "log")) {
+            /* 事后再取证：不用串口监听当时活着，事件都记在 RAM 里 */
+            gatt_miot_dump_evt();
+        } else if (!strcmp(line, "handles")) {
+            gatt_miot_dump_handles();
+        } else if (!strncmp(line, "push", 4)) {
+            /* push      -> 查询
+             * push 1/0  -> 开/关「订阅后主动推 MiBeacon 帧」 */
+            const char *a = line + 4;
+            while (*a == ' ') a++;
+            if (*a) s_push_on = (uint8_t)atoi(a);
+            ESP_LOGW(TAG, "数据推送 = %d（0=不推，1=订阅后推 + 每 2s 心跳）", s_push_on);
         } else if (!strncmp(line, "weight", 6)) {
             /* 让秤「称一次」，验证 App 秤页面能不能落记录：
              *   weight           默认 64.5kg / 阻抗 500
@@ -767,15 +1280,92 @@ static void cli_task(void *arg)
                 ESP_LOGI(TAG, "  slot %d %-13s %2dB  %s", i, slot_name(i), n, hex);
             }
         } else if (!strcmp(line, "factory")) {
-            ESP_LOGW(TAG, "factory reset -> erase NVS, restart");
-            vTaskDelay(pdMS_TO_TICKS(50));
-            nvs_flash_erase();
+            /* 只擦当前档案的身份，其它档案的绑定保留（要全清用 `factory all`） */
+            ESP_LOGW(TAG, "factory reset -> 擦除档案 [%s] 身份, restart", s_ns);
+            nvs_handle_t h;
+            if (nvs_open(s_ns, NVS_READWRITE, &h) == ESP_OK) {
+                nvs_erase_all(h);
+                nvs_commit(h);
+                nvs_close(h);
+            }
             vTaskDelay(pdMS_TO_TICKS(100));
+            esp_restart();
+        } else if (!strncmp(line, "gr", 2)) {
+            /* gr       -> 查询
+             * gr 0     -> 静默（判定 App 是否在等 GETRAND 回包）
+             * gr 1     -> 单帧（旧工程有效形态）
+             * gr 18    -> 多假设循环（默认） */
+            const char *arg = line + 2;
+            while (*arg == ' ') arg++;
+            if (*arg) gatt_miot_set_gr_reply(atoi(arg));
+            ESP_LOGW(TAG, "GETRAND 应答帧数 = %d（0=静默 1=单帧 18=多假设）",
+                     gatt_miot_get_gr_reply());
+        } else if (!strncmp(line, "strat", 5)) {
+            /* strat      -> 查询
+             * strat -1   -> 自动轮换（每次重连换一种 通道+延时）
+             * strat 0..5 -> 固定：0=200ms@0001 1=60ms@0001 2=110ms@0001
+             *                      3=60ms@001B  4=60ms@001A  5=300ms@0001 */
+            const char *arg = line + 5;
+            while (*arg == ' ') arg++;
+            if (*arg) gatt_miot_set_strat(atoi(arg));
+            ESP_LOGW(TAG, "登录路径应答策略 = %d（-1=自动轮换）", gatt_miot_get_strat());
+        } else if (!strncmp(line, "spec", 4)) {
+            /* spec 1 -> App 订阅 001B/001A 时设备主动发 ag2 START 控制帧
+             * spec 0 -> 关（默认） */
+            const char *arg = line + 4;
+            while (*arg == ' ') arg++;
+            gatt_miot_set_spec_probe(atoi(arg));
+            ESP_LOGW(TAG, "spec 探针 = %d（0=关 1=ag2 START 2=mng 建链）",
+                     gatt_miot_get_spec_probe());
+        } else if (!strncmp(line, "fc", 2)) {
+            /* fc      -> 查询
+             * fc 22   -> v2|solicited=1|auth=0（旧工程跑通形态）
+             * fc 58   -> v5|solicited=0|auth=2 */
+            const char *arg = line + 2;
+            while (*arg == ' ') arg++;
+            if (*arg) s_fc_hi = (uint8_t)strtoul(arg, NULL, 16);
+            ESP_LOGW(TAG, "未绑定广播 FC 高字节 = 0x%02X%s",
+                     s_fc_hi ? s_fc_hi : 0x58,
+                     s_fc_hi ? "" : "（自动）");
+            build_frame(s_idx);
+            adv_refresh();
+        } else if (!strncmp(line, "advu", 4)) {
+            /* advu       -> 查询
+             * advu 1/0   -> 强制/取消「待绑定」形态广播（token 与 bind_key 不动） */
+            const char *arg = line + 4;
+            while (*arg == ' ') arg++;
+            if (*arg) s_adv_unbound = (uint8_t)(atoi(arg) ? 1 : 0);
+            ESP_LOGW(TAG, "强制待绑定广播 = %d（bound=%d）", s_adv_unbound, s_auth.bound);
+            build_frame(s_idx);
+            adv_refresh();
+        } else if (!strncmp(line, "setmacv", 7)) {
+            /* 指定 MAC 版本号（末字节 = 0x01 + 2*n），重启生效。
+             * 现场要「回到某台已配对过的地址」时用它，比连点 newmac 精确。 */
+            const char *a = line + 7;
+            while (*a == ' ') a++;
+            if (*a) {
+                uint8_t v = (uint8_t)(strtoul(a, NULL, 10) & 0x3F);
+                macv_set(v);
+                ESP_LOGW(TAG, "MAC 版本号 -> %u（末字节 %02X），重启生效",
+                         s_macv, (unsigned)(0x01 + (s_macv & 0x3F) * 2));
+                vTaskDelay(pdMS_TO_TICKS(200));
+                esp_restart();
+            } else {
+                ESP_LOGW(TAG, "用法: setmacv N （0..63）");
+            }
+        } else if (!strcmp(line, "newmac")) {
+            /* 换一个全新 BLE 地址（末字节 +2）并重启。用于绕开
+             * 米家/MIUI 对「反复失败地址」的 DeviceBlackList，
+             * 同时迫使手机丢弃 GATT 缓存、重新做服务发现。 */
+            macv_bump();
+            ESP_LOGW(TAG, "MAC 版本号 -> %u（末字节 %02X），重启生效",
+                     s_macv, (unsigned)(0x02 + (s_macv & 0x3F) * 2));
+            vTaskDelay(pdMS_TO_TICKS(200));
             esp_restart();
         } else if (!strcmp(line, "reboot")) {
             esp_restart();
         } else if (*line) {
-            ESP_LOGW(TAG, "命令: dev [N] | info | frames | weight [值] [阻抗] | factory | reboot");
+            ESP_LOGW(TAG, "命令: dev [N] | info | tok | key <24hex> | log | handles | frames | gr [N] | fc [22|58] | advu [0|1] | setmacv N | newmac | weight [值] [阻抗] | factory | reboot");
         }
     }
 }
@@ -812,8 +1402,21 @@ static void btn_task(void *arg)
                 }
             }
             if (ms >= 60) {
-                ESP_LOGW(TAG, "BOOT press %dms -> weigh-in requested", ms);
-                s_weigh_req = 1;
+                /* 任何档案都先当作「按一下设备上的蓝牙设定按钮」：真机夜灯2 配网时
+                 * App 会提示按这个按钮，设备按下去会唤醒/加密广播一段时间。固件若对
+                 * 这一步毫无响应，App 就一直停在那个提示/按钮上（实测卡住）。
+                 * 顺带保留 S400 的称重语义，两个动作互不冲突。 */
+                s_adv_req = 1;
+                ESP_LOGW(TAG, "BOOT press %dms -> pairing adv + weigh-in", ms);
+                /* 别再给开关档案塞称重请求：只会每按一次就打一行「只对 S400 有效」，
+                 * 真正的动作是它自己的按键事件。 */
+                if (s_sel == 2)                    s_weigh_req = 1;
+                if (s_sel == 3 || s_sel == 4) {
+                    /* BOOT 固定代表「左键单击」，不受上一次 `btn x 2` 的影响
+                     * （否则现场按 BOOT 会莫名其妙报成右键，本轮实测踩到过）。 */
+                    s_btn_key = 1;
+                    s_btn_req = 1;
+                }
             }
         }
         vTaskDelay(pdMS_TO_TICKS(30));
@@ -859,6 +1462,8 @@ void app_main(void)
         nvs_flash_init();
     }
     sel_load();            /* 先定档案，ensure_pid_match 才知道该比哪个 PID */
+    ns_build();            /* 再定该档案的命名空间（身份/fcnt/macv 都按档案隔离） */
+    macv_load();
     ensure_pid_match();
 
     /* BOOT(GPIO9) 的按键处理挪到 btn_task：开机检测只管「按住不放」，
@@ -873,7 +1478,8 @@ void app_main(void)
      * 同一档案重启后地址不变（s_sel 存在 NVS），绑定关系不会因重启失效。 */
     {
         uint8_t base[6] = { 0x10, 0x00, 0x3B, 0xCE,
-                            (uint8_t)(0x40 + (s_sel & 0x0F)), 0x01 };
+                            (uint8_t)(0x40 + (s_sel & 0x0F)),
+                            (uint8_t)(0x01 + (s_macv & 0x3F) * 2) };
         esp_base_mac_addr_set(base);
     }
 
@@ -931,20 +1537,108 @@ void app_main(void)
     ble_svc_gatt_init();
     ble_svc_gap_device_name_set(D->name);
     gatt_miot_set_pid(DEV_PID);
+    gatt_miot_set_mac(s_mac_air);
+    {
+        /* mixA/mixB 的正态输入是人读序 MAC（s_mac_air 是它的反转） */
+        uint8_t mac_human[6];
+        for (int i = 0; i < 6; i++) mac_human[i] = s_mac_air[5 - i];
+        gatt_miot_set_mac_human(mac_human);
+        ESP_LOGW(TAG, "mix MAC human=%02X%02X%02X%02X%02X%02X",
+                 mac_human[0], mac_human[1], mac_human[2],
+                 mac_human[3], mac_human[4], mac_human[5]);
+    }
     gatt_miot_register_svcs();
     gatt_miot_bind(&s_auth, &s_dev);
     ble_att_set_preferred_mtu(247);
 
     nimble_port_freertos_init(host_task);
+    xTaskCreate(push_task, "push", 4096, NULL, 3, NULL);
     xTaskCreate(cli_task, "cli", 4096, NULL, 4, NULL);
     xTaskCreate(btn_task, "btn", 3072, NULL, 3, NULL);
 
     uint32_t last_report = 0;
     uint32_t last_adv = 0;
+    int fast_window = 0;
 
     for (;;) {
         uint32_t t = now_ms();
         miot_auth_poll(&s_auth, t);
+
+        /* 夜灯2 传感器上报：CLI 触发一次「有人移动」，1.5s 后自动回落。
+         * 必须当场把帧刷出去 —— 网关按边沿判定事件，等下一轮心跳（100~300ms 也可能
+         * 刚好落在电量帧上）会漏掉这次移动，自动化就不触发。 */
+        if (s_nl_motion_req) {
+            s_nl_motion_req = 0;
+            s_nl_motion = 1;
+            s_nl_motion_until = t + 1500;
+            s_fcnt++;
+            build_frame(s_idx);
+            adv_refresh();
+            ESP_LOGW(TAG, "sensor: 0x000F motion=1 (1.5s 后回落) light=%u", s_nl_light);
+        } else if (s_nl_motion && (int32_t)(t - s_nl_motion_until) >= 0) {
+            s_nl_motion = 0;
+            /* 对齐到 3 的倍数，保证这次回落发的也是 0x000F（0=无人），
+             * 否则网关只看到最后一帧是电量，这次「移动结束」就丢了。 */
+            do { s_fcnt++; } while (s_fcnt % 3);
+            if (build_frame(s_idx) >= 0) adv_refresh();
+            ESP_LOGI(TAG, "sensor: 0x000F motion=0");
+        }
+
+        /* 无线开关按键：立刻把事件帧刷出去（网关按边沿判定，
+         * 等下一轮心跳会落在别的帧上直接漏掉），并保持 2.5s 重复广播。 */
+        if (s_btn_req) {
+            int k = s_btn_req;
+            s_btn_req = 0;
+            s_btn_obj = (k == 2) ? MB_OBJ_BTN_DOUBLE
+                      : (k == 3) ? MB_OBJ_BTN_HOLD
+                                 : MB_OBJ_BTN_CLICK;
+            s_btn_until = t + 2500;
+            s_fcnt++;
+            if (build_frame(s_idx) >= 0) adv_refresh();
+            ESP_LOGW(TAG, "btn: 0x%04X %s(%s键)，重复广播 2.5s",
+                     s_btn_obj, (k == 2) ? "双击" : (k == 3) ? "长按" : "单击",
+                     (s_btn_key == 2) ? "右" : "左");
+        } else if (s_btn_obj && (int32_t)(t - s_btn_until) >= 0) {
+            s_btn_obj = 0;
+            s_fcnt++;
+            if (build_frame(s_idx) >= 0) adv_refresh();
+            ESP_LOGI(TAG, "btn: 事件结束，回到电量帧");
+        }
+
+        int fast_now = s_fast_until && (int32_t)(t - s_fast_until) < 0;
+        if (fast_window && !fast_now) {
+            /* 唤醒窗口结束：重建一帧把 solicited 位清掉，再按常规间隔重开广播 */
+            fast_window = 0;
+            if (!gatt_miot_is_connected()) {
+                s_fcnt++;
+                build_frame(s_idx);
+                adv_refresh();
+            }
+        }
+        if (s_adv_req) {
+            s_adv_req = 0;
+            if (!gatt_miot_is_connected()) {
+                s_fast_until = t + ADV_FAST_MS;
+                fast_now = 1;
+                fast_window = 1;
+                last_adv = t;
+                /* ★必须让空中帧真的变：只改间隔不改内容，App 看不出「按钮被按过」。
+                 * 真机按下蓝牙按钮会刷新帧计数，App 靠广播内容变化确认设备已唤醒。 */
+                s_fcnt++;
+                sim_tick();
+                if (build_frame(s_idx) >= 0) {
+                    char hex[3 * 16 + 4];
+                    size_t o = 0;
+                    for (int k = 0; k < s_flen && k < 16; k++)
+                        o += (size_t)snprintf(hex + o, sizeof(hex) - o, "%02X ", s_frame[k]);
+                    ESP_LOGW(TAG, "pair adv: 快广播 %dms, cnt=%lu, frame=%s",
+                             ADV_FAST_MS, (unsigned long)s_fcnt, hex);
+                } else {
+                    ESP_LOGW(TAG, "pair adv: frame build failed");
+                }
+                adv_refresh();
+            }
+        }
 
         if (s_auth.logged_in && !s_logged_in) {
             s_logged_in = 1;
@@ -962,7 +1656,10 @@ void app_main(void)
         }
 
         if (!gatt_miot_is_connected()) {
-            if (t - last_adv >= ADV_PERIOD_MS) {
+            /* 快广播窗口内保持广播连续，不做 stop/start —— 空档就是连接失败的窗口 */
+            uint32_t per = fast_now ? UINT32_MAX
+                                    : (s_auth.bound ? ADV_PERIOD_MS : ADV_PERIOD_UNBOUND_MS);
+            if (t - last_adv >= per) {
                 last_adv = t;
                 s_idx = (s_idx + 1) % DEV_SLOTS;
                 s_fcnt++;

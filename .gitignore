@@ -26,3 +26,10 @@ sdkconfig.old
 sdkconfig.clean
 # 只允许各工程的 sdkconfig.defaults 入库（小白克隆后必须能直接 build）
 !esp32/*/sdkconfig.defaults
+
+# 本地调试产物（串口抓取 / logcat 落盘 / 临时脚本）
+/_*.log
+/_*.txt
+/_*.py
+/_*.out
+/_*.bin

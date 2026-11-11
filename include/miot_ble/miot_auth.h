@@ -134,6 +134,14 @@ typedef struct miot_auth {
     size_t   ag_len;
     uint8_t  ag_pkg, ag_expect, ag_got;
     int      chan_ready;
+    int      info_sent;                /* 本次连接的 device info 已交出去（防重发） */
+    uint32_t info_at_ms;               /* device info 的发送时刻（1=pending 未排期） */
+
+    /* 内部：ag2 分片发送队列（START → 等 App ACK(1) → 逐帧发 → 每帧等 ACK(0)）。
+     * 一次性把 START 和数据帧全推出去，App 还没就绪，数据帧等于白发。 */
+    uint8_t  tx_buf[64];
+    uint8_t  tx_len, tx_n, tx_i;
+    uint32_t tx_ms;                    /* 下一帧的发送时刻（poll 驱动） */
 
     /* 内部：legacy PSK（与标准认证互不影响） */
     miot_psk_state_t psk_state;
@@ -172,6 +180,11 @@ static inline const miot_auth_identity_t *miot_auth_identity(const miot_auth_t *
 
 /** 断连时调用：清会话（保留绑定身份与 ECDH 密钥） */
 void miot_auth_on_disconnect(miot_auth_t *a);
+
+/** legacy 绑定流程里 App 会把 20B Device ID 写在 0x0013 上，必须转存进来：
+ *  device info 帧（channel msgType=0）就是靠它告诉 App「我是哪台设备」，
+ *  did 为空时 App 收不到身份，卡在「设备初始化」不往下走认证。 */
+void miot_auth_set_did(miot_auth_t *a, const uint8_t *did, size_t len);
 
 /* ---- legacy PSK ---- */
 

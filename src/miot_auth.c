@@ -76,13 +76,18 @@ static void ag_single(miot_auth_t *a, uint8_t pkg_type, const uint8_t *d, size_t
     ch_send(a, 0, d, n);   /* device info 走 channel data 包 msgType=0 */
 }
 
-/* ag2 分片：START(pkgType) + N 个数据帧（[fno 1B][00][chunk<=18]） */
 static void ag_parcel(miot_auth_t *a, uint8_t pkg_type, const uint8_t *d, size_t n)
 {
+    if (n > sizeof(a->tx_buf)) return;
     uint8_t cnt = (uint8_t)((n + 17) / 18);
     if (!cnt) cnt = 1;
     uint8_t start[6] = { 0x00, 0x00, 0x00, pkg_type, cnt, 0x00 };
     n19(a, start, 6);
+    alog(a, "ag tx START pkg=%u cnt=%u (%uB)", (unsigned)pkg_type, (unsigned)cnt, (unsigned)n);
+    /* ★2026-11-11 手机侧实证：App 对 START 只回一次 ACK(1)，**从不为数据帧回
+     * ACK(0)** —— 说明我们节流 80ms 推的帧它根本没收到/没接受。
+     * 参考工程（真机验证：64B 公钥、32B devConfirm、整条证书链）的做法是
+     * START 之后**立即连发全部数据帧**，中间不留间隔。这里对齐参考实现。 */
     size_t off = 0;
     for (uint8_t i = 1; i <= cnt; i++) {
         size_t chunk = n - off;
@@ -93,6 +98,7 @@ static void ag_parcel(miot_auth_t *a, uint8_t pkg_type, const uint8_t *d, size_t
         n19(a, f, 2 + chunk);
         off += chunk;
     }
+    alog(a, "ag tx parcel done %u frames", (unsigned)cnt);
 }
 
 /* ================= 通用随机数 ================= */
@@ -121,8 +127,22 @@ static void send_device_info(miot_auth_t *a)
     while (dl > off && a->id.did[dl - 1] == 0x00) dl--;
     dl -= off;
     if (dl) memcpy(info + 4, a->id.did + off, dl), n += dl;
-    ag_single(a, 0x00, info, n);
-    alog(a, "device info sent (did=%uB)", (unsigned)dl);
+    /* ★必须走 ag2 分帧：4+did(20) = 24B，而 MTU 23 下单帧上限 20B。
+     * 之前用 ag_single 直接发，被 GATT 层按 "len > mtu-3" 静默丢弃，
+     * 表现为 App 收不到 device info、停在「连接超时」。 */
+    if (n <= 16) ag_single(a, 0x00, info, n);
+    else         ag_parcel(a, 0x00, info, n);
+    alog(a, "device info sent (did=%uB, %uB payload)", (unsigned)dl, (unsigned)n);
+}
+
+void miot_auth_set_did(miot_auth_t *a, const uint8_t *did, size_t len)
+{
+    if (!a || !did || !len) return;
+    if (len > sizeof(a->id.did)) len = sizeof(a->id.did);
+    memset(a->id.did, 0, sizeof(a->id.did));
+    memcpy(a->id.did, did, len);
+    alog(a, "did set from 0x0013 (%uB)", (unsigned)len);
+    if (a->port.save && a->bound) a->port.save(a->port.user, &a->id);
 }
 
 void miot_auth_prepare(miot_auth_t *a)
@@ -633,6 +653,14 @@ static void mng_test_reply(miot_auth_t *a)
     n19(a, t, sizeof(t));
     a->chan_ready = 1;
     alog(a, "channel READY (mng_ack test 16x0x12 sent)");
+    /* ★device info 的时机（2026-11-11 手机侧实证修正）：
+     * App 从 connect 到 cancelOpen 只有约 990ms（固定硬窗口）。之前这里排期
+     * 150ms 后才发，恰好赶在它放弃之后 —— 手机日志里 START/数据帧一次都没
+     * 出现（onNotify 只有 6B 的 mng 和 20B 的测试包）。
+     * 现在：优先在收到 App 测试包回执(code=1)的瞬间发（那才是它真正就绪的
+     * 时刻）；回执不来则由 poll 在 250ms 兜底。 */
+    a->info_sent = 0;
+    a->info_at_ms = 0;                      /* 0 = 未排期，交给回执/兜底 */
 }
 
 void miot_auth_on_0019(miot_auth_t *a, const uint8_t *d, size_t len)
@@ -650,7 +678,10 @@ void miot_auth_on_0019(miot_auth_t *a, const uint8_t *d, size_t len)
             ag_ack(a, 0x01);                 /* ★必须 ACK 就绪，否则 App 5s 超时重发 a2 → -28 */
             return;
         }
-        if (type == 0x01 && len >= 4) return;               /* App 对我们数据的 ACK */
+        if (type == 0x01 && len >= 4) {                     /* App 对我们数据的 ACK */
+            /* 分片已改为「START 后立即连发」，不再依赖 ACK 驱动。 */
+            return;
+        }
         if (type == 0x02 && len >= 4) {                     /* SINGLE */
             dispatch_payload(a, d[3], d + 4, len - 4);
             return;
@@ -659,7 +690,12 @@ void miot_auth_on_0019(miot_auth_t *a, const uint8_t *d, size_t len)
         if (type == 0x05) {                                 /* mng_ack */
             uint8_t code = (len >= 4) ? d[3] : 0xFF;
             if (code == 0x00 && !a->chan_ready) mng_test_reply(a);
-            else if (code == 0x01) { /* App 测试包回执，已 READY */ }
+            else if (code == 0x01) {
+                /* App 回执测试包 → 建链这关过了。此刻它才准备好收业务帧，
+                 * 立刻把 device info 交过去，它才能判定「我是哪台设备」
+                 * 并决定走哪条认证分支。 */
+                if (!a->info_sent) { a->info_sent = 1; a->info_at_ms = 0; send_device_info(a); }
+            }
             return;
         }
         if (type == 0x04) {                                 /* mng：code=1 是 App 测试包 */
@@ -746,6 +782,19 @@ void miot_auth_on_0010(miot_auth_t *a, const uint8_t *d, size_t len)
 
 void miot_auth_poll(miot_auth_t *a, uint32_t now_ms)
 {
+    /* device info 兜底排期：正常由 App 的测试包回执(code=1)立即触发；
+     * 回执不来时 250ms 后自行发出（App 的窗口只有约 990ms，不能更久）。 */
+    if (a->chan_ready && !a->info_sent) {
+        if (a->info_at_ms == 0) {
+            a->info_at_ms = now_ms + 250;
+        } else if ((int32_t)(now_ms - a->info_at_ms) >= 0) {
+            a->info_sent = 1;
+            a->info_at_ms = 0;
+            alog(a, "device info fired (fallback 250ms, no echo)");
+            send_device_info(a);
+        }
+    }
+
     if (a->state != MIOT_AUTH_ST_LOGIN_SENT_CONF || !a->conf_pending) return;
     if (a->conf_tries >= 4) { a->conf_pending = 0; return; }
 
@@ -784,6 +833,10 @@ void miot_auth_on_disconnect(miot_auth_t *a)
     a->ag_expect = 0;
     a->ag_got = 0;
     a->chan_ready = 0;
+    a->info_sent = 0;                  /* 新连接要重新交一次 device info */
+    a->info_at_ms = 0;
+    a->tx_n = 0;
+    a->tx_i = 0;
     memset(a->session, 0, sizeof(a->session));
 
     /* PSK 子状态复位：AUTO 下回到 IDLE（下次由启动帧重新判定），

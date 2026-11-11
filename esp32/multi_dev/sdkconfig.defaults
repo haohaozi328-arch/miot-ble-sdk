@@ -24,5 +24,11 @@ CONFIG_MBEDTLS_SHA256_C=y
 CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192
 CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=256
 
+# ★app_main（主任务）默认栈 3584 不够：登录完成后处理 GET/推属性时，
+# miot_spec_packet_t(~600B) + spec_reply 的 out(306B)/hex(124B) + 日志
+# vsnprintf 一起压栈，实测 panic「Stack protection fault」→ App 报
+# 「蓝牙连接失败」。这里给到 8192。
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
 # 默认档案：2 = 米家体脂秤 S400（0x30D9）。串口 `dev N` 可随时切换。
 CONFIG_MIOT_DEV_DEFAULT_INDEX=2

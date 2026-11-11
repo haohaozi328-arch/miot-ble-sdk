@@ -73,16 +73,38 @@ size_t miot_beacon_obj_bytes(uint8_t *p, uint16_t obj_id, const uint8_t *v, size
 int miot_beacon_frame_hello(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
                             uint8_t bond_ability, uint8_t *out, size_t cap)
 {
-    if (cap < 12) return -3;
+    if (cap < 16) return -3;
 
-    out[0] = 0x30;              /* bit4 MAC Include | bit5 Capability Include */
-    out[1] = 0x58;              /* bit8 registered=0 | authMode=2 | version=5 */
+    out[0] = 0x70;              /* bit4 MAC | bit5 Capability | bit6 Object Include */
+    /* ★2026-11-10 21:0x 纠正：未绑定帧必须是 **V2 明文** 形态 0x20（bit9=0），
+     * 配对窗口里置 bit9 → 0x22（「设备请求被连接」）。
+     * 之前写的 0x58 解出来是 version=5 | registered=0，属于「v5 但没注册」的
+     * 畸形组合，真机从不这么发；参考工程（同 PID 真机实测）明确记着
+     * 「0x58=未注册被 App 无视」，已绑定设备才是 0x59。
+     * 现场症状与此完全吻合：App 扫得到、连得上、订阅完不写任何一个字节就断开。 */
+    out[1] = 0x20;              /* v2 | registered=0 | authMode=0（未绑定明文帧） */
     out[2] = (uint8_t)(cfg->pid & 0xFF);
     out[3] = (uint8_t)(cfg->pid >> 8);
     out[4] = (uint8_t)(frame_cnt & 0xFF);
     memcpy(out + 5, cfg->mac_air, 6);
-    out[11] = (uint8_t)((bond_ability & 0x03) << 3);   /* bit3~4 BondAbility */
-    return 12;
+    out[11] = (uint8_t)(0x01 | ((bond_ability & 0x03) << 3));  /* bit0 可连接 | bit3~4 BondAbility */
+
+    /* ★0x1011「待绑定」对象 —— 未绑定广播必须带，缺了它就是死局。
+     *
+     * 实测对拍（旧工程唯一跑通的那次，同一 App、同一 PID 0x03DD）：
+     *   它的未绑定帧 = ... |cap 0x09| 11 10 01 00
+     *   我们原来的   = ... |cap 0x08|（到此结束，无任何对象）
+     * 后果：App 能扫到、能连上、能订阅 0x001B/0x001A/0x0001，但**永远不写
+     * 0x0010 的 AUTH INIT、也永远不下发 12B token**，只是订阅完干等 1 秒后
+     * 主动退订断开（reason 0x213），循环重试。它等的就是「这台设备已经进入
+     * 待绑定状态」这个对象 —— 真机是按下蓝牙按钮后才在广播里带上它。
+     *
+     * 另有 cap bit0（可连接）也漏了：真机 0x09，我们 0x08。 */
+    out[12] = 0x11;             /* 对象 0x1011 LE */
+    out[13] = 0x10;
+    out[14] = 0x01;             /* 长度 1B */
+    out[15] = 0x00;             /* 0 = 待绑定 */
+    return 16;
 }
 
 int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
@@ -126,6 +148,57 @@ int miot_beacon_frame_v5(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
     out[n++] = nonce[10];
     out[n++] = nonce[11];
     memcpy(out + n, tmp + objs_len, 4);         /* MIC(4) 必须在最后 */
+    n += 4;
+    return n;
+}
+
+/* ---------------- v5 加密帧（无 MAC 形态，GATT notify 用） ----------------
+ * FC(2) | PID(2) | cnt(1) | ct(N) | counter_ext(3) | MIC(4)
+ *
+ * 为什么需要这一形态：App 的 ATT MTU 固定 23，单包上限 20B。带 MAC 的 v5 帧
+ * 光帧头就 11B，再加 counter_ext(3)+MIC(4)=18B，只剩 2B，连一个最小的 u8 对象
+ * （obj_id 2 + len 1 + value 1 = 4B）都塞不进去 —— 于是只能推「空对象帧」，
+ * App 收到后解析不出任何属性，订阅完 1s 就退订断开，页面永远「连接超时」。
+ * GATT 通道上接收方本来就靠连接识别设备，MAC 字段冗余，真机 24B 测量帧同样
+ * 用无 MAC 形态（见 miot_beacon.h 说明）。去掉 6B MAC 后：
+ *   13 + objs_len，一个 3B 对象 = 19B ✓，一个 1B 对象 = 17B ✓
+ * nonce 里仍然要带 MAC（CCM 的 nonce 与帧头无关）。 */
+int miot_beacon_frame_v5_nomac(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
+                               const uint8_t *objs, size_t objs_len,
+                               uint8_t *out, size_t cap)
+{
+    if (objs_len > 7) return -2;                    /* 13+7=20，超过就超 ATT 上限 */
+    const size_t total = 6 + objs_len + 3 + 4;
+    if (cap < total) return -3;
+
+    uint8_t nonce[12];
+    memcpy(nonce, cfg->mac_air, 6);
+    nonce[6] = (uint8_t)(cfg->pid & 0xFF);
+    nonce[7] = (uint8_t)(cfg->pid >> 8);
+    nonce[8]  = (uint8_t)(frame_cnt & 0xFF);
+    nonce[9]  = (uint8_t)((frame_cnt >> 8) & 0xFF);
+    nonce[10] = (uint8_t)((frame_cnt >> 16) & 0xFF);
+    nonce[11] = (uint8_t)((frame_cnt >> 24) & 0xFF);
+
+    int n = 0;
+    out[n++] = 0x48;                                /* FC lo: obj|enc，bit4(MAC)=0 */
+    out[n++] = 0x59;                                /* FC hi: v5|registered */
+    out[n++] = nonce[6];
+    out[n++] = nonce[7];
+    out[n++] = nonce[8];
+
+    uint8_t aad = 0x11;
+    uint8_t tmp[7 + 4];
+    if (miot_ccm_encrypt(cfg->beacon_key, nonce, &aad, 1,
+                         objs, objs_len, tmp) != 0)
+        return -1;
+    memcpy(out + n, tmp, objs_len);
+    n += (int)objs_len;
+
+    out[n++] = nonce[9];
+    out[n++] = nonce[10];
+    out[n++] = nonce[11];
+    memcpy(out + n, tmp + objs_len, 4);
     n += 4;
     return n;
 }

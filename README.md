@@ -145,14 +145,18 @@ void app_main(void) {
 }
 ```
 
-## 设备清单（11 台，全部米家 Android App 实测通过）
+## 设备清单（11 台，米家 Android App 实测状态）
 
 > **先看这一条**：各档案在**官方原版 App（无任何模块、未 root）**下能否添加，
 > 见 [docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
-> 其中**驱蚊器智能版**与**夜灯2 的重新绑定**走 legacy PSK。PSK 分支已在
-> `miot_auth` 实现（默认 `AUTO` 自动判定），**但尚未实机验证**——首次实测通过前
-> 仍不要把它们当作「开箱即用」演示。帧格式、已实现的状态机与实测开关见
-> [docs/psk-auth.md](docs/psk-auth.md)。
+>
+> ⚠️ **两个档案当前有问题，不要当「开箱即用」演示**：
+> **夜灯2（0x03DD）** 与 **驱蚊器智能版（0x040A）**。具体现象与规避方式见
+> [docs/known-issues.md](docs/known-issues.md)；夜灯2 的完整打通记录（NUS 文本协议 +
+> legacy RC4 登录 + 去 hook 验证）见
+> [docs/nightl2-ag2-handoff.md](docs/nightl2-ag2-handoff.md)。
+> 其余档案的 legacy PSK 分支已在 `miot_auth` 实现（默认 `AUTO` 自动判定），
+> **但尚未实机验证**，帧格式与已实现状态机见 [docs/psk-auth.md](docs/psk-auth.md)。
 > 推荐入门档案：**蓝牙温湿度计2**（标准认证、免网关、属性可验证）。
 >
 > 「详情」= 该设备代码的存放位置：`examples/<设备>/main.c`（可运行演示）+
@@ -164,8 +168,8 @@ void app_main(void) {
 |---|--------|--------------|------|----------|--------------|
 | 1 | 米家体脂秤 S400 | MJTZC01YM / `yunmai.scales.ms103`（PID 0x30D9） | 绑定/登录/用户资料推送/测量事件上报（8.1 过程流 + 8.2 结果 + 11.1022 + 属性变更）全链路，含云端入库与完整身体成分报告 | 全流程 ✓（App 实时页 + 报告页 + 云端历史实测通过） | [examples/scale_s400/](examples/scale_s400/main.c) · `src/miot_profiles.c §1` |
 | 2 | 蓝牙温湿度计2 | LYWSD03MMC(t9) / `cgllc-cgdk3`（PID 0x055B） | 双 spec siid 兼容（同一属性在两个 spec 里 siid 不同，两份都注册），温度 float / 湿度 / 电量，周期上报 | 绑定 + spec 读写 ✓ | [examples/thermometer/](examples/thermometer/main.c) · `src/miot_profiles.c §2` |
-| 3 | 夜灯2 | MUE4094RT | 亮度%(1-100)/延时ms/开关 spec 下行 + 电量回报，on_set 副作用挂钩 | v54 完整打通 ✓ | [examples/night_light/](examples/night_light/main.c) · `src/miot_profiles.c §5` |
-| 4 | 驱蚊器智能版 | WX08ZM（PID 0x040A） | 开关下行 + set 后立刻回报（页面开关停在正确位置）+ 电量/驱蚊片余量 | 绑定 + 开关下发/回报 ✓ | [examples/repeller/](examples/repeller/main.c) · `src/miot_profiles.c §6` |
+| 3 | 夜灯2 | MUE4094RT（PID 0x03DD） | 亮度%(1-100)/延时ms/开关 + 4 个固定场景；`esp32/multi_dev` 走**北欧 NUS 文本协议**（`6E400001/2/3`）+ legacy RC4 登录（4B 恒等 `E0C7FAFE`） | ⚠️ **已打通但有问题**：原版 App 可绑定，详情页可读可写（实测 `set_bright 35` → 回读 35）；遗留 ① 偶发「连接超时」（页面打开瞬间未抢到连接，重试自恢复）② 删除设备后重扫前**必须先 `factory`**（设备侧带 token 时广播 BondAbility=0x29，扫描列表直接过滤）③ 无「如果」触发条件（spec 只有属性、无 event） | [examples/night_light/](examples/night_light/main.c)（spec 层）· `esp32/multi_dev`（NUS 全链路） |
+| 4 | 驱蚊器智能版 | WX08ZM（PID 0x040A） | 开关下行 + set 后立刻回报（页面开关停在正确位置）+ 电量/驱蚊片余量 | ⚠️ **有问题**（现象待登记，见 [docs/known-issues.md](docs/known-issues.md)） | [examples/repeller/](examples/repeller/main.c) · `src/miot_profiles.c §6` |
 | 5 | 米家无线开关（双键版） | XMWXKG01YL / `yeelink.remote.contrl`（PID 0x1949） | 绑定 + 按键事件广播（0x4E0C 单击 / 0x4E0D 双击 / 0x4E0E 长按，载荷 1B = 键位 1 左 / 2 右）；按键值不进 GATT，事件只走广播 | 绑定 + 事件上报 ✓（连接握手偏慢，见 testing.md #5） | [examples/button_event/](examples/button_event/main.c) · `miot_beacon.h` |
 
 ### B. MiBeacon 广播型（不建连接，加密广播帧）
