@@ -875,12 +875,28 @@ static int nl_mtu_cb(uint16_t conn_handle, const struct ble_gatt_error *error,
     return 0;
 }
 
+/* 最近一次连接的 central 地址（排查手机/网关混连时用） */
+static uint8_t s_peer[6];
+static int     s_peer_ok;
+
 static int gap_event_cb(struct ble_gap_event *event, void *arg)
 {
     (void)arg;
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
+            /* ★2026-11-12 加：打印 central 身份。混合环境里手机、青萍网关、小爱都能连，
+             * 只靠 "phone connected" 无法区分是谁，排查「网关到底连没连」必须看 MAC
+             * 与连接参数（网关通常是固定长间隔 + 大 latency，手机是 7.5~15ms）。 */
+            struct ble_gap_conn_desc cd;
+            if (ble_gap_conn_find(event->connect.conn_handle, &cd) == 0) {
+                memcpy(s_peer, cd.peer_id_addr.val, 6);
+                s_peer_ok = 1;
+                ESP_LOGW(TAG, "CENTRAL %02X:%02X:%02X:%02X:%02X:%02X itvl=%u lat=%u to=%u",
+                         s_peer[5], s_peer[4], s_peer[3], s_peer[2], s_peer[1], s_peer[0],
+                         (unsigned)cd.conn_itvl, (unsigned)cd.conn_latency,
+                         (unsigned)cd.supervision_timeout);
+            }
             gatt_miot_on_connect(event->connect.conn_handle, BLE_ATT_MTU_DFLT);
             /* ★连接态必须继续广播（真机行为，参考工程实测结论）：
              * App 的扫描管线靠 MiBeacon 帧把设备标记为「在身边/在线」，
@@ -920,6 +936,12 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         return 0;
 
     case BLE_GAP_EVENT_DISCONNECT:
+        if (s_peer_ok) {
+            ESP_LOGW(TAG, "DISCONNECT from %02X:%02X:%02X:%02X:%02X:%02X reason=0x%x",
+                     s_peer[5], s_peer[4], s_peer[3], s_peer[2], s_peer[1], s_peer[0],
+                     (unsigned)event->disconnect.reason);
+            s_peer_ok = 0;
+        }
         gatt_miot_on_disconnect();
         miot_auth_on_disconnect(&s_auth);
         miot_device_session_reset(&s_dev);
