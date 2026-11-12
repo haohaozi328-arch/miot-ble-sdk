@@ -1164,8 +1164,17 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
         /* ★ag2 / channel 帧统一交给认证层：
          * 它有 START→ACK、mng→测试包、分片重组、channel data/ack 的完整分支，
          * 我们在这里再补一个 ACK 只会造成重复应答、把 App 的状态机顶乱。 */
-        if (looks_ag2(buf, got)) {
-            ESP_LOGW(TAG, "spec: 0x001A ag2 帧 len=%u -> 认证层", got);
+        /* ★2026-11-12 21:36 网关实测（central = 46:7D:0B:3F:E9:36）：
+         * 认证一通过，网关立刻发 ag2 数据帧要数据，但 looks_ag2() 按
+         * 「认证层还想收数据」(ag_expect>0) 把这些帧判给了认证层 —— 连 START
+         * 一起吃掉。结果 spec 侧的 ag2 状态机永远收不到 START（rx_expect=0），
+         * 后续数据帧全部按 stray 丢弃，日志表现就是
+         *   `dispatch: no consumer (pkg=0 len=11)`
+         * 网关等 4.7s 拿不到回应，退订并断开（reason=0x213）。
+         * 修法：登录完成后 0x001A 一律交给 spec 层（START/ACK/DATA 全归它的
+         * ag2 状态机），认证层只在未登录时接管。 */
+        if (looks_ag2(buf, got) && !(s_auth && miot_auth_is_logged_in(s_auth))) {
+            ESP_LOGW(TAG, "spec: 0x001A ag2 帧 len=%u -> 认证层（未登录）", got);
             if (s_auth) miot_auth_on_0019(s_auth, buf, got);
             break;
         }
@@ -1182,8 +1191,8 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
         s_rx_chan = s_h1b;
         ESP_LOGI(TAG, "wr 001B #%lu len=%u cmd=%02X", (unsigned long)s_wr1b, got, got ? buf[0] : 0);
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, buf, got > 32 ? 32 : got, ESP_LOG_INFO);
-        if (looks_ag2(buf, got)) {
-            ESP_LOGW(TAG, "spec: 0x001B ag2 帧 len=%u -> 认证层", got);
+        if (looks_ag2(buf, got) && !(s_auth && miot_auth_is_logged_in(s_auth))) {
+            ESP_LOGW(TAG, "spec: 0x001B ag2 帧 len=%u -> 认证层（未登录）", got);
             if (s_auth) miot_auth_on_0019(s_auth, buf, got);
             break;
         }

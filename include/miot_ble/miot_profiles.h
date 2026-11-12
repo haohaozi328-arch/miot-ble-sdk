@@ -30,6 +30,10 @@ void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
 #define SCALE_S400_STEPS 7
 int  scale_s400_report_step(miot_device_t *dev, int step,
                             uint32_t weight_01g, uint32_t impedance_01, uint32_t ts);
+/** 离线称重落库：手机不在场（无会话）时也要把体重/阻抗写进属性表。
+ *  真机此时把数据存秤里，网关或手机下次连上来 GET 3.1005 / 3.1006 就能读到；
+ *  实现上只需写 s400_weight / s400_imp —— spec 属性 GET 直接读这两个变量。 */
+void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01);
 /** siid 扫射（私有 spec 事件 siid 未知时探查） */
 void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2);
 

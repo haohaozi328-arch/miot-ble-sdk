@@ -72,6 +72,16 @@ void scale_s400_init(miot_device_t *dev, miot_port_t *port,
  *   旧实现直接塞克（64500）→ 插件算成 6450kg，超量程丢弃 → 页面停在「上秤」。 */
 static uint32_t s400_kg10(uint32_t grams) { return grams / 100u; }
 
+/* 离线称重落库（无会话路径）。
+ * 真机「体重称重模式：无需连接蓝牙，上秤即可完成测量」——数据先存秤里，
+ * 等网关/手机连上来取。我们这里把值写进属性表，spec GET 3.1005/3.1006
+ * 会直接返回它，所以网关一登录就能读到这次离线测量的结果。 */
+void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01)
+{
+    s400_weight = s400_kg10(weight_01g);
+    s400_imp    = impedance_01;
+}
+
 /* 一帧一步：0..3 = 8.1 过程流，4 = 8.2 结果，5 = 11.1022，6 = 11.2/11.3 属性变更。
  * ★必须由调用方节流（App 的 ag2 接收窗口同一毫秒只吃一帧，连发会整帧丢）。*/
 int scale_s400_report_step(miot_device_t *dev, int step,

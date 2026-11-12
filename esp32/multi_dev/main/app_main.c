@@ -235,6 +235,10 @@ static uint32_t s_ev_next;              /* 下一帧重发时刻（ms） */
 /* 称重序列的分帧状态机（见 scale_s400_report_step：一帧一步，必须节流） */
 static int      s_wstep = -1;
 static uint32_t s_wnext, s_ww, s_wimp, s_wts;
+/* 离线称重后的「请求被连接」窗口（ms 截止时刻）。
+ * 真机称完、手机不在场时会把广播的 solicited 位置 1，等于对外喊「我有数据要交」；
+ * 网关正是靠这一位决定要不要主动建链。窗口结束后自动回落到默认形态。 */
+static uint32_t s_solicit_until;
 /* 每步之后到下一步的间隔：8.1 过程流 250ms 一跳，结果前留 400ms，
  * 1022 / 属性变更各留 900ms —— App 的 ag2 窗口同一毫秒只吃一帧。 */
 static const uint16_t k_wgap[SCALE_S400_STEPS] = { 250, 250, 250, 400, 900, 900, 0 };
@@ -768,6 +772,13 @@ static int build_frame(int idx)
      * 夜灯2 是 legacy p21 绑的（0x0010 上 AUTH_INIT/BOND/GETRAND），
      * 页面会话能不能起来，就看 App 认哪种。 */
     if (s_fc_hi) s_frame[1] = s_fc_hi;
+    /* 离线称重窗口内强制 solicited=1：0x5B = v5|registered=1|solicited=1|authMode=2。
+     * 真机称完、手机不在场时就是这个形态 —— 「我有数据要交，来连我」。
+     * 网关的扫描策略正是按这一位决定要不要主动建链，所以窗口结束后必须回落，
+     * 否则长期 solicited 会让网关以为一直有待传数据。 */
+    if (s_solicit_until && (int32_t)(s_solicit_until - now_ms()) > 0) {
+        s_frame[1] = 0x5B;
+    }
     s_flen = (uint8_t)fl;
     return fl;
 }
@@ -1308,6 +1319,26 @@ static void cli_task(void *arg)
                 s_wdelay = 0; s_wgap_p = k_wgap; s_click_pending = 0;
                 s_wstep = 0; s_wnext = now_ms();
             }
+        } else if (!strncmp(line, "ow", 2)) {
+            /* ow                -> 离线称重，默认 64.5kg / 阻抗 500
+             * ow 70 / ow 70250 480
+             * 模拟「手机不在场时上秤」这个真实场景：体重写进属性表，
+             * 广播 solicited 置 1 保持 10 分钟，等网关主动建链来读 3.1005。 */
+            const char *a1 = line + 2;
+            while (*a1 == ' ') a1++;
+            uint32_t g = *a1 ? (uint32_t)strtoul(a1, NULL, 10) : 64500u;
+            if (g < 2000u) g *= 1000u;
+            uint32_t imp = 500u;
+            const char *a2 = strchr(a1, ' ');
+            if (a2) {
+                while (*a2 == ' ') a2++;
+                if (*a2) imp = (uint32_t)strtoul(a2, NULL, 10);
+            }
+            scale_s400_store_offline(g, imp);
+            s_solicit_until = now_ms() + 10u * 60u * 1000u;
+            adv_refresh();
+            ESP_LOGW(TAG, "offline weigh-in %u.%03ukg imp=%u -> solicited adv 10min",
+                     (unsigned)(g / 1000u), (unsigned)(g % 1000u), (unsigned)imp);
         } else if (!strncmp(line, "near", 4)) {
             /* near              -> 查询
              * near 0            -> 关闭
@@ -1784,7 +1815,26 @@ void app_main(void)
             if (s_sel != 2) {
                 ESP_LOGW(TAG, "BOOT 称重只对档案 [2] S400 有效（当前 sel=%d）", s_sel);
             } else if (!s_auth.logged_in) {
-                ESP_LOGW(TAG, "App 未登录（login=0）：先在米家里打开秤页面，再按 BOOT");
+                /* ★未登录 = 手机不在场，这正是说明书里的「离线称重模式」。
+                 * 真机此时照样完成称重、把数据存在秤里，并让广播进入「请求被连接」
+                 * 形态，等网关/手机来取（说明书绑定步骤④：手机与秤未连接时，
+                 * 秤会自动连接蓝牙网关）。我们做同样两件事：
+                 *   1) 体重/阻抗写进属性表 → 谁连上来 GET 3.1005 / 3.1006 就能读到；
+                 *   2) 广播 solicited 置 1，窗口 10 分钟（见 build_frame 里的 0x5B）。
+                 * 事件帧（8.1/8.2/11.1022）此刻发不出去 —— 没有会话密钥，
+                 * 这与真机「数据先存秤里、等下次连接再上传」是同一个状态。 */
+                s_ww   = k_wcycle[s_widx][0];
+                s_wimp = k_wcycle[s_widx][1];
+                s_widx = (s_widx + 1) % (int)(sizeof(k_wcycle) / sizeof(k_wcycle[0]));
+                s_wts  = scale_now();
+                s_last_weigh = t;
+                scale_s400_store_offline(s_ww, s_wimp);
+                s_solicit_until = t + 10u * 60u * 1000u;
+                adv_refresh();
+                ESP_LOGW(TAG, "offline weigh-in %u.%03ukg imp=%u (no session) -> "
+                              "adv solicited=1, gateway may read 3.1005",
+                         (unsigned)(s_ww / 1000u), (unsigned)(s_ww % 1000u),
+                         (unsigned)s_wimp);
             } else if (s_wstep < 0) {
                 int from_click = s_click_pending;
                 s_click_pending = 0;
