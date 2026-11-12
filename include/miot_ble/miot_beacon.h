@@ -33,6 +33,12 @@ extern "C" {
 #endif
 
 /* ---------- 标准 MiBeacon 对象 ID（实测自真机广播） ---------- */
+/* ★通用事件（Event，不是 Property）：网关按边沿判定，收到后可以主动作为
+ * central 连上来。0x0001=「连接」，0x0003=「靠近」。这是第三方 MiBeacon
+ * 网关唯一会被「叫醒」去建立 GATT 连接的手段 —— 秤这类 Spec 设备没有
+ * 能装体重的 Property 对象，只能靠事件把网关引过来，再由会话推数据。 */
+#define MB_OBJ_EV_CONNECT     0x0001  /* 1B：设备请求被连接 */
+#define MB_OBJ_EV_NEAR        0x0003  /* 1B：设备靠近（唤醒网关） */
 #define MB_OBJ_MOTION_LIGHT   0x000F  /* 3B：b1=移动 b2=光照>0 有光（人体/夜灯共用） */
 #define MB_OBJ_BUTTON         0x1001  /* 3B：类型/步数/动作 0=单击 1=双击 2=长按 */
 #define MB_OBJ_TEMP_I16       0x1004  /* 2B：int16 0.1℃（t9/cgdk3/JQJCY01YM） */

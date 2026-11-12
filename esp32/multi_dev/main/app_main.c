@@ -225,6 +225,13 @@ static uint16_t s_btn_obj;              /* 0=空闲；否则 0x4E0C/0x4E0D/0x4E0
 static uint8_t  s_btn_key = 1;          /* 载荷 = 按键号：1=左键 2=右键（双键版语义） */
 static uint32_t s_btn_until;            /* 事件保持到何时（ms），到点回落电量帧 */
 static volatile int s_btn_req;          /* 1=单击 2=双击 3=长按，主循环消费 */
+/* 「叫网关来连」的事件窗口（`near` 命令）：
+ * 秤没有能装体重的 Property 对象，第三方网关无从解析，也就不会主动连；
+ * 唯一的招是发通用事件 0x0001/0x0003 —— 网关见到「设备请求被连接」才会
+ * 作为 central 连上来，之后走我们已经打通的标准登录 + spec 会话推数据。 */
+static uint16_t s_ev_obj;               /* 0=空闲；否则 0x0001/0x0003 */
+static uint32_t s_ev_until;             /* 窗口截止（ms） */
+static uint32_t s_ev_next;              /* 下一帧重发时刻（ms） */
 /* 称重序列的分帧状态机（见 scale_s400_report_step：一帧一步，必须节流） */
 static int      s_wstep = -1;
 static uint32_t s_wnext, s_ww, s_wimp, s_wts;
@@ -702,7 +709,10 @@ static int build_frame(int idx)
 
     uint8_t objs[16];
     size_t n;
-    if (DEV_KIND == 1) {
+    if (s_ev_obj) {
+        /* 事件帧优先：一帧只装一个对象，长度 12+3+4=19B，远低于 31B 预算 */
+        n = miot_beacon_obj_u8(objs, s_ev_obj, 1);
+    } else if (DEV_KIND == 1) {
         n = build_objs_beacon(idx, objs, sizeof(objs));
     } else if (s_sel == 0) {
         /* 夜灯2：移动 / 光照 / 电量 三个 1B 对象轮换。
@@ -1276,6 +1286,46 @@ static void cli_task(void *arg)
                 s_wdelay = 0; s_wgap_p = k_wgap; s_click_pending = 0;
                 s_wstep = 0; s_wnext = now_ms();
             }
+        } else if (!strncmp(line, "near", 4)) {
+            /* near              -> 查询
+             * near 0            -> 关闭
+             * near 1 [秒]       -> 发 0x0001「连接」事件（默认 12s）
+             * near 3 [秒]       -> 发 0x0003「靠近」事件
+             * 目的：验证第三方网关（青萍）会不会因为事件而主动连上来。
+             * 连上来之后能否读到数据，取决于网关有没有这个型号的读取表。 */
+            const char *a = line + 4;
+            while (*a == ' ') a++;
+            if (!*a) {
+                ESP_LOGW(TAG, "near: obj=0x%04X 剩余=%dms（0=关闭）", s_ev_obj,
+                         s_ev_obj ? (int)(s_ev_until - now_ms()) : 0);
+            } else {
+                int obj = atoi(a);
+                if (obj == 0) {
+                    s_ev_obj = 0;
+                    s_fast_until = 0;
+                    s_fcnt++;
+                    build_frame(s_idx);
+                    adv_refresh();
+                    ESP_LOGW(TAG, "near: 已停止，回到电量帧");
+                } else if (obj == 1 || obj == 3) {
+                    uint32_t sec = 12;
+                    const char *a2 = strchr(a, ' ');
+                    if (a2) { while (*a2 == ' ') a2++; if (*a2) sec = (uint32_t)strtoul(a2, NULL, 10); }
+                    if (sec < 3) sec = 3;
+                    if (sec > 300) sec = 300;
+                    uint32_t t = now_ms();
+                    s_ev_obj = (uint16_t)(obj == 1 ? MB_OBJ_EV_CONNECT : MB_OBJ_EV_NEAR);
+                    s_ev_until = t + sec * 1000u;
+                    s_ev_next = t;
+                    /* 同时开快广播窗口：100ms 太稀，网关 20~30ms 一帧才容易抓到边沿 */
+                    s_fast_until = s_ev_until;
+                    s_adv_req = 1;
+                    ESP_LOGW(TAG, "near: 0x%04X %s事件，持续 %us（快广播 + 220ms 重发）",
+                             s_ev_obj, obj == 1 ? "连接" : "靠近", (unsigned)sec);
+                } else {
+                    ESP_LOGW(TAG, "用法: near 0 | near 1 [秒] | near 3 [秒]");
+                }
+            }
         } else if (!strcmp(line, "frames")) {
             /* 逐槽构造一次真实广播帧并打印 —— 不依赖手机即可校验
              * 31B 预算、对象编码与槽位数是否对齐（现场评审的第一手证据）。 */
@@ -1614,6 +1664,21 @@ void app_main(void)
             s_fcnt++;
             if (build_frame(s_idx) >= 0) adv_refresh();
             ESP_LOGI(TAG, "btn: 事件结束，回到电量帧");
+        }
+
+        /* near 事件窗口：每 220ms 换一帧计数重发（网关去重，内容必须变），
+         * 到点回落电量帧。整段期间 adv 都是 connectable，网关随时能连。 */
+        if (s_ev_obj && (int32_t)(t - s_ev_next) >= 0) {
+            if ((int32_t)(t - s_ev_until) >= 0) {
+                s_ev_obj = 0;
+                s_fcnt++;
+                if (build_frame(s_idx) >= 0) adv_refresh();
+                ESP_LOGW(TAG, "near: 窗口结束，回到电量帧");
+            } else {
+                s_ev_next = t + 220;
+                s_fcnt++;
+                if (build_frame(s_idx) >= 0) adv_refresh();
+            }
         }
 
         int fast_now = s_fast_until && (int32_t)(t - s_fast_until) < 0;
