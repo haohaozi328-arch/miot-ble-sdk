@@ -76,13 +76,16 @@ int miot_beacon_frame_hello(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
     if (cap < 16) return -3;
 
     out[0] = 0x70;              /* bit4 MAC | bit5 Capability | bit6 Object Include */
-    /* ★2026-11-10 21:0x 纠正：未绑定帧必须是 **V2 明文** 形态 0x20（bit9=0），
-     * 配对窗口里置 bit9 → 0x22（「设备请求被连接」）。
-     * 之前写的 0x58 解出来是 version=5 | registered=0，属于「v5 但没注册」的
-     * 畸形组合，真机从不这么发；参考工程（同 PID 真机实测）明确记着
-     * 「0x58=未注册被 App 无视」，已绑定设备才是 0x59。
-     * 现场症状与此完全吻合：App 扫得到、连得上、订阅完不写任何一个字节就断开。 */
-    out[1] = 0x20;              /* v2 | registered=0 | authMode=0（未绑定明文帧） */
+    /* ★2026-11-12 13:1x 铁证修正（否决此前的 0x20/0x58 两轮猜测）：
+     *   FC 高字节位布局：bit0=registered、bit1=请求被连接、bit2~3=authMode、
+     *   bit4~7=version。App **靠 authMode 选认证分支**：
+     *     authMode=0 → 二代 legacy p21 挑战应答（我们之前一直在走这条）
+     *     authMode=2 → 标准认证（ECDH REGISTER + HKDF LOGIN，S400 真机形态）
+     * 0x20/0x22 的 bit2~3 都是 00，所以 App 永远走 legacy：绑定"成功"、token
+     * 是本地兜底值、详情页永远建不起 spec 会话（转圈→连接超时）。
+     * 已绑定帧我们发的是 0x29（v2|registered|authMode=2），App 认；未绑定帧
+     * 必须同样宣告 authMode=2 → **0x28**（配对窗口置 bit9 → 0x2A）。 */
+    out[1] = 0x28;              /* v2 | registered=0 | authMode=2（标准认证待绑定） */
     out[2] = (uint8_t)(cfg->pid & 0xFF);
     out[3] = (uint8_t)(cfg->pid >> 8);
     out[4] = (uint8_t)(frame_cnt & 0xFF);

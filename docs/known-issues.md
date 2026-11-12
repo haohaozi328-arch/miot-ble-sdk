@@ -23,6 +23,33 @@
 > 云端多建一条记录（同型号出现多台）。已改为**按档案隔离命名空间**（见
 > `docs/nightl2-ag2-handoff.md` §10.9），一次性擦除后的档案需重新绑定一次。
 
+### 2.1 米家体脂秤 S400（MJTZC01YM，PID 0x30D9）✅ 已打通（2026-11-12）
+
+绑定成功但详情页永远「连接超时 / 请靠近设备后重试」，`login=0`。**根因两个，都在应答通道上，与 token / KDF 无关**：
+
+| # | 现象 | 根因 | 修法 |
+|---|------|------|------|
+| 1 | App 对每帧都回 ACK，但从不发 `0x0A` appConfirm，15s 后 `reason=0x213` 断开 | 认证 parcel（device info / `0x0D` devRand / `0x0C` devConfirm）**全部投到 0x001A**。App 的 ag2 层照常 ACK（看起来"收到了"），但认证状态机只盯 **0x0019** | `gatt_miot_notify_auth_0019`：登录完成前一律回「App 写进来的那条面」(`auth_chan()`) |
+| 2 | 登录成功后属性读写推不动：App 每 6 秒重发一次 `wr 001A 00 00 00 00 01 00` | `s_ag_h` 是「本次连接第一次写入的面」，登录阶段被钉成 0x0019；登录后 App 改在 **0x001A** 发 ag2 START，ACK 却仍投 0x0019 | 新增 `s_rx_chan`：**逐帧记录来源面**，应答回到该帧进来的那条特征 |
+
+修好后串口实证（一次成功，无需重发变体）：
+
+```
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+[miot-auth] LOGIN: devConfirm sent (#1)
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+MIOT: *** session established: spec channel ready ***
+```
+
+称重数据链路同样打通：`weight 63.8 21` → `weigh-in: 63.000 kg imp=21` → 7 步 spec 写帧，App 逐帧 ACK，米家页面出现新记录。
+
+> 排除项（都试过、都不是原因）：HKDF 字节序 4 变体、ikm 补零、token 新旧。
+> 绑定时拿到的 `87DE7C8A861FFC4D4A04FE17` 是**有效的**——它虽然由 legacy 流程下发，
+> App 侧保存的也是同一个值，标准 LOGIN 用它算 devConfirm 能对上。
+> 另外广播 FC 的 authMode（0x20/0x22 → 0x28/0x2A）对 App 选哪条认证分支**没有影响**，
+> 改与不改都走 legacy 绑定；真正的分水岭是上面两个通道问题。
+
 ### 2. 驱蚊器智能版（WX08ZM，PID 0x040A）⚠️ 有问题
 
 - 状态：**存在问题，具体现象待登记**（本轮只确认「有问题」这个结论）。

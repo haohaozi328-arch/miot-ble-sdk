@@ -687,7 +687,13 @@ static int build_frame(int idx)
          *   我们上一步把未绑定帧写成 0x58，等于既不是待绑定、也不是已注册，
          *   App 连上后什么都不写、1 秒退订——现场就是 -55。
          *   现在未绑定一律发 0x22（一直请求连接，真机按键后同款）。 */
-        s_frame[1] = s_fc_hi ? s_fc_hi : 0x22;
+        /* ★2026-11-12 13:1x 铁证修正：原来这里写 0x22，解出来 authMode=0，
+         * 于是 App 把设备当「二代 legacy 设备」，**绑定全程走 p21 挑战应答**
+         * （串口实证：`legacy token 落盘` + `legacy BOND 确认`，两次绑定都是），
+         * 拿到的 12B token 是 legacy 兜底值，不是云端 token —— 之后的
+         * 标准 LOGIN 用这把假钥匙算 devConfirm，App 必然不认，页面永久转圈。
+         * 真机形态：v2|registered=0|authMode=2 → 0x28；配对窗口加 bit9 → 0x2A。 */
+        s_frame[1] = s_fc_hi ? s_fc_hi : 0x2A;
         s_flen = (uint8_t)fl;
         return fl;
     }
@@ -787,7 +793,12 @@ static void adv_start(void)
     int m = 0;
     mfr[m++] = 0x8F; mfr[m++] = 0x03;
     mfr[m++] = 0x30;
-    mfr[m++] = (uint8_t)(s_auth.bound ? 0x29 : 0x20);   /* 参考工程：未绑定 0x20 / 已绑定 0x29 */
+    /* ★2026-11-12 13:2x 这才是 App 真正读的那一帧：扫描应答里的 MiBeacon
+     * 制造商数据（0xFE95 的 service data 只是辅助）。原写死 `bound?0x29:0x20`，
+     * 未绑定恒为 0x20 → authMode=0 → App 判定「二代 legacy 设备」，
+     * 绑定走 p21 挑战应答（串口实证 legacy token 落盘），token 是假的。
+     * 已绑定 0x29 = v2|registered|authMode=2；未绑定对齐成 0x28。 */
+    mfr[m++] = (uint8_t)(s_auth.bound ? 0x29 : 0x28);
     mfr[m++] = (uint8_t)(DEV_PID & 0xFF);
     mfr[m++] = (uint8_t)(DEV_PID >> 8);
     mfr[m++] = (uint8_t)s_fcnt;

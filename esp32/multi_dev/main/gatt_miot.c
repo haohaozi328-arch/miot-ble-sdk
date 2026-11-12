@@ -369,11 +369,18 @@ static uint8_t s_sub[64];
  * 我们之前按 auth_chan() 固定投到 0x001A，等于把校验包投进了没人读的信箱，
  * App 干等 1s 后 cancelOpen（页面「连接超时」）。 */
 static uint16_t s_ag_h;
-
 /** legacy 请求的「来路面」（0x0001 或 0x0010）。
  *  绑定时 App 把 GETRAND 写在 0x0010，却在 0x0001 上等回包 —— 两种都有；
  *  实测被接住的那次是**单帧**回到 App 真正订阅的那条面。 */
 static uint16_t s_leg_h;
+
+/** ★2026-11-12 16:4x：**当前这一帧是从哪条特征写进来的**。
+ *  s_ag_h 是「本次连接第一次写入的那条面」，粘住不变；登录阶段 App 先写
+ *  0x0019，于是 s_ag_h 被钉成 0x0019。登录成功后 App 改在 0x001A 发 ag2
+ *  控制帧（START `00 00 00 00 01 00`），我们来 ACK 却仍投 0x0019 ——
+ *  App 在 0x001A 上等不到 ACK，每 6 秒重发一次 START（实测正是如此），
+ *  属性读写永远推进不下去。应答必须**逐帧**回到该帧的来源面。 */
+static uint16_t s_rx_chan;
 
 /** 认证应答面：优先「控制帧来路面」，其次 0x0019 > 0x001A > 0x001B。
  *  夜灯2 命中的是 0x001A；门锁是 0x0016（那套在 mi_beacon 里另有分支）。 */
@@ -1144,12 +1151,14 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
     case 0x0019:
         s_wr19++;
         if (!s_ag_h) s_ag_h = s_h19;
+        s_rx_chan = s_h19;      /* 本帧来路面：后续应答回这里 */
         ESP_LOGD(TAG, "wr 0019 #%lu len=%u", (unsigned long)s_wr19, got);
         if (s_auth) miot_auth_on_0019(s_auth, buf, got);
         break;
     case 0x001A:
         s_wr1a++;
         if (!s_ag_h) s_ag_h = s_h1a;
+        s_rx_chan = s_h1a;      /* ★登录后 App 的 ag2 全在这里，ACK 必须回来 */
         ESP_LOGI(TAG, "wr 001A #%lu len=%u cmd=%02X", (unsigned long)s_wr1a, got, got ? buf[0] : 0);
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, buf, got > 32 ? 32 : got, ESP_LOG_INFO);
         /* ★ag2 / channel 帧统一交给认证层：
@@ -1170,6 +1179,7 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
     case 0x001B:
         s_wr1b++;
         if (!s_ag_h) s_ag_h = s_h1b;
+        s_rx_chan = s_h1b;
         ESP_LOGI(TAG, "wr 001B #%lu len=%u cmd=%02X", (unsigned long)s_wr1b, got, got ? buf[0] : 0);
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, buf, got > 32 ? 32 : got, ESP_LOG_INFO);
         if (looks_ag2(buf, got)) {
@@ -1637,6 +1647,7 @@ void gatt_miot_on_disconnect(void)
              (unsigned long)s_wr1a, (unsigned long)s_wr1b);
     s_conn = BLE_HS_CONN_HANDLE_NONE;
     s_ag_h = 0;              /* 新连接重新判定控制帧应答面 */
+    s_rx_chan = 0;
     s_leg_h = 0;
     s_mtu = BLE_ATT_MTU_DFLT;
 }
@@ -1859,9 +1870,17 @@ int gatt_miot_notify_auth_0019(void *user, const uint8_t *d, size_t len)
     uint16_t h;
     int is_ctrl = (len >= 2 && d[0] == 0x00 && d[1] == 0x00 &&
                    !(len >= 3 && (d[2] == 0x00 || d[2] == 0x02)));
-    h = is_ctrl ? auth_chan() : spec_data_chan();
+    /* ★登录完成之前，device info / dev_rand(0x0D) / dev_confirm(0x0C) 这些
+     * 认证 parcel 必须回 App 写入的那条面（0x0019）。原来一律走 0x001A，
+     * App 的分片层照样 ACK（所以看起来"收到了"），但认证状态机只盯 0x0019，
+     * 于是永远等不到 0x0C → 静默 15s → reason=0x213 断开。
+     * 实测依据：S400 真机抓包 dev_rand/remote_info 都在 0x0019 上。 */
+    int in_auth = !(s_auth && miot_auth_is_logged_in(s_auth));
+    /* 优先逐帧回到「来路面」（s_rx_chan），它有订阅才用；否则退回旧逻辑。 */
+    if (s_rx_chan && s_rx_chan < 64 && s_sub[s_rx_chan]) h = s_rx_chan;
+    else h = (is_ctrl || in_auth) ? auth_chan() : spec_data_chan();
     int rc = notify_chr(h, d, len);
-    ESP_LOGW(TAG, "auth notify %uB -> h%u rc=%d (%s ag_h=%u)",
-             (unsigned)len, h, rc, is_ctrl ? "ctrl" : "data", s_ag_h);
+    ESP_LOGW(TAG, "auth notify %uB -> h%u rc=%d (%s ag_h=%u rx=%u)",
+             (unsigned)len, h, rc, is_ctrl ? "ctrl" : "data", s_ag_h, s_rx_chan);
     return rc;
 }
