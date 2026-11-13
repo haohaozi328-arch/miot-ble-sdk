@@ -73,10 +73,14 @@ extern "C" {
 #define MIOT_OP_VERSION_XCH 0xF0
 
 #define MIOT_SPEC_VER       2u      /* 协议版本（len16 高 4 位） */
-/* 单包最大参数/对象数。★别调回 4：13.1 sync（用户档案同步）一帧带 5 个入参，
- * 第 5 个正是整段 uinfo JSON，截断后既看不到也存不下。NimBLE host 任务栈 8KB，
- * 6 个 value（各 ~140B）+ 应答缓冲约 1.7KB，实测无溢出。 */
-#define MIOT_SPEC_MAX_ARGS  6
+/* 单包最大参数/对象数。★别调小到 6：13.1 sync（用户档案同步）一帧带 5 个入参，
+ * 第 5 个正是整段 uinfo JSON，截断后既看不到也存不下（原来是 4）。
+ * ★也别低于 8：温湿度计 3 Pro 页面初始化时一次 GET 请求 8 个属性
+ * （7.1001 7.1002 8.1029 4.1003 5.1026 8.1 7.1 6.1027），
+ * MAX_ARGS=6 时 args[6]/args[7] 越界读、handle_get 的 vals[6]/vals[7] 越界写，
+ * 把返回地址冲成 0 → Instruction access fault 直接重启（2026-11-13 21:49 实测）。
+ * NimBLE host 任务栈 8KB；为控制栈占用，handle_get/handle_set 的临时数组已改 static。 */
+#define MIOT_SPEC_MAX_ARGS  12
 /* 字符串参数最大长度。★别调小：体脂秤 8.2 结果帧是 28 字段 CSV，
  * 实测 66 字符（含 10 位时间戳）。原来是 40，载荷被静默截断，
  * App 解析不出字段，页面就一直停在「上秤」（23:07 实测）。 */

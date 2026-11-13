@@ -192,7 +192,10 @@ static void fill_value(miot_spec_value_t *v, uint8_t siid, uint16_t piid,
 
 static void handle_get(miot_device_t *d, const miot_spec_packet_t *pkt)
 {
-    miot_spec_value_t vals[MIOT_SPEC_MAX_ARGS];
+    /* ★static：MIOT_SPEC_MAX_ARGS 提到 12 后单数组约 1.7KB，放在 8KB 的
+     * NimBLE host 栈上会和 dispatch 里的 packet 叠加，逼近溢出。
+     * spec 通道是单连接串行处理（同一时刻只有一个 req 在跑），static 安全。 */
+    static miot_spec_value_t vals[MIOT_SPEC_MAX_ARGS];
     for (int i = 0; i < pkt->argc; i++) {
         uint8_t siid = pkt->args[i].siid;
         uint16_t piid = pkt->args[i].piid;
@@ -233,7 +236,7 @@ static void handle_get(miot_device_t *d, const miot_spec_packet_t *pkt)
 
 static void handle_set(miot_device_t *d, const miot_spec_packet_t *pkt)
 {
-    miot_spec_value_t res[MIOT_SPEC_MAX_ARGS];
+    static miot_spec_value_t res[MIOT_SPEC_MAX_ARGS];   /* 同上：省栈 */
     for (int i = 0; i < pkt->argc; i++) {
         const miot_spec_value_t *in = &pkt->args[i];
         uint16_t result = 1;
@@ -340,7 +343,7 @@ void miot_device_dispatch_plain(miot_device_t *d, const uint8_t *pt, size_t len)
         /* 应答：默认 `[06][respCode16]`；若设备侧能提供 out 参数就按 kt4 带齐
          * （13.1 sync 的 6/7/8/9/10，缺一个 App 都不推进同步流程） */
         uint8_t r[192];
-        miot_spec_value_t outs[MIOT_SPEC_MAX_ARGS];
+        static miot_spec_value_t outs[MIOT_SPEC_MAX_ARGS];   /* 同上：省栈 */
         memset(outs, 0, sizeof(outs));
         int no = miot_device_action_out(pkt.siid, pkt.piid, outs, (int)MIOT_SPEC_MAX_ARGS);
         int n = (no > 0)

@@ -314,6 +314,10 @@ int miot_spec_parse(const uint8_t *in, size_t len, miot_spec_packet_t *out)
             out->args[i].piid = get16(p + 1);
             p += 3; remain -= 3;
         }
+        /* ★必须钳制：只截断循环而不改 argc，上层按 pkt->argc 遍历就会读到
+         * args[] 之外的栈垃圾，并在应答数组上越界写（3 Pro 一次 GET 8 个属性，
+         * MAX_ARGS=6 时直接栈溢出重启）。宁可少回几个，也不能越界。 */
+        if (out->argc > MIOT_SPEC_MAX_ARGS) out->argc = MIOT_SPEC_MAX_ARGS;
         return 0;
     case MIOT_OP_SET:
         if (remain < 1) return -3;
@@ -324,6 +328,7 @@ int miot_spec_parse(const uint8_t *in, size_t len, miot_spec_packet_t *out)
             if (c < 0) return -4;
             p += c; remain -= (size_t)c;
         }
+        if (out->argc > MIOT_SPEC_MAX_ARGS) out->argc = MIOT_SPEC_MAX_ARGS;
         return 0;
     case MIOT_OP_ACTION:
         /* ★v67 串口实证（267B 的 13.1 sync 帧逐字节对齐）：
