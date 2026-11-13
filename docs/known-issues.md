@@ -265,6 +265,31 @@ S400 的网关同步**大概率只对小米多模网关 2 / 中枢网关这类�
 - 实测：该设备**可以在小爱同学/米家的自动化里添加场景**（不是「官方不支持」）。
 - 但仍受第 4 条约束：场景能不能被触发，取决于当时有没有上报源（手机在旁或青萍网关在线）。
 
+### 6. 终局结论：云端把 S400 注册为「蓝牙 Mesh」设备，网关走 Mesh 广播，从不发起 GATT 连接（2026-11-13）
+
+- 关键证据：删除重绑后米家 App「关于设备」显示型号 `yunmai.scales.ms103`，
+  连接方式为**蓝牙 Mesh**（用户手机截图确认，MAC 10:00:3B:CE:42:03 一致）。
+- 官方文档（小米 IoT 开发者平台《BLE/BLE Mesh 设备控制》+ 米家 BLE Mesh 技术文章）明确：
+  - **BLE 设备**：只能手机 GATT 直连，网关不下发指令；
+  - **BLE Mesh 设备**：网关把云端 spec 命令**转成 Mesh 消息经广播(ADV)下发**，
+    设备上行同样走 Mesh 广播——**全程无 GATT 连接**；
+  - 近场 Mesh 设备若网关 **1.5min** 收不到其广播即显示离线。
+- 对应本项目的实测链（全部零 GATT 连接）：
+  1. 6 种广播 FC 变体（含 mesh=1 / solicited / unreg）×多轮窗口——音箱扫描但从不连；
+  2. 小爱语音查询「体脂秤体重」——不认识该查询，无任务下发；
+  3. 删除重绑（factory → 新 did=00 62 6C 74 → 新 token）+ 音箱重启 Mesh——仍零连接；
+  4. 重绑全程 GATT 抓包（设备侧）：注册流手机只下发 `A4/15/A2/13` 小命令，
+     **无 mesh 密钥随 miot 注册下发**。
+- 根因：Mesh 通信需要配网时通过 **Mesh 配网流程**（0x1827 Provisioning Service
+  或米家快配）下发 Network Key/App Key，再以米家 Vendor Model 封包广播。
+  本固件只实现 miot GATT 注册，未实现 Mesh 配网与 Mesh 协议栈，
+  广播里改 FC/mesh 标志位发出的不是合法 Mesh PDU，网关丢弃。
+- 结论：**「音箱不来连」是协议设计使然**——Mesh 设备的网关只扫描广播、不建连接。
+  要打通需在 ESP32 上实现米家 BLE Mesh（SIG Mesh 配网 + Mi Profile Vendor Model），
+  ESP-IDF 的 NimBLE/esp_ble_mesh 具备实现基础。
+- 另注：App 显示的「已连接」是 Mesh 组网成员状态（手机侧查询），非网关 GATT 在线；
+  重绑后 6 次 CENTRAL 全部来自手机（57:86:… 与 5A:7F:D5:A5:D2:32），音箱 MAC 一次未现。
+
 ## 附：相关文档
 
 - [nightl2-ag2-handoff.md](nightl2-ag2-handoff.md) — 夜灯2 全链路与去 hook 记录
