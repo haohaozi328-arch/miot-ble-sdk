@@ -63,7 +63,11 @@ static const char *TAG = "T3PRO";
 #define T3PRO_NAME     "MJWSD07MMC"
 #define ADV_PERIOD_MS  1500      /* 一轮 3 帧 ≈ 4.5s 走完；网关侧够密 */
 #define FRAME_SLOTS    3
-#define NVS_NS         "miot"
+/* ★命名空间必须独立：multi_dev 的档案槽是 "miot"（sel=0 夜灯2）/ "miot<sel>"。
+ * 若这里也用 "miot"，本工程会读到夜灯2 的身份（did + bind_key）并以「已绑定」
+ * 状态广播 3 Pro 的帧 —— 米家会把数据记到夜灯名下，3 Pro 反而添加不了。
+ * 用独立名字后，multi_dev 与本工程可以来回烧，各自绑定互不影响。 */
+#define NVS_NS         "t3pro"
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
 
@@ -107,6 +111,12 @@ static int      s_was_bound;
 static uint32_t s_last_spec;            /* 上一次 spec 属性上报时刻 */
 
 static uint32_t now_ms(void) { return (uint32_t)(esp_timer_get_time() / 1000); }
+
+/** 按键唤醒窗口是否还开着（真机按下蓝牙按键后的一段时间） */
+static bool win_active(void)
+{
+    return s_wake_until && (int32_t)(s_wake_until - now_ms()) > 0;
+}
 
 /** miot_port_t.time_now 的签名带 user 参数 */
 static uint32_t port_time_now(void *user)
@@ -206,11 +216,18 @@ static int build_frame(int idx)
     memcpy(cfg.mac_air, s_mac_air, 6);
 
     /* 未绑定：只发身份心跳（带 Capability、registered=0）。
-     * 这一帧是 App「附近设备」列表的唯一依据，别掺任何对象数据进去。 */
+     * 这一帧是 App「附近设备」列表的唯一依据，别掺任何对象数据进去。
+     *
+     * ★FC 高字节必须带 bit9（solicited，=「设备请求被连接」）：
+     *   hello 帧默认给的是 0x28，App 能看到设备、点击后会**一直等这一位**
+     *   才发起连接，等不到就干等 30s 报「连接超时」（2026-11-13 现场实证：
+     *   设备端一个 CONNECT 事件都没有）。改成 0x2A 后立刻能连上。
+     *   未绑定期间恒置这一位是安全的：没有网关会接管一台未注册的设备。 */
     if (!s_auth.bound) {
         int fl = miot_beacon_frame_hello(&cfg, s_fcnt, 2 /* 后绑定 */,
                                          s_frame, sizeof(s_frame));
         if (fl < 0) { ESP_LOGE(TAG, "hello rc=%d", fl); return fl; }
+        s_frame[1] = 0x2A;       /* v2 | registered=0 | authMode=2 | solicited=1 */
         s_flen = (uint8_t)fl;
         return fl;
     }
@@ -241,6 +258,10 @@ static int build_frame(int idx)
         ESP_LOGE(TAG, "frame rc=%d (crypto backend?)", fl);
         return fl;
     }
+    /* ★按键唤醒窗口内把 bit9（solicited）置 1：真机按一下按键也是这么做的，
+     * 等于对 App 喊「我在这儿、可以连」。0x59 = v5|registered|authMode=2，
+     * 加 bit9 → 0x5B。窗口外必须清掉，长期置位会让网关以为设备一直有待传数据。 */
+    if (win_active()) s_frame[1] = 0x5B;
     s_flen = (uint8_t)fl;
 
     /* 广播和 GATT 读到同一组值：手机连上时页面显示的就是当前读数 */
@@ -305,13 +326,18 @@ static void adv_start(void)
     p.conn_mode = BLE_GAP_CONN_MODE_UND;     /* 随时可被 App 连接 */
 #else
     /* 真机行为：只在唤醒窗口内可连接 */
-    p.conn_mode = (s_wake_until && (int32_t)(s_wake_until - now_ms()) > 0)
-                  ? BLE_GAP_CONN_MODE_UND : BLE_GAP_CONN_MODE_NON;
+    p.conn_mode = win_active() ? BLE_GAP_CONN_MODE_UND : BLE_GAP_CONN_MODE_NON;
 #endif
     p.disc_mode = BLE_GAP_DISC_MODE_GEN;
-    /* 官方要求：未绑定 100~200ms、绑定后 500ms 保活 */
-    p.itvl_min = s_auth.bound ? 800 : 160;
-    p.itvl_max = s_auth.bound ? 800 : 320;
+    if (win_active()) {
+        /* 唤醒窗口内用快广播（30~50ms），App 才来得及在窗口内连上；
+         * 平时未绑定 100~200ms、绑定后 800ms 保活（官方建议值）。 */
+        p.itvl_min = 48;
+        p.itvl_max = 80;
+    } else {
+        p.itvl_min = s_auth.bound ? 800 : 160;
+        p.itvl_max = s_auth.bound ? 800 : 320;
+    }
 
     rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &p,
                            gap_event_cb, NULL);
@@ -424,6 +450,41 @@ static void host_task(void *param)
     nimble_port_freertos_deinit();
 }
 
+/* ---------------- BOOT 键（GPIO9，板载 BOOT）
+ * 短按 = 真机「蓝牙按键」：开 120 秒唤醒窗口（solicited=1 + 快广播）
+ * 长按 5s = 恢复出厂（擦 NVS）
+ *
+ * ★必须在运行期持续监听，不能只在 app_main 里读一次：早前那版只在启动
+ *   瞬间检查电平，用户配对时怎么按 BOOT 都没反应，App 干等 30s 报「连接超时」
+ *   （2026-11-13 现场实证：设备端零 CONNECT 事件）。 */
+static void btn_task(void *arg)
+{
+    (void)arg;
+    for (;;) {
+        if (gpio_get_level(9) == 0) {
+            int ms = 0;
+            while (gpio_get_level(9) == 0) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+                ms += 100;
+                if (ms >= 5000) {
+                    ESP_LOGW(TAG, "BOOT held 5s -> erase NVS (factory reset)");
+                    nvs_flash_erase();
+                    vTaskDelay(pdMS_TO_TICKS(200));
+                    esp_restart();
+                }
+            }
+            if (ms >= 60) {
+                s_wake_until = now_ms() + WAKE_WINDOW_MS;
+                ESP_LOGW(TAG, "BOOT press %dms -> wake window %ds (solicited adv + fast)",
+                         ms, WAKE_WINDOW_MS / 1000);
+                build_frame(s_idx);
+                adv_refresh();
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(30));
+    }
+}
+
 void app_main(void)
 {
     esp_err_t err = nvs_flash_init();
@@ -432,8 +493,8 @@ void app_main(void)
         nvs_flash_init();
     }
 
-    /* BOOT(GPIO9) 两种按法：
-     *   短按 —— 真机「蓝牙按键」的等价动作：开 120s 唤醒窗口（仅 ADV_CONN_ALWAYS=0 时有意义）
+    /* BOOT(GPIO9) 两种按法（运行期持续监听，见下方 btn_task）：
+     *   短按 —— 真机「蓝牙按键」的等价动作：开 120s 唤醒窗口（solicited=1 + 快广播）
      *   长按 5s —— 恢复出厂：清掉绑定身份，广播回到未注册态。
      * 真机靠长按复位重新配对，这里同理 —— 否则一旦绑定过一次，
      * App 会认为设备已属于某个账号，再也进不了"添加设备"流程。 */
@@ -443,24 +504,7 @@ void app_main(void)
         .pull_up_en = GPIO_PULLUP_ENABLE,
     };
     gpio_config(&io);
-    if (gpio_get_level(9) == 0) {
-        int ms = 0;
-        while (gpio_get_level(9) == 0) {
-            vTaskDelay(pdMS_TO_TICKS(100));
-            ms += 100;
-            if (ms >= 5000) {
-                ESP_LOGW(TAG, "BOOT held 5s -> erase NVS (factory reset)");
-                nvs_flash_erase();
-                vTaskDelay(pdMS_TO_TICKS(200));
-                esp_restart();
-            }
-        }
-        if (ms >= 60) {
-            s_wake_until = now_ms() + WAKE_WINDOW_MS;
-            ESP_LOGW(TAG, "BOOT press %dms -> wake window %ds (pairing button)", ms,
-                     WAKE_WINDOW_MS / 1000);
-        }
-    }
+    xTaskCreate(btn_task, "btn", 3072, NULL, 3, NULL);
 
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_BT);
@@ -536,6 +580,20 @@ void app_main(void)
                      s_was_bound);
             build_frame(s_idx);
             adv_refresh();
+        }
+
+        /* 唤醒窗口到期：把广播里的 solicited 位清掉，回到常态形态
+         * （长期置位会让网关以为设备一直有待传数据） */
+        {
+            static bool win_was;
+            bool win_now = win_active();
+            if (win_was && !win_now) {
+                ESP_LOGI(TAG, "wake window closed -> adv back to %s",
+                         s_auth.bound ? "0x59" : "0x2A");
+                build_frame(s_idx);
+                adv_refresh();
+            }
+            win_was = win_now;
         }
 
         if (!gatt_miot_is_connected()) {

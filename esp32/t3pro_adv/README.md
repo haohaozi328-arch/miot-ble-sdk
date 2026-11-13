@@ -127,6 +127,13 @@ spec pushed (26.1C / 58% / 480ppm / batt 90%)
    顶部有读数、历史曲线永远空。
 6. IDF v6.0 / mbedTLS 4.x 需要 `MBEDTLS_DECLARE_PRIVATE_IDENTIFIERS` 和显式开启
    `CONFIG_MBEDTLS_*_C`（`main/CMakeLists.txt` 与 `sdkconfig.defaults` 已配好）。
+7. **未绑定帧必须带 bit9（solicited）**，即 FC 高字节发 `0x2A` 而不是库默认的 `0x28`。
+   这一位是「设备请求被连接」：App 点击添加后会一直等它才发起连接，等不到就干等 30 秒
+   报「连接超时」。判断依据很干脆——串口侧**一个 `phone connected` 都没有**，
+   说明连接根本没建立（不是握手失败）。
+8. **BOOT 键要在运行期监听**，不能只在 `app_main()` 里读一次电平。写成一次性判断时，
+   用户在配对过程中按 BOOT 完全没反应（现象和上一条一样：连接超时）。现在由 `btn_task`
+   持续轮询：短按开 120s 唤醒窗口（`solicited` + 快广播 30~50ms），长按 5s 擦 NVS。
 
 ## 免责声明
 
