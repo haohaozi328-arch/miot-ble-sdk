@@ -69,3 +69,24 @@
 - `docs/mesh-ref/08-mesh-intro.md`、`09-mesh-dev.md`：miio_open 镜像官方文档
 - `docs/mesh-ref/gw3_mesh.py`：XiaomiGateway3 网关侧 mesh 数据库层解析
 - 官方资料本地镜像：`D:\workspace\米家资料\miot_docs_md\`（17 篇 mesh 相关）
+
+## 6. 移植层崩溃复盘（2026-11-13 16:20）
+
+现象：挂上 Mesh 后设备每 ~3 分钟重启一次，断言 `npl_freertos_event_init npl_os_freertos.c:263`。
+
+根因链：
+1. IDF v6.0 freertos NPL 的 `ble_npl_event` 必须经 `ble_npl_event_init` 分配内嵌对象；
+   Mesh 源码里 `static struct ble_npl_event ev = { }` 与 adv_pool 的 ev 从未 init →
+   `set_arg` 静默 no-op → `net_buf_put` 的 `get_arg` 断言。
+2. 修复时若"每次分配都 init"或"整池一次 init 20 个"，会吃掉事件池
+   （`BLE_TOTAL_EV_COUNT` 只按 host 栈算，约 20 个对象），池空即 `BLE_LL_ASSERT(event)` 重启。
+3. 正解：adv 缓冲**按需惰性 init**（每缓冲首次使用占 1 个事件）+
+   事件池扩容 `BLE_TOTAL_EV_COUNT + 40`。
+
+四个构建期补丁（`esp32/multi_dev/patch/`，见 `build_mesh.sh`）：
+| 文件 | 改动 |
+|---|---|
+| `adv_legacy.c` | adv_update 静态事件 init 一次（guard） |
+| `adv.c` | adv_alloc 惰性 init（`s_ev_ready[id]`） |
+| `glue.c` | net_buf_put 自愈：arg 为空时补 init |
+| `npl_os_freertos.c` | 事件池 `BLE_TOTAL_EV_COUNT + 40` |

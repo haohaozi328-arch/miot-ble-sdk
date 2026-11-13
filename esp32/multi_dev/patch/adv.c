@@ -55,10 +55,17 @@ static struct bt_mesh_adv adv_pool[CONFIG_BT_MESH_ADV_BUF_COUNT];
 
 static struct bt_mesh_adv *adv_alloc(int id)
 {
-	/* ★patch 2026-11-13: IDF v6.0 freertos NPL 要求每个 ble_npl_event
-	 * 经 ble_npl_event_init 分配内嵌对象。pool 的 ev 原样零值，
-	 * set_arg 静默 no-op -> net_buf_put 的 get_arg 断言必炸。 */
-	ble_npl_event_init(&adv_pool[id].ev, NULL, NULL);
+	/* ★patch 2026-11-13 v3: IDF v6.0 freertos NPL 的 ble_npl_event 必须
+	 * 先经 ble_npl_event_init 分配内嵌对象，否则 set_arg 静默无效、
+	 * net_buf_put 断言。但事件池很小（BLE_TOTAL_EV_COUNT ≈ 20），
+	 * 一次性初始化整池 20 个会把池吃穿（v2 的崩因）。
+	 * 正确做法：按需惰性初始化，每个缓冲只在首次使用时占一个事件。 */
+	static bool s_ev_ready[CONFIG_BT_MESH_ADV_BUF_COUNT];
+
+	if (!s_ev_ready[id]) {
+		ble_npl_event_init(&adv_pool[id].ev, NULL, NULL);
+		s_ev_ready[id] = true;
+	}
 	return &adv_pool[id];
 }
 
