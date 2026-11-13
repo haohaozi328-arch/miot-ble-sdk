@@ -86,8 +86,16 @@ I (405) MIOT: host synced, 米家体脂秤 S400  PID=0x30D9  MAC 10:00:3B:CE:42:
 `bound=0` → 设备处于未绑定广播状态，App 能扫到；绑定成功后变 `bound=1`，
 App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](docs/troubleshooting.md)。
 
-**换一台设备**：串口发 `dev` 看 11 个序号，`dev 1` 切到温湿度计2，设备会擦身份自动重启。
+**换一台设备**：串口发 `dev` 看 12 个序号，`dev 1` 切到温湿度计2，设备会擦身份自动重启。
 **板载 BOOT 键**：短按 = 触发一次称重（等价于真机上「人踩上去」）；长按 5 秒 = 清 NVS 恢复出厂。
+
+**只想要一台设备的最小工程？** 不用动 multi_dev，直接用下面这两个（各自独立，500 行上下，
+不含 Mesh 栈，`idf.py build` 就能烧）：
+
+| 工程 | 模拟设备 | 说明 |
+|---|---|---|
+| [`esp32/t3pro_adv`](esp32/t3pro_adv) | 温湿度计 3 Pro（0x9AB9） | 温/湿/CO₂/电量加密广播 + spec 属性，米家添加后小爱可查 |
+| [`esp32/thermo_gatt`](esp32/thermo_gatt) | 温湿度计 2（0x055B） | 同上骨架，链路注释最全，适合当模板改别的型号 |
 
 人类一页纸版本：[QUICKSTART.md](QUICKSTART.md)；让 AI 代劳的版本：[AGENTS.md](AGENTS.md)。
 
@@ -181,7 +189,7 @@ void app_main(void) {
 | 8 | 人体传感器2 | RTCGQ02LM（PID 0x0A8D） | 0x000F 移动+光照 / 0x1017 无人时长 / 0x1001 按键 / 0x100A 电量 | ✓ | [examples/sensor_motion/](examples/sensor_motion/main.c) · `miot_beacon.h` |
 | 9 | 水浸传感器 | SJWS01LM（PID 0x0863） | 0x1014 漏水状态(0=正常 >0=漏水) / 0x100A 电量 | ✓ | [examples/sensor_leak/](examples/sensor_leak/main.c) · `miot_beacon.h` |
 | 10 | 温湿度计3 mini | MJWSD06MMC（国区 pdid 21941 = **0x55B5**；0x5BEA 是海外版 23530，国区扫不到） | 0x4C01 温度 float32 / 0x4C02 湿度 uint8 / 0x4803 电量 uint8（对象 ID 依 XiaomiGateway3 `mi`=19457/19458/18435） | ✓ | [examples/thermo_t3m/](examples/thermo_t3m/main.c) · `miot_beacon.h` |
-| 11 | 温湿度计3 Pro | MJWSD07MMC（PID **0x9AB9**） | 0x5C01 温度 float32 / 0x5C02 湿度 uint8 / 0x601D CO₂ uint16 / 0x4803 电量 uint8，四对象三帧轮换（一帧装不下）。**对象号是 3 Pro 专属的新系列，沿用 3 mini 的 0x4C01/0x4C02 会导致「设备在线但数值全空」**。真机为按键连接模式（平时不广播可连接态，按键后才 `solicited=1`） | ✓（广播 → 网关解密 → 云端 → 小爱语音查温湿度，全链路实测） | `esp32/multi_dev`（档案 `T3PRO`）· `miot_beacon.h` |
+| 11 | 温湿度计3 Pro | MJWSD07MMC（PID **0x9AB9**） | 0x5C01 温度 float32 / 0x5C02 湿度 uint8 / 0x601D CO₂ uint16 / 0x4803 电量 uint8，四对象三帧轮换（一帧装不下）。**对象号是 3 Pro 专属的新系列，沿用 3 mini 的 0x4C01/0x4C02 会导致「设备在线但数值全空」**。真机为按键连接模式（平时不广播可连接态，按键后才 `solicited=1`） | ✓（广播 → 网关解密 → 云端 → 小爱语音查温湿度，全链路实测） | [esp32/t3pro_adv/](esp32/t3pro_adv)（单设备完整工程，`idf.py build` 即烧）· `multi_dev` 档案 `T3PRO` |
 
 ### C. 事件型按键（可连接用于绑定，事件本身走广播）
 

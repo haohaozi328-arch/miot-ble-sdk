@@ -60,7 +60,9 @@ void thermometer_report(miot_device_t *dev, float temp_c, float hum_pct,
  * 官方 spec（XiaomiGateway3 #1776 实机核对）：
  *   7.p.1001 温度 float ℃ / 7.p.1002 湿度 uint8 % /
  *   8.p.1029 CO₂ uint16 ppm / 4.p.1003 电量 uint8 %
- * 广播对象仍用 ble_monitor 已收录的 0x4C01/0x4C02/0x601D/0x4803。 */
+ * 广播对象是**新系列**：0x5C01 温度 float32 / 0x5C02 湿度 uint8 /
+ * 0x601D CO₂ uint16 / 0x4803 电量 uint8（沿用 3 mini 的 0x4C01/0x4C02
+ * 会表现为「设备在线但数值全空」，见 2026-11-13 实证）。 */
 void t3pro_init(miot_device_t *dev, miot_port_t *port,
                 miot_prop_t **tbl, size_t *cnt);
 /** 造广播帧时顺手把同一组值同步进 spec 属性表（手机读到的就是当前值） */
