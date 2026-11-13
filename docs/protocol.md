@@ -164,7 +164,7 @@ action 应答（7B，respCode=0）:
 07 20 0a 01 06 00 00
 └len┘└tid─┘ └op┘└resp┘
 
-13.1 sync 应答（带 5 个 out，22B）:
+13.1 sync 应答（带 5 个 out，64B，len16=0x2040）:
 40 20 0f 00 06 00 00 05 06 01 10 00 07 0c a0 "S4003BCE4203" 08 11 a0 "10:00:3B:CE:42:03"
 └len┘└tid─┘ └op┘└resp┘└cnt┘└6=offline-cnt┘└7=sn┘        └8=mac┘
 ... 09 0c a0 "1.0.0_0031" 0a 01 10 5c
