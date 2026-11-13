@@ -278,6 +278,57 @@ void thermometer_report(miot_device_t *dev, float temp_c, float hum_pct, uint32_
     (void)ts;
 }
 
+/* ================= 2b. 温湿度计 3 Pro（PID 0x9AB9） =================
+ * 与 3 mini 的关键区别：3 Pro 支持蓝牙直连（App 详情页会显示「蓝牙 未连接手机」），
+ * 也就是它有一条 GATT spec 通道。之前把它当纯广播型（属性表 NULL），手机
+ * 连上来 READ 任何属性都拿不到东西，页面只能靠网关。补上真机 spec 后，
+ * 手机在旁边直接能出数，网关通路另算。 */
+static float    t3_temp = 25.0f;
+static uint8_t  t3_hum  = 56;
+static uint16_t t3_co2  = 480;
+static uint8_t  t3_batt = 90;
+
+static miot_prop_t t3_props[] = {
+    { 7, 1001, MIOT_TYPE_FLOAT, MIOT_PROP_R, 4, &t3_temp, 0, 0, NULL, "temperature" },
+    { 7, 1002, MIOT_TYPE_U8,    MIOT_PROP_R, 1, &t3_hum,  0, 0, NULL, "humidity" },
+    { 8, 1029, MIOT_TYPE_U16,   MIOT_PROP_R, 2, &t3_co2,  0, 0, NULL, "co2" },
+    { 4, 1003, MIOT_TYPE_U8,    MIOT_PROP_R, 1, &t3_batt, 0, 0, NULL, "battery" },
+};
+
+static bool t3_get(void *user, uint8_t siid, uint16_t piid, miot_spec_value_t *out)
+{
+    (void)user;
+    if (siid == 7 && piid == 1001) { out->type = MIOT_TYPE_FLOAT; out->val.f  = t3_temp; return true; }
+    if (siid == 7 && piid == 1002) { out->type = MIOT_TYPE_U8;    out->val.u8 = t3_hum;  return true; }
+    if (siid == 8 && piid == 1029) { out->type = MIOT_TYPE_U16;   out->val.u16 = t3_co2; return true; }
+    if (siid == 4 && piid == 1003) { out->type = MIOT_TYPE_U8;    out->val.u8 = t3_batt; return true; }
+    return false;
+}
+
+static bool t3_set(void *user, uint8_t siid, uint16_t piid, const miot_spec_value_t *in)
+{
+    (void)user; (void)siid; (void)piid; (void)in;
+    return false;
+}
+
+void t3pro_init(miot_device_t *dev, miot_port_t *port,
+                miot_prop_t **tbl, size_t *cnt)
+{
+    miot_device_init(dev, port);
+    miot_device_attach(dev, t3_props, sizeof(t3_props) / sizeof(t3_props[0]),
+                       t3_get, t3_set, NULL);
+    if (tbl) *tbl = t3_props;
+    if (cnt) *cnt = sizeof(t3_props) / sizeof(t3_props[0]);
+}
+
+void t3pro_update(float temp_c, uint8_t hum_pct, uint16_t co2_ppm, uint8_t batt)
+{
+    t3_temp = temp_c;
+    t3_hum  = hum_pct;
+    t3_co2  = co2_ppm;
+    t3_batt = batt;
+}
+
 /* ================= 3. 开关型（夜灯 / 驱蚊器） ================= */
 
 static uint8_t sw_on = 0;

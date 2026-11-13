@@ -105,6 +105,15 @@ static const dev_desc_t k_devs[] = {
     { "MOTION",   "MJ_MOTION",  "人体传感器2 (RTCGQ02LM)",     0x0A8D, 1, 0, 4, sn_motion, NULL },
     { "LEAK",     "MJ_LEAK",    "水浸传感器 (SJWS01LM)",       0x0863, 1, 0, 2, sn_leak,   NULL },
     { "T3M",      "MJ_T3M",     "温湿度计3 mini (MJWSD06MMC)", 0x55B5, 1, 0, 3, sn_thb,    NULL },
+    /* ★2026-11-13 温湿度计 3 Pro（MJWSD07MMC，PDID 39609=0x9AB9）。
+     * spec：7.p.1001 温度 float / 7.p.1002 湿度 u8 / 8.p.1029 CO₂ u16 /
+     *       4.p.1003 电量 u8 / 4.e.1001 低电量事件。
+     * 为什么选这个品类做网关验证：小爱内置 Mesh 网关对 MiBeacon 只保留很小的
+     * 品类白名单，温湿度计是其中之一（见 docs/known-issues.md 第 3 条）；
+     * 体脂秤不在白名单，广播在扫描阶段就被丢弃。
+     * 广播对象暂用 3 mini 实测过的那组（0x4C01/0x4C02/0x4803），CO₂ 对象
+     * 编号未知、等真机抓包后再补，先验证「App 能否识别 + 网关能否解密上报」。 */
+    { "T3PRO",    "MJWSD07MMC", "温湿度计3 Pro (MJWSD07MMC)",  0x9AB9, 1, 0, 3, sn_thb,    t3pro_init },
 };
 
 #define DEV_COUNT ((int)(sizeof(k_devs) / sizeof(k_devs[0])))
@@ -144,6 +153,37 @@ static uint8_t s_fc_lo;
  * LOGIN 全过）就发生在设备广播待绑定帧的时候；广播已绑定帧的每一次连接，
  * App 都在订阅完 0x0001 后 1 秒主动放弃。串口 `advu 1` 打开。 */
 static uint8_t s_adv_unbound;
+
+/* ★2026-11-13 21:0x 网关「在线但无数据」对冲开关。
+ * 现场事实：米家详情页显示「已连接蓝牙网关」（网关认了这台设备在线），
+ * 但温度/湿度/CO₂ 全是空。设备侧帧结构早已逐字节核对过，剩下的差别只有
+ * PID：0x9AB9 是 2026-09 才上市的新品，小爱音箱固件里的本地产品表很可能
+ * 还没有它 —— 那就只能「认 MAC 判在线」，一到解析对象就整帧丢弃。
+ * 3 mini（0x55B5）在同一网关上出过数，用它做对照能把「产品表缺失」和
+ * 「密钥/解密失败」彻底分开：把广播 PID 临时改成 0x55B5，帧内其它字节
+ * 一个不动，App 若立刻出数 → 100% 是 PID 产品表问题。
+ * 覆盖同时作用于 MiBeacon 帧头（解密 nonce 用）与扫描应答的厂商数据。 */
+static uint16_t s_pid_ovr;      /* 0 = 按档案 */
+static uint16_t s_obj_ovr[3];   /* [0]=温度 [1]=湿度 [2]=电量/CO₂，0 = 按档案 */
+/* 自动对冲：轮流把「PID × 对象组」试一遍，人不用反复敲命令。
+ * 顺序按可能性排：先试 3 mini 的 PID（网关产品表里确定有），再试新对象号。 */
+static uint8_t  s_hunt_on;
+static uint8_t  s_hunt_i;
+static uint32_t s_hunt_next;
+
+static const struct {
+    uint16_t pid;
+    uint16_t obj[3];
+    const char *note;
+} k_hunt[] = {
+    { 0x9AB9, { 0x4C01, 0x4C02, 0x4803 }, "基线：本机 PID + 3 mini 对象组" },
+    { 0x55B5, { 0x4C01, 0x4C02, 0x4803 }, "3 mini PID（网关产品表必有）" },
+    { 0x9AB9, { 0x5C01, 0x5C02, 0x4803 }, "新系列对象组候选 5C01/5C02" },
+    { 0x9AB9, { 0x4C01, 0x4C02, 0x601D }, "第三槽换 CO₂ 0x601D" },
+    { 0x9AB9, { 0x4C01, 0x4C02, 0x4803 }, "回到基线" },
+};
+#define HUNT_N ((int)(sizeof(k_hunt) / sizeof(k_hunt[0])))
+#define HUNT_PERIOD_MS 45000
 
 #define ADV_PERIOD_MS  1500
 /* 未绑定时不要每 1.5s 停一次广播：每次 adv_refresh 都是 stop+start，
@@ -674,9 +714,27 @@ static size_t build_objs_beacon(int idx, uint8_t *objs, size_t cap)
 
     case 10:    /* 温湿度计3 mini：0x4C01 f32 / 0x4C02 u8 / 0x4803 u8 */
         switch (idx) {
-        case 0: return miot_beacon_obj_f32(objs, MB_OBJ_TEMP_F32, (float)v_temp / 10.0f);
-        case 1: return miot_beacon_obj_u8(objs, MB_OBJ_HUM_U8, (uint8_t)(v_hum / 10));
-        default: return miot_beacon_obj_u8(objs, MB_OBJ_BATT_U8_48, v_batt);
+        case 0: return miot_beacon_obj_f32(objs, s_obj_ovr[0] ? s_obj_ovr[0] : MB_OBJ_TEMP_F32, (float)v_temp / 10.0f);
+        case 1: return miot_beacon_obj_u8(objs, s_obj_ovr[1] ? s_obj_ovr[1] : MB_OBJ_HUM_U8, (uint8_t)(v_hum / 10));
+        default: return miot_beacon_obj_u8(objs, s_obj_ovr[2] ? s_obj_ovr[2] : MB_OBJ_BATT_U8_48, v_batt);
+        }
+
+    case 11:    /* 温湿度计3 Pro：对象号是**新系列**，与 3 mini 不同！
+                 * 2026-11-13 实证：0x4C01/0x4C02 页面恒 "--"；
+                 * 换 0x5C01/0x5C02 后温湿度立刻出数，小爱语音可查。
+                 * 第三槽在「电量 0x4803」与「CO₂ 0x601D」之间轮换
+                 * （一帧装不下 4 个对象，真机同样分帧发）。 */
+        t3pro_update((float)v_temp / 10.0f, (uint8_t)(v_hum / 10),
+                     (uint16_t)(420 + (s_fcnt % 30) * 10), v_batt);
+        switch (idx) {
+        case 0: return miot_beacon_obj_f32(objs, s_obj_ovr[0] ? s_obj_ovr[0] : MB_OBJ_TEMP_F32_5C, (float)v_temp / 10.0f);
+        case 1: return miot_beacon_obj_u8(objs, s_obj_ovr[1] ? s_obj_ovr[1] : MB_OBJ_HUM_U8_5C, (uint8_t)(v_hum / 10));
+        default:
+            /* 只在没人用 objs 命令覆盖时才轮换 CO₂，方便现场做单变量实验 */
+            if (!s_obj_ovr[2] && (s_fcnt % 2)) {
+                return miot_beacon_obj_u16(objs, MB_OBJ_CO2_U16, (uint16_t)(420 + (s_fcnt % 30) * 10));
+            }
+            return miot_beacon_obj_u8(objs, s_obj_ovr[2] ? s_obj_ovr[2] : MB_OBJ_BATT_U8_48, v_batt);
         }
 
     default:
@@ -688,7 +746,7 @@ static int build_frame(int idx)
 {
     miot_beacon_cfg_t cfg;
     memset(&cfg, 0, sizeof(cfg));
-    cfg.pid = DEV_PID;
+    cfg.pid = s_pid_ovr ? s_pid_ovr : DEV_PID;
     memcpy(cfg.mac_air, s_mac_air, 6);
 
     if (!s_auth.bound || s_adv_unbound) {
@@ -778,7 +836,16 @@ static int build_frame(int idx)
         n = miot_beacon_obj_u8(objs, MB_OBJ_BATTERY, v_batt);
     }
 
-    int fl = miot_beacon_frame_v5(&cfg, s_fcnt, objs, n, s_frame, sizeof(s_frame));
+    /* ★beacon 型走「无 MAC 形态」：温湿度计这类传感器的对象值本身就有 4B
+     * （0x4C01 是 float32），带 MAC 的帧 = 11+obj+7 = 24B，加上 UUID 列表和
+     * AD 头正好把 31B 主广播包顶爆（实测 rc=4 EMSGSIZE，一帧都发不出去）。
+     * 真机的 24B 测量帧同样不带 MAC，网关按广播源地址归属，不影响解密。 */
+    int fl;
+    if (DEV_KIND == 1) {
+        fl = miot_beacon_frame_v5_nomac(&cfg, s_fcnt, objs, n, s_frame, sizeof(s_frame));
+    } else {
+        fl = miot_beacon_frame_v5(&cfg, s_fcnt, objs, n, s_frame, sizeof(s_frame));
+    }
     if (fl < 0) {
         ESP_LOGE(TAG, "frame rc=%d (crypto backend?)", fl);
         return fl;
@@ -841,8 +908,10 @@ static void adv_start(void)
      * 绑定走 p21 挑战应答（串口实证 legacy token 落盘），token 是假的。
      * 已绑定 0x29 = v2|registered|authMode=2；未绑定对齐成 0x28。 */
     mfr[m++] = (uint8_t)(s_auth.bound ? 0x29 : 0x28);
-    mfr[m++] = (uint8_t)(DEV_PID & 0xFF);
-    mfr[m++] = (uint8_t)(DEV_PID >> 8);
+    /* 扫描应答里的 PID 必须和 MiBeacon 帧头一起改：网关/App 判「这台设备
+     * 是什么产品」主要读这里，两处不一致会直接被当成两台设备。 */
+    mfr[m++] = (uint8_t)((s_pid_ovr ? s_pid_ovr : DEV_PID) & 0xFF);
+    mfr[m++] = (uint8_t)((s_pid_ovr ? s_pid_ovr : DEV_PID) >> 8);
     mfr[m++] = (uint8_t)s_fcnt;
     for (int i = 0; i < 6; i++) mfr[m++] = s_mac_air[i];
     mfr[m++] = 0x08;
@@ -1528,6 +1597,60 @@ static void cli_task(void *arg)
             }
             if (n == 16) mesh_miot_set_uuid(u);
             else ESP_LOGW(TAG, "需要 32 个 hex 字符（16 字节），收到 %d 字节", n);
+        } else if (!strncmp(line, "pid", 3)) {
+            /* pid           -> 查询
+             * pid 55B5      -> 广播 PID 临时改成 3 mini（对照实验，不动绑定与密钥）
+             * pid 0         -> 恢复按档案 */
+            const char *arg = line + 3;
+            while (*arg == ' ') arg++;
+            if (*arg) s_pid_ovr = (uint16_t)strtoul(arg, NULL, 16);
+            ESP_LOGW(TAG, "广播 PID = 0x%04X (%s)  did 不变",
+                     s_pid_ovr ? s_pid_ovr : DEV_PID, s_pid_ovr ? "覆盖" : "按档案");
+            if (build_frame(s_idx) >= 0) adv_refresh();
+        } else if (!strncmp(line, "objs", 4)) {
+            /* objs          -> 查询
+             * objs 4C01 4C02 4803 -> 依次为 温度/湿度/第三槽 的对象 ID（hex，填 0 = 按档案） */
+            const char *arg = line + 4;
+            while (*arg == ' ') arg++;
+            if (*arg) {
+                for (int i = 0; i < 3 && *arg; i++) {
+                    s_obj_ovr[i] = (uint16_t)strtoul(arg, (char **)&arg, 16);
+                    while (*arg == ' ') arg++;
+                }
+            }
+            ESP_LOGW(TAG, "广播对象 = %04X %04X %04X",
+                     s_obj_ovr[0] ? s_obj_ovr[0] : MB_OBJ_TEMP_F32,
+                     s_obj_ovr[1] ? s_obj_ovr[1] : MB_OBJ_HUM_U8,
+                     s_obj_ovr[2] ? s_obj_ovr[2] : MB_OBJ_BATT_U8_48);
+            if (build_frame(s_idx) >= 0) adv_refresh();
+        } else if (!strncmp(line, "hunt", 4)) {
+            /* hunt 1 / hunt 0：每 45s 自动轮换「PID × 对象组」，人只要盯着米家页面。
+             * 不用反复敲命令，四组各给 45s（网关每次至少要 1~2 个上报周期）。 */
+            const char *arg = line + 4;
+            while (*arg == ' ') arg++;
+            s_hunt_on = (uint8_t)(*arg ? (atoi(arg) ? 1 : 0) : !s_hunt_on);
+            if (!s_hunt_on) {
+                s_pid_ovr = 0;
+                memset(s_obj_ovr, 0, sizeof(s_obj_ovr));
+                if (build_frame(s_idx) >= 0) adv_refresh();
+            } else {
+                s_hunt_i = 0;
+                s_hunt_next = now_ms();
+                ESP_LOGW(TAG, "对冲实验开启：每 45s 换一组 PID/对象，盯米家详情页");
+            }
+            ESP_LOGW(TAG, "hunt = %d", s_hunt_on);
+        } else if (!strncmp(line, "wake", 4)) {
+            /* wake [秒]  -> 模拟真机「按键连接模式」的按键唤醒：
+             * solicited=1 + 快广播窗口（默认 120s）。开了之后马上去 App
+             * 详情页点「已点击」，App 扫到 solicited 位就会来连。 */
+            const char *arg = line + 4;
+            while (*arg == ' ') arg++;
+            uint32_t sec = *arg ? (uint32_t)atoi(arg) : 120;
+            s_solicit_until = now_ms() + sec * 1000u;
+            s_fast_until = s_solicit_until;
+            ESP_LOGW(TAG, "唤醒窗口 %lus：solicited=1 + 快广播，去 App 点「已点击」",
+                     (unsigned long)sec);
+            if (build_frame(s_idx) >= 0) adv_refresh();
         } else if (!strncmp(line, "fc", 2)) {
             /* fc          -> 查询
              * fc 22       -> 只改高字节（旧形态）
@@ -1588,6 +1711,7 @@ static void cli_task(void *arg)
             esp_restart();
         } else if (*line) {
             ESP_LOGW(TAG, "命令: dev [N] | info | tok | key <24hex> | log | handles | frames | gr [N] | fc [22|58] | advu [0|1] | setmacv N | newmac | weight [值] [阻抗] | factory | reboot");
+            ESP_LOGW(TAG, "      pid [XXXX] | objs [T H B] | hunt [0|1]  —— 网关无数据对冲（不改绑定）");
         }
     }
 }
@@ -1693,7 +1817,15 @@ static void on_sync(void)
      * start 失败（实测 err 2），广播内容也已经废了，设备整个从空中消失。
      * glue.c 的门卫（g_mesh_adv_owned）再兜一层：宿主占着广播时 Mesh 直接返回。 */
     adv_start();
-    mesh_miot_on_sync();
+    /* ★beacon 型档案（温湿度计/传感器）不要 Mesh 协议栈：
+     * 它们只有 MiBeacon 广播一条通路，Mesh 开着唯一的副作用是扫描占掉
+     * 一半射频时隙（30/15ms），还会跟广播抢 adv 实例。只有 spec 型
+     * （体脂秤这类要建 GATT 会话的）才需要 Mesh 承载。 */
+    if (DEV_KIND == 0) {
+        mesh_miot_on_sync();
+    } else {
+        ESP_LOGW(TAG, "beacon-only profile: mesh stack skipped (radio fully for adv)");
+    }
     gatt_miot_dump_handles();
     s_was_bound = s_auth.bound;
 }
@@ -1758,9 +1890,14 @@ void app_main(void)
     s_port.random      = port_random;
     s_port.log         = port_log;
 
-    if (DEV_KIND == 0) {
+    if (D->init) {
+        /* ★2026-11-13 21:1x 3 Pro 的教训：广播型设备也可能带 GATT spec 通道。
+         * 原来这里按 DEV_KIND 分叉，beacon 型一律 s_tbl=NULL —— 手机连上来
+         * READ 任何属性都是空的，页面只能等网关。改成「有 init 就建表」，
+         * 广播帧走 build_objs_beacon，spec 通道走属性表，两者互不干扰。 */
         D->init(&s_dev, &s_port, &s_tbl, &s_tbl_cnt);
-        ESP_LOGI(TAG, "profile loaded: %s (%u props)", DEV_LABEL, (unsigned)s_tbl_cnt);
+        ESP_LOGI(TAG, "profile loaded: %s (%u props)%s", DEV_LABEL,
+                 (unsigned)s_tbl_cnt, DEV_KIND ? " + MiBeacon adv" : "");
     } else {
         /* 广播型：不注册属性表，spec 通道只用于认证/绑定，数据面全在 MiBeacon */
         miot_device_init(&s_dev, &s_port);
@@ -1962,6 +2099,21 @@ void app_main(void)
             }
         }
 
+        /* ★对冲实验：每 45s 换一组 PID/对象组。网关要收到 1~2 个上报周期
+         * 才会更新云端影子，所以每组至少给这么长，中途看 App 页面的变化。 */
+        if (s_hunt_on && (uint32_t)(t - s_hunt_next) >= HUNT_PERIOD_MS) {
+            s_hunt_next = t;
+            if (s_hunt_i >= HUNT_N) s_hunt_i = 0;
+            s_pid_ovr = k_hunt[s_hunt_i].pid;
+            memcpy(s_obj_ovr, k_hunt[s_hunt_i].obj, sizeof(s_obj_ovr));
+            ESP_LOGW(TAG, "HUNT[%d/%d] pid=0x%04X objs=%04X/%04X/%04X  %s",
+                     s_hunt_i + 1, HUNT_N, s_pid_ovr,
+                     s_obj_ovr[0], s_obj_ovr[1], s_obj_ovr[2],
+                     k_hunt[s_hunt_i].note);
+            s_hunt_i++;
+            if (build_frame(s_idx) >= 0) adv_refresh();
+        }
+
         /* 诊断看门狗：每 30s 一行，回答三个问题——
          * 1) Mesh 扫描有没有在跑（disc 计数持续增长 = 在扫）
          * 2) 手机/网关有没有发配网 PDU（prov=0 就是人家没来找我们）
@@ -1995,6 +2147,20 @@ void app_main(void)
             s_weigh_req = 0;
             if (s_sel != 2) {
                 ESP_LOGW(TAG, "BOOT 称重只对档案 [2] S400 有效（当前 sel=%d）", s_sel);
+                /* ★2026-11-13 21:0x 真机 3 Pro 的「按键连接模式」还原：
+                 * 设置页弹窗写得很清楚——「连接设备前，需单击设备右下侧按键」。
+                 * 也就是说真机平时根本不发可连接广播，只有按键后的一小段窗口
+                 * 才会 solicited=1 + 快广播，App 靠这个信号决定要不要建链。
+                 * 我们之前常开可连接广播，App 看不到 solicited，永远不会来连，
+                 * 这就是「手机怎么都连不上、详情页只能等网关」的直接原因。
+                 * 现在把 BOOT 短按当作「真机按键」的等价事件（除 S400 外），
+                 * 顺带把快广播窗口一起打开。 */
+                if (DEV_KIND == 1) {
+                    s_solicit_until = t + 120u * 1000u;
+                    s_fast_until    = s_solicit_until;
+                    adv_refresh();
+                    ESP_LOGW(TAG, "按键唤醒 120s：solicited=1 + 快广播，现在去 App 点「已点击」");
+                }
             } else if (!s_auth.logged_in) {
                 /* ★未登录 = 手机不在场，这正是说明书里的「离线称重模式」。
                  * 真机此时照样完成称重、把数据存在秤里，并让广播进入「请求被连接」

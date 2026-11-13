@@ -54,6 +54,14 @@ extern "C" {
 #define MB_OBJ_TEMP_F32       0x4C01  /* 4B：float32 ℃（MJWSD06MMC，miot 2.1001，mi=19457） */
 #define MB_OBJ_HUM_U8         0x4C02  /* 1B：uint8 %（MJWSD06MMC，miot 2.1002，mi=19458） */
 #define MB_OBJ_BATT_U8_48     0x4803  /* 1B：电量 %（MJWSD06MMC，miot 3.1003，mi=18435） */
+/* ★温湿度计 3 Pro（MJWSD07MMC / PID 0x9AB9）用的是**新系列对象号**，
+ * 不是 3 mini 的 0x4C01/0x4C02。2026-11-13 现场实证：
+ * 发 0x4C01/0x4C02 时页面温湿度恒为 "--"；改成 0x5C01/0x5C02 后
+ * 温度 26.1℃ 与湿度同时出现，小爱语音也能查到 —— 网关→云端→语音全链路通。
+ * 编码与旧号完全一致（0x5C01 float32 4B / 0x5C02 uint8 1B，ble_monitor 同）。 */
+#define MB_OBJ_TEMP_F32_5C    0x5C01  /* 4B：float32 ℃（MJWSD07MMC，miot 7.1001） */
+#define MB_OBJ_HUM_U8_5C      0x5C02  /* 1B：uint8 %（MJWSD07MMC，miot 7.1002） */
+#define MB_OBJ_CO2_U16        0x601D  /* 2B：uint16 ppm（MJWSD07MMC，miot 8.1029） */
 /* 无线开关事件对象：载荷恒 1B = 按键号（单键恒 1；双键 1=左 2=右）。
  * 三键位分开成三个对象，App 侧据此拆成「单击/双击/长按」三个触发器。
  * 实测：XMWXKG01YL（0x1949 双键）与 XMWXKG01CM（0x2387 单键）通用。 */

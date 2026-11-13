@@ -53,6 +53,19 @@ void thermometer_init(miot_device_t *dev, miot_port_t *port,
 void thermometer_report(miot_device_t *dev, float temp_c, float hum_pct,
                         uint32_t ts);
 
+/* ============ 2b. 温湿度计 3 Pro（MJWSD07MMC，PID 0x9AB9） ============
+ * 这台是**双通道**设备：既发加密 MiBeacon 广播（网关用），又支持蓝牙直连
+ * 读 spec（手机详情页用）。之前按纯广播型处理（s_tbl=NULL），手机连上来
+ * 一个属性都读不到 → 页面恒空，只剩网关一条路。
+ * 官方 spec（XiaomiGateway3 #1776 实机核对）：
+ *   7.p.1001 温度 float ℃ / 7.p.1002 湿度 uint8 % /
+ *   8.p.1029 CO₂ uint16 ppm / 4.p.1003 电量 uint8 %
+ * 广播对象仍用 ble_monitor 已收录的 0x4C01/0x4C02/0x601D/0x4803。 */
+void t3pro_init(miot_device_t *dev, miot_port_t *port,
+                miot_prop_t **tbl, size_t *cnt);
+/** 造广播帧时顺手把同一组值同步进 spec 属性表（手机读到的就是当前值） */
+void t3pro_update(float temp_c, uint8_t hum_pct, uint16_t co2_ppm, uint8_t batt);
+
 /* ============ 3. 开关型设备（夜灯 / 驱蚊器 0x040A） ============
  * 验证状态：绑定 + spec 开关下发/回报 ✓（set 后立刻回报 0x1012，
  * 页面开关才停在正确位置） */
