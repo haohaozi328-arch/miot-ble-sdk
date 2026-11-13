@@ -36,8 +36,16 @@ static void ag2_frame_cb(void *user, const uint8_t *k61, size_t n)
 
     uint16_t seq = (uint16_t)(k61[0] | (k61[1] << 8));
     size_t ct_len = n - 2 - 4;                  /* 去掉 seq16 与 tag4 */
-    uint8_t pt[256];
-    if (ct_len > sizeof(pt)) return;
+    /* ★缓冲从 256 提到 512（与 MIOT_AG2_RX_CAP 对齐）：2026-11-12 夜里手机在
+     * spec version exchange 之后紧接着发了一个 ~500B 的多帧请求（ag2 共 32 帧），
+     * 旧代码 `if (ct_len > sizeof(pt)) return;` **静默丢弃**，App 收不到应答就
+     * 干等 19s 再 0x213 断开。丢包必须有日志，否则现场只能看到"卡住"。 */
+    static uint8_t pt[512];
+    if (ct_len > sizeof(pt)) {
+        dev_log(d, MIOT_LOG_WARN, "spec req DROP seq=%u ct=%u > cap %u",
+                seq, (unsigned)ct_len, (unsigned)sizeof(pt));
+        return;
+    }
     if (miot_spec_frame_decrypt(d->keys + 16, d->keys + 36, seq, k61 + 2, ct_len, pt)) {
         dev_log(d, MIOT_LOG_WARN, "spec decrypt fail seq=%u", seq);
         return;
