@@ -29,6 +29,44 @@ static uint8_t  s400_unit    = 0;       /* 0=kg 1=lb */
 static uint8_t  s400_mode    = 0;       /* 10.1 work-mode: 0=normal 1=baby 2=balance 3=visitor 4=single */
 static uint32_t s400_weight  = 0;       /* 最近体重，0.1kg 单位（页面直接显示） */
 static uint32_t s400_imp     = 0;       /* 最近阻抗 0.1Ω */
+static uint16_t s400_plugin_ver = 3;    /* 13.1 pluginversion */
+static uint8_t  s400_time_flag  = 1;    /* 13.3 */
+static uint8_t  s400_offline_cnt = 0;   /* 13.6 offline-msg-cnt */
+static uint32_t s400_now = 0;           /* 13.4 current-time */
+
+/* 13.1 sync 的 out 参数里要回给 App 的身份信息（真机从 flash 读，这里由 app 层填入） */
+static char s400_sn[24]  = "S400-0000001";
+static char s400_mac[18] = "10:00:3B:CE:42:03";
+static char s400_fw[20]  = "1.0.0";
+
+void scale_s400_set_identity(const char *mac, const char *sn, const char *fw)
+{
+    if (mac) snprintf(s400_mac, sizeof(s400_mac), "%s", mac);
+    if (sn)  snprintf(s400_sn,  sizeof(s400_sn),  "%s", sn);
+    if (fw)  snprintf(s400_fw,  sizeof(s400_fw),  "%s", fw);
+}
+
+/* 13.1 sync（yunmai.ms103 规格：in=[1,2,4,3,5] out=[6,7,8,9,10]）
+ * out 依次是：离线消息数 / SN / MAC / 固件版本 / 电量。
+ * ★必须带齐 5 个：只回 respCode 时 App 同步流程不推进，开屏停住（v67 实测）。 */
+int scale_s400_action_out(uint8_t siid, uint8_t aiid,
+                          miot_spec_value_t *outs, int max)
+{
+    if (siid != 13 || aiid != 1 || max < 5) return 0;
+    memset(outs, 0, sizeof(*outs) * 5u);
+
+    outs[0].piid = 6;  outs[0].type = MIOT_TYPE_U8;
+    outs[0].val.u8 = s400_offline_cnt;
+    outs[1].piid = 7;  outs[1].type = MIOT_TYPE_STRING;
+    snprintf(outs[1].val.str, sizeof(outs[1].val.str), "%s", s400_sn);
+    outs[2].piid = 8;  outs[2].type = MIOT_TYPE_STRING;
+    snprintf(outs[2].val.str, sizeof(outs[2].val.str), "%s", s400_mac);
+    outs[3].piid = 9;  outs[3].type = MIOT_TYPE_STRING;
+    snprintf(outs[3].val.str, sizeof(outs[3].val.str), "%s", s400_fw);
+    outs[4].piid = 10; outs[4].type = MIOT_TYPE_U8;
+    outs[4].val.u8 = s400_battery;
+    return 5;
+}
 
 static miot_prop_t s400_props[] = {
     { 3, 1003, MIOT_TYPE_U8,  MIOT_PROP_R,  1, &s400_battery, 0, 0,   NULL, "battery"   },
@@ -38,7 +76,16 @@ static miot_prop_t s400_props[] = {
     /* 10.1 必须注册：插件开屏会 GET 一次 work-mode，未注册拿到 result=1（不认识），
      * 页面按「不支持」处理，测量入口点不动（docs/protocol.md §11）。 */
     { 10, 1,   MIOT_TYPE_U8,  MIOT_PROP_RW, 1, &s400_mode,    0, 4,   NULL, "work-mode" },
+    /* 13 syncinfo：开屏 13.1 之后 App 会把这些当设备身份读一遍 */
+    { 13, 1,   MIOT_TYPE_U16, MIOT_PROP_R,  2, &s400_plugin_ver, 0, 0xFFFF, NULL, "pluginversion" },
+    { 13, 2,   MIOT_TYPE_U8,  MIOT_PROP_R,  1, &s400_unit,    0, 1,   NULL, "unit"      },
+    { 13, 3,   MIOT_TYPE_BOOL,MIOT_PROP_R,  1, &s400_time_flag, 0, 1, NULL, "time-valid" },
+    { 13, 4,   MIOT_TYPE_U32, MIOT_PROP_R,  4, &s400_now,     0, 0,   NULL, "current-time" },
+    { 13, 6,   MIOT_TYPE_U8,  MIOT_PROP_R,  1, &s400_offline_cnt, 0, 0xFF, NULL, "offline-msg-cnt" },
+    { 13, 10,  MIOT_TYPE_U8,  MIOT_PROP_R,  1, &s400_battery, 0, 100, NULL, "battery"   },
 };
+
+void scale_s400_set_now(uint32_t epoch) { s400_now = epoch; }
 
 static bool s400_get(void *user, uint8_t siid, uint16_t piid, miot_spec_value_t *out)
 {

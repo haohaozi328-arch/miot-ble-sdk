@@ -51,6 +51,22 @@ static void ag2_frame_cb(void *user, const uint8_t *k61, size_t n)
         return;
     }
     dev_log(d, MIOT_LOG_INFO, "spec req seq=%u pt=%uB", seq, (unsigned)ct_len);
+    /* ★请求明文全量转储（前 4 包）：267B 大请求被误判成 ACTION siid=13 aiid=1281，
+     * 说明字段边界对不上；只有看到完整字节才能确定真实布局。 */
+    static int n_dump;
+    if (n_dump < 4) {
+        n_dump++;
+        char hx[3 * 40 + 4];
+        for (size_t off = 0; off < ct_len; off += 40) {
+            size_t dn = ct_len - off;
+            if (dn > 40) dn = 40;
+            size_t o = 0;
+            for (size_t i = 0; i < dn; i++)
+                o += (size_t)snprintf(hx + o, sizeof(hx) - o, "%02X ", pt[off + i]);
+            hx[o] = 0;
+            dev_log(d, MIOT_LOG_INFO, "  pt[%03u] %s", (unsigned)off, hx);
+        }
+    }
     miot_device_dispatch_plain(d, pt, ct_len);
 }
 
@@ -261,6 +277,15 @@ __attribute__((weak)) void miot_demo_app_action_hook(uint8_t siid, uint16_t aiid
     (void)siid; (void)aiid;
 }
 
+/* 设备可接管 action 的 out 参数（返回个数，0=按旧格式只回 respCode）。
+ * 13.1 sync 需要 5 个 out，缺了 App 的同步流程就停在开屏。 */
+__attribute__((weak)) int miot_device_action_out(uint8_t siid, uint16_t aiid,
+                                                 miot_spec_value_t *outs, int max)
+{
+    (void)siid; (void)aiid; (void)outs; (void)max;
+    return 0;
+}
+
 
 /* 解析失败时把明文打出来：App 的 SET 里可能出现我们没实现的类型
  * （i16/u64/i64）或超长字符串，静默丢弃会让它无限重发、页面一直转圈。 */
@@ -297,12 +322,33 @@ void miot_device_dispatch_plain(miot_device_t *d, const uint8_t *pt, size_t len)
     }
     case MIOT_OP_ACTION: {
         miot_demo_app_action_hook(pkt.siid, pkt.piid);
-        /* 应答格式仅 [op=6][respCode16=0]，带 siid/aiid 会被 App 解析为失败并无限重发 */
-        uint8_t r[7];
-        int n = miot_spec_build_action_reply(pkt.tid, 0, r, sizeof(r));
+        /* 入参逐项打印：13.1 sync 的第 5 个入参是整段用户档案 JSON，
+         * 解析对不对一眼就能看出来（旧版这里会显示 aiid=1281）。 */
+        for (int i = 0; i < pkt.argc; i++) {
+            const miot_spec_value_t *a = &pkt.args[i];
+            if (a->type == MIOT_TYPE_STRING)
+                dev_log(d, MIOT_LOG_INFO, "  act in[%d] piid=%u str(%u)B: %.96s",
+                        i, a->piid, (unsigned)strlen(a->val.str), a->val.str);
+            else if (a->type == MIOT_TYPE_U32 || a->type == MIOT_TYPE_I32 ||
+                     a->type == MIOT_TYPE_U64 || a->type == MIOT_TYPE_I64)
+                dev_log(d, MIOT_LOG_INFO, "  act in[%d] piid=%u u32=%u",
+                        i, a->piid, (unsigned)a->val.u32);
+            else
+                dev_log(d, MIOT_LOG_INFO, "  act in[%d] piid=%u t=%u val=%u",
+                        i, a->piid, a->type, (unsigned)a->val.u32);
+        }
+        /* 应答：默认 `[06][respCode16]`；若设备侧能提供 out 参数就按 kt4 带齐
+         * （13.1 sync 的 6/7/8/9/10，缺一个 App 都不推进同步流程） */
+        uint8_t r[192];
+        miot_spec_value_t outs[MIOT_SPEC_MAX_ARGS];
+        memset(outs, 0, sizeof(outs));
+        int no = miot_device_action_out(pkt.siid, pkt.piid, outs, (int)MIOT_SPEC_MAX_ARGS);
+        int n = (no > 0)
+              ? miot_spec_build_action_reply_ex(pkt.tid, 0, outs, (size_t)no, r, sizeof(r))
+              : miot_spec_build_action_reply(pkt.tid, 0, r, sizeof(r));
         if (n > 0) spec_reply(d, r, (size_t)n);
-        dev_log(d, MIOT_LOG_WARN, "spec ACTION siid=%u aiid=%u -> respCode=0",
-                pkt.siid, pkt.piid);
+        dev_log(d, MIOT_LOG_WARN, "spec ACTION siid=%u aiid=%u argc=%u -> respCode=0 outs=%d",
+                pkt.siid, pkt.piid, pkt.argc, no);
         break;
     }
     case MIOT_OP_GET:

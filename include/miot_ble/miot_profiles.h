@@ -36,6 +36,14 @@ int  scale_s400_report_step(miot_device_t *dev, int step,
 void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01);
 /** siid 扫射（私有 spec 事件 siid 未知时探查） */
 void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2);
+/** 13.1 sync 的 out 参数（离线消息数 / SN / MAC / 固件 / 电量）。
+ *  ★App 开屏必发 13.1，应答缺这 5 个 out 时同步流程不推进，页面停在开屏。 */
+int  scale_s400_action_out(uint8_t siid, uint8_t aiid,
+                           miot_spec_value_t *outs, int max);
+/** 填身份信息（MAC / SN / 固件版本），只影响 13.1 应答内容 */
+void scale_s400_set_identity(const char *mac, const char *sn, const char *fw);
+/** 13.4 current-time：App 用它对时，同时也是记录时间戳的来源 */
+void scale_s400_set_now(uint32_t epoch);
 
 /* ============ 2. 温湿度计（cgllc-cgdk3 / miaomiaoce-t9 双 spec 兼容） ============
  * 验证状态：绑定 + spec 读写 ✓（温度 float 2.1001 / 3.1001，湿度、电量） */

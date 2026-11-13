@@ -73,7 +73,10 @@ extern "C" {
 #define MIOT_OP_VERSION_XCH 0xF0
 
 #define MIOT_SPEC_VER       2u      /* 协议版本（len16 高 4 位） */
-#define MIOT_SPEC_MAX_ARGS  4       /* 单包最大参数/对象数 */
+/* 单包最大参数/对象数。★别调回 4：13.1 sync（用户档案同步）一帧带 5 个入参，
+ * 第 5 个正是整段 uinfo JSON，截断后既看不到也存不下。NimBLE host 任务栈 8KB，
+ * 6 个 value（各 ~140B）+ 应答缓冲约 1.7KB，实测无溢出。 */
+#define MIOT_SPEC_MAX_ARGS  6
 /* 字符串参数最大长度。★别调小：体脂秤 8.2 结果帧是 28 字段 CSV，
  * 实测 66 字符（含 10 位时间戳）。原来是 40，载荷被静默截断，
  * App 解析不出字段，页面就一直停在「上秤」（23:07 实测）。 */
@@ -108,8 +111,7 @@ typedef struct miot_spec_packet {
 
 /* ================= 组包（返回帧总长，负数=错误码） ================= */
 
-/** set_properties 应答（op=1） */
-int miot_spec_build_set_reply(uint16_t tid, const miot_spec_value_t *res, size_t count,
+/** set_properties 应答（op=1） */int miot_spec_build_set_reply(uint16_t tid, const miot_spec_value_t *res, size_t count,
                               uint8_t *out, size_t cap);
 
 /** get_properties 应答（op=3） */
@@ -123,6 +125,12 @@ int miot_spec_build_props_changed(uint16_t tid, const miot_spec_value_t *props, 
 /** action 应答（op=6，仅 respCode） */
 int miot_spec_build_action_reply(uint16_t tid, uint16_t resp_code,
                                  uint8_t *out, size_t cap);
+
+/** action 应答（op=6）带 out 参数：`[06][respCode16][count][piid8][type16][value]...`
+ *  13.1 sync 必须带 5 个 out（offline-msg-cnt / sn / mac / fw / battery） */
+int miot_spec_build_action_reply_ex(uint16_t tid, uint16_t resp_code,
+                                    const miot_spec_value_t *outs, size_t count,
+                                    uint8_t *out, size_t cap);
 
 /** 事件（op=7），args 的 piid/type/val 有效 */
 int miot_spec_build_event(uint16_t tid, uint8_t siid, uint16_t eiid,

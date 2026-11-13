@@ -317,8 +317,15 @@ void miot_demo_app_action_hook(uint8_t siid, uint16_t aiid)
     s_weigh_req = 1;
 }
 
-/* 体脂秤记录时间戳：板上没有 RTC，也没连 WiFi，只能自己造一个 wall clock。
- * 做法是拿**编译时刻**（__DATE__/__TIME__）当锚点，再加运行时长 —— 误差等于
+/* action 的 out 参数：只有体脂秤的 13.1 sync 需要（离线消息数/SN/MAC/固件/电量）。
+ * ★App 开屏第一件事就是发这条 267B 的动作，应答缺 out 时同步流程不推进。 */
+int miot_device_action_out(uint8_t siid, uint16_t aiid,
+                           miot_spec_value_t *outs, int max)
+{
+    return scale_s400_action_out(siid, (uint8_t)aiid, outs, max);
+}
+
+/* 体脂秤记录时间戳：板上没有 RTC，也没连 WiFi，只能自己造一个 wall clock。 * 做法是拿**编译时刻**（__DATE__/__TIME__）当锚点，再加运行时长 —— 误差等于
  * 「编译 → 上电」的间隔，实测够用；填 0 会被云端判非法（报告页 1970 + 「服务器异常」）。
  * ★编译容器 espressif/idf:v6.0 的 TZ 是 UTC，__TIME__ 已经是 UTC，不要再减 8 小时。 */
 static uint32_t build_epoch(void)
@@ -1602,6 +1609,15 @@ void app_main(void)
     for (int i = 0; i < 6; i++) s_mac_air[i] = mac[5 - i];
     ESP_LOGI(TAG, "MAC for [%d] %s: %02X:%02X:%02X:%02X:%02X:%02X",
              s_sel, DEV_LABEL, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    {
+        /* 13.1 sync 的 out 参数要回 MAC/SN/固件：真机从 flash 读，这里用空中地址派生。
+         * ★不填的话 App 拿到的设备页会缺「序列号/固件版本/电量」。 */
+        char mstr[18], snstr[24];
+        snprintf(mstr, sizeof(mstr), "%02X:%02X:%02X:%02X:%02X:%02X",
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        snprintf(snstr, sizeof(snstr), "S400%02X%02X%02X%02X", mac[2], mac[3], mac[4], mac[5]);
+        scale_s400_set_identity(mstr, snstr, "1.0.0_0031");
+    }
 
     miot_port_esp32_crypto_init();
     fcnt_load();
