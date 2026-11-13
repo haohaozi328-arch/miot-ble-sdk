@@ -76,8 +76,8 @@ tid  : 事务 ID，应答原样带回
 | 2  | get_properties 请求 | App→Dev | `[count]([siid][piid16])×count` |
 | 3  | get_properties 应答 | Dev→App | `[count]([siid][piid16][result16][type16][value])×count` |
 | 4  | properties_changed | Dev→App | `[count]([siid][piid16][type16][len][value])×count` |
-| 5  | action 请求 | App→Dev | `[siid][aiid16][argc]([piid16][type16][len][value])×argc` |
-| 6  | action 应答 | Dev→App | `[respCode16]` |
+| 5  | action 请求 | App→Dev | `[siid u8][aiid **u8**][argc u8]([piid16][type16][len][value])×argc` |
+| 6  | action 应答 | Dev→App | `[respCode16][count u8]([piid **u8**][type16][value])×count` |
 | 7  | event 事件 | Dev→App | `[siid][eiid16][argc]([piid16][type16][len][value])×argc` |
 | F0 | 版本交换 | 双向 | 无（`[05 20][tid][F0]` 镜像应答） |
 
@@ -92,9 +92,15 @@ tid  : 事务 ID，应答原样带回
    `kt4` 格式：`[06][respCode16][count][piid8][type16][value]...`（count 为 out
    参数个数，piid 为 8 位）。无 out 参数时仅 `[06][respCode16]`。
    把 `[siid][aiid]` 放在 respCode 位置会被误读为 `respCode=269` → App 判定动作
-   失败 → 无限重发（如 13.sync 的 aiid 实为 0x0501=1281，out=[6,7,8,9,10]，
-   必须按 kt4 带齐 5 个 out 参数，App 的同步流程才会推进）。
-4. **App→设备的 SET 条目 type16 实际也是 `(type<<12)|len`（v65/v66 串口实测）**
+   失败 → 无限重发（如 13.sync，out=[6,7,8,9,10]，必须按 kt4 带齐 5 个 out
+   参数，App 的同步流程才会推进）。
+4. **op=5 action 请求头是 `siid u8 + aiid u8 + argc u8`（不是 aiid16）**
+   早期按 `aiid16` 解析，13.sync 被读成 `aiid=1281`（`0x0501`，实为 argc=5 的
+   低字节错位）、且入口 4 字节偏移吃掉一个字节，后续入参全部错位。
+   2026-11-13 用 267B 实测明文逐字节反推确认：`0D 01 05 | 01 ...` = siid=13
+   aiid=1 argc=5。**action 的入参不带 siid**，条目为 `[piid16][type16][value]`
+   （`type16=(type<<12)|len`，与 §4.2.5 同格式），与 SET 条目（带 siid）不同。
+5. **App→设备的 SET 条目 type16 实际也是 `(type<<12)|len`（v65/v66 串口实测）**
    v65 抓包推翻了早期结论：App 下发 10.1 `set mode=bool(false)` 时 type16 = `0x1001`
    = `(0<<12)|1`，即与设备→App 方向**相同**的 `(SpecValueType << 12) | len` 格式。
    早期按「纯类型号 + len8」解析会把 len 读成 0 → 拒绝（result=1，rc=-2/-4）。
@@ -157,7 +163,27 @@ result 语义：0=成功；非 0=错误码（未认识的属性回 1）。
 action 应答（7B，respCode=0）:
 07 20 0a 01 06 00 00
 └len┘└tid─┘ └op┘└resp┘
+
+13.1 sync 应答（带 5 个 out，22B）:
+40 20 0f 00 06 00 00 05 06 01 10 00 07 0c a0 "S4003BCE4203" 08 11 a0 "10:00:3B:CE:42:03"
+└len┘└tid─┘ └op┘└resp┘└cnt┘└6=offline-cnt┘└7=sn┘        └8=mac┘
+... 09 0c a0 "1.0.0_0031" 0a 01 10 5c
+    └9=fwver┘             └10=battery(92)┘
+
+13.1 sync 请求明文（267B，节选）:
+0d 01 05  | 01 <u16 167> | 02 <u8 3> | 04 <u32 ts> | 03 <bool 1> | 05 a0 e7 "{"mid":"326...
+└si┘└ai┘└argc┘ (action 条目无 siid，逐项 [piid16][type16][value])
 ```
+
+App 第一次拿到的真实用户档案就在这条 JSON 的最后一项里：
+
+```json
+{"mid":"326998345159","uid":1,"uc":2,"ow":1,"hash":"93abea6b…",
+ "ud":[{"uid":1,"ut":1,"age":18,"sex":1,"hi":170,"wt":638,"time":1794149328},
+       {"uid":2,"ut":2,"age":18,"sex":1,"hi":170,"wt":600,"time":1794441905}]}
+```
+
+`hi`（身高）/`age`/`sex` 正是体脂率计算需要却被我们长期硬编码的三个量，现在有真值来源。
 
 ## 5. App 侧分发链（插件收不到事件时的排查路径）
 
@@ -256,7 +282,8 @@ spec 树是「标准 MIoT（siid 1/2/11）+ 云米/yunmai 私有服务（siid 6/
 | 8.2 事件 upload-body-data（args=[2]） | 28 字段 CSV 字符串 | 测量结果：按插件 uploadBodyDataObj 下标取值（weight=3、heartRate=4、bfp=7、slm=8…），keyNeedDivide10 字段需 ÷10 |
 | 11.1022 事件 | 权限位 | 测量完成收尾 |
 | 10.1 属性 work-mode | uint8 | 页面第一道判断：0=normal 1=baby 2=balance 3=visitor 4=single |
-| 13.sync action | aiid=0x0501(1281)，out=[6,7,8,9,10] | 历史同步，kt4 应答必须带 out 参数 |
+| 13.1 动作 sync（in=[1,2,4,3,5]，out=[6,7,8,9,10]） | 入参 5：`pluginver u16, unit u8, current-time u32, bool, userinfolist str(JSON)` | 每次连上都会下发，**267B**（多帧 ag2 拼装）。应答必须按 kt4 带齐 5 个 out，否则 App 判定失败并反复重发，页面卡在同步阶段 |
+| 6.5 动作 update-base-weight（in=[1,8,4,6]，out=**空**） | `miid u32, user-id u8, user-type u8, user-weight u16(0.1kg)` | 出数后 App 把结果回写为基准体重；空应答即正确（实测 `respCode=0 outs=0`，App 不再重发） |
 
 关键字段（8.2 CSV 下标 5）`weightDoneStatus`：
 `0`=normalData（直接入库）/ `2`=userError（弹「是你吗」）/ `4`=multipleUsers（弹选人）。

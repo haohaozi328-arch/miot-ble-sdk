@@ -50,6 +50,31 @@ MIOT: *** session established: spec channel ready ***
 > 另外广播 FC 的 authMode（0x20/0x22 → 0x28/0x2A）对 App 选哪条认证分支**没有影响**，
 > 改与不改都走 legacy 绑定；真正的分水岭是上面两个通道问题。
 
+#### 第二轮：详情页「一直转圈不出数」✅ 已闭环（2026-11-13）
+
+登录通了、7 步称重全 ACK、米家历史里有记录，但**详情页不出数值**，且 App 连上 **19 秒后自己断开**（`reason=0x213`）。三个 bug 串在一起，全在「大请求」这条路上：
+
+| # | 层 | 现象 | 根因 | 修法 |
+|---|----|------|------|------|
+| 1 | k61 解密 | `rx#7`~`rx#38` 共 32 帧、约 500B 的请求进来后设备**毫无反应**，连日志都没有 | `uint8_t pt[256]; if (ct_len > sizeof(pt)) return;` —— 13.1 sync 明文 **267B** 超限，**静默丢弃** | 缓冲 256→512（对齐 `MIOT_AG2_RX_CAP`），超限改为打 `spec req DROP` 日志 |
+| 2 | spec 解析 | 267B 被读成 `ACTION siid=13 aiid=1281`，`argc` 与后续入参全错位 | action 头是 `siid u8 + aiid **u8** + argc u8`，我们按 `aiid16` 读，入口 4 字节偏移多吃了 1 字节 | 按实测明文逐字节反推改正（`docs/protocol.md §4.2.4`）；action 入参条目**不带 siid**，为 `[piid16][type16][value]` |
+| 3 | action 应答 | 13.1 回了 `[06][respCode16]` 空应答，App 立刻重发同一个包（每次重发 1~2 次） | 规格 `13.1` out=[6,7,8,9,10]，`kt4` 必须带齐 5 个 out | 应答改为 `[06][0000][05]` + offline-cnt / SN / MAC / 固件版本 / 电量 |
+
+修完后实测（2026-11-13，`_rb10.log`）：
+
+```
+spec req seq=1 pt=267B                                   ← 缓冲吃得下
+act in[0] piid=1 u16 167 / in[4] piid=5 str(231B) {"mid":...  ← 5 个入参全对
+spec ACTION siid=13 aiid=1 -> respCode=0 outs=5          ← App 一次收下、不再重发
+weigh step 0..6/7 三轮全 rc 正常
+spec ACTION siid=6 aiid=5 argc=4 -> respCode=0 outs=0    ← 6.5 update-base-weight（out 本就为空）
+```
+
+结果：页面连续显示 **63.8 / 64.5 / 65.2** 三个值，**不再 19 秒断开**，会话保持到手机主动退出。
+
+顺带拿到的真值：13.1 入参第 5 项是用户档案 JSON（`{"ud":[{"age":18,"sex":1,"hi":170,"wt":638,...}]}`），
+`hi/age/sex` 正是体脂率计算需要却被固件长期硬编码的三个量。
+
 ### 2.2 S400 能否「不拿手机、纯靠网关」称重：⚠️ 官方支持，实测未打通（2026-11-12）
 
 **官方说明书原文（S400 使用说明书，2026-11-12 取证，两处）：**
