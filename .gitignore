@@ -33,3 +33,4 @@ sdkconfig.clean
 /_*.py
 /_*.out
 /_*.bin
+esp32/multi_dev/build/

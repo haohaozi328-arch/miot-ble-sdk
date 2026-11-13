@@ -50,6 +50,7 @@
 #include "miot_ble/miot_profiles.h"
 
 #include "gatt_miot.h"
+#include "mesh_miot.h"
 
 void miot_port_esp32_crypto_init(void);
 
@@ -798,6 +799,9 @@ static int build_frame(int idx)
 static void adv_start(void)
 {
     if (ble_gap_adv_active()) return;
+    /* ★Mesh 门卫：未配网 beacon 广播期间 Mesh 层持有 legacy 广播实例，
+     * 这里必须让位，否则两边互相 stop/start 打架，谁也发不成完整帧。 */
+    if (mesh_miot_adv_owns_radio()) return;
 
     static const ble_uuid16_t uuid_fe95 = BLE_UUID16_INIT(0xFE95);
 
@@ -1443,6 +1447,31 @@ static void cli_task(void *arg)
             gatt_miot_set_spec_probe(atoi(arg));
             ESP_LOGW(TAG, "spec 探针 = %d（0=关 1=ag2 START 2=mng 建链）",
                      gatt_miot_get_spec_probe());
+        } else if (!strcmp(line, "mstat")) {
+            char st[160]; mesh_miot_status(st, sizeof(st));
+            ESP_LOGW(TAG, "%s", st);
+        } else if (!strncmp(line, "mprov", 5)) {
+            /* mprov 0/1  -> 关/开 Mesh 配网承载（未配网 beacon + 0x1827）。
+             * 关掉后 MiBeacon 广播恢复（`factory` 后默认是开的）。 */
+            const char *arg = line + 5;
+            while (*arg == ' ') arg++;
+            if (*arg) {
+                mesh_miot_set_prov(atoi(arg) ? true : false);
+                adv_refresh();
+            }
+            char st[160]; mesh_miot_status(st, sizeof(st));
+            ESP_LOGW(TAG, "%s", st);
+        } else if (!strncmp(line, "muuid ", 6)) {
+            /* muuid 8F03...  -> 整帧替换 16 字节 Mesh Device UUID（32 个 hex） */
+            const char *arg = line + 6;
+            uint8_t u[16]; int n = 0;
+            while (n < 16 && arg[0] && arg[1]) {
+                char b[3] = { arg[0], arg[1], 0 };
+                u[n++] = (uint8_t)strtoul(b, NULL, 16);
+                arg += 2;
+            }
+            if (n == 16) mesh_miot_set_uuid(u);
+            else ESP_LOGW(TAG, "需要 32 个 hex 字符（16 字节），收到 %d 字节", n);
         } else if (!strncmp(line, "fc", 2)) {
             /* fc          -> 查询
              * fc 22       -> 只改高字节（旧形态）
@@ -1579,6 +1608,10 @@ static void on_sync(void)
 
     s_idx = 0;
     build_frame(s_idx);
+    /* ★2026-11-13 Mesh 承载层：云端档案是「蓝牙 Mesh」，网关只扫描 Mesh 广播。
+     * host 同步后开启未配网 beacon；期间 Mesh 层持有广播实例，
+     * MiBeacon 广播让位（见 adv_start 开头的门卫）。 */
+    mesh_miot_on_sync();
     adv_start();
     gatt_miot_dump_handles();
     s_was_bound = s_auth.bound;
@@ -1696,6 +1729,14 @@ void app_main(void)
     gatt_miot_register_svcs();
     gatt_miot_bind(&s_auth, &s_dev);
     ble_att_set_preferred_mtu(247);
+
+    /* ★Mesh 栈早期挂载：bt_mesh_init 注册 Mesh Proxy/Prov GATT 服务，
+     * 必须赶在 host 启动（ble_gatts_start 建表）之前，晚了会断言崩溃。 */
+    {
+        uint8_t mac_human[6];
+        for (int i = 0; i < 6; i++) mac_human[i] = s_mac_air[5 - i];
+        mesh_miot_early_init(DEV_PID, mac_human);
+    }
 
     nimble_port_freertos_init(host_task);
     xTaskCreate(push_task, "push", 4096, NULL, 3, NULL);

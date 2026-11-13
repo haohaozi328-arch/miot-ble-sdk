@@ -4,6 +4,7 @@ set(SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/../../..")
 idf_component_register(
     SRCS "app_main.c"
          "gatt_miot.c"
+         "mesh_miot.c"
          "${SDK_DIR}/src/miot_beacon.c"
          "${SDK_DIR}/src/miot_crypto.c"
          "${SDK_DIR}/src/miot_auth.c"
