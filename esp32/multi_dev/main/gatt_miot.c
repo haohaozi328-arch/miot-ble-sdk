@@ -1004,7 +1004,24 @@ static int looks_ag2(const uint8_t *b, uint16_t n)
 static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
                        struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
-    (void)conn_handle; (void)attr_handle; (void)arg;
+    (void)arg;
+
+    /* ★2026-11-13 多连接：CONFIG_BT_NIMBLE_MAX_CONNECTIONS 提到 3 之后，
+     * 小爱网关/第二个 central 可能在我们和手机通话时连进来。
+     * 这里只「旁听」：把它的访问原样打出来（这是抓网关行为的关键证据），
+     * 但绝不改动主会话的任何状态机变量，否则手机那条链路会被带崩。 */
+    if (s_conn != BLE_HS_CONN_HANDLE_NONE && conn_handle != s_conn) {
+        uint16_t u2 = ble_uuid_u16(ctxt->chr->uuid);
+        if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+            uint16_t n = OS_MBUF_PKTLEN(ctxt->om);
+            ESP_LOGW(TAG, "2nd link conn=%u wr attr=%04X len=%u:", conn_handle, u2, n);
+            ESP_LOG_BUFFER_HEX_LEVEL(TAG, ctxt->om->om_data,
+                                     n > 32 ? 32 : n, ESP_LOG_WARN);
+            return 0;
+        }
+        ESP_LOGW(TAG, "2nd link conn=%u rd attr=%04X (not served)", conn_handle, u2);
+        return BLE_ATT_ERR_READ_NOT_PERMITTED;
+    }
 
     uint16_t u = ble_uuid_u16(ctxt->chr->uuid);
 
@@ -1710,6 +1727,11 @@ int gatt_miot_is_connected(void)
     return s_conn != BLE_HS_CONN_HANDLE_NONE;
 }
 
+/* 主会话占用的连接句柄（多连接旁听时用来分辨「断的是哪一条」） */
+uint16_t gatt_miot_conn_handle(void)
+{
+    return s_conn;
+}
 uint32_t gatt_miot_rx_ms(void)
 {
     return s_rx_ms;

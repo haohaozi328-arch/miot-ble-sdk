@@ -52,6 +52,11 @@
 #include "gatt_miot.h"
 #include "mesh_miot.h"
 
+/* 事件池记账（实现在 patch/npl_os_freertos.c）：判断是突发打穿还是泄漏 */
+extern int ble_npl_ev_live_count(void);
+extern int ble_npl_ev_total_count(void);
+extern int ble_npl_ev_hist(void **ras, int *cnts, int max);
+
 void miot_port_esp32_crypto_init(void);
 
 /* ==================== 型号表（运行期选择） ====================
@@ -929,6 +934,14 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                          (unsigned)cd.conn_itvl, (unsigned)cd.conn_latency,
                          (unsigned)cd.supervision_timeout);
             }
+            /* ★多连接：主会话已占用时，第二条链路只旁听（不重置认证状态、
+             * 不改连接参数），抓「网关连上来之后干什么」。 */
+            if (gatt_miot_is_connected()) {
+                ESP_LOGW(TAG, "2nd link conn=%u accepted as LISTENER (primary=%u alive)",
+                         (unsigned)event->connect.conn_handle,
+                         (unsigned)gatt_miot_conn_handle());
+                return 0;
+            }
             gatt_miot_on_connect(event->connect.conn_handle, BLE_ATT_MTU_DFLT);
             /* ★连接态必须继续广播（真机行为，参考工程实测结论）：
              * App 的扫描管线靠 MiBeacon 帧把设备标记为「在身边/在线」，
@@ -973,6 +986,14 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                      s_peer[5], s_peer[4], s_peer[3], s_peer[2], s_peer[1], s_peer[0],
                      (unsigned)event->disconnect.reason);
             s_peer_ok = 0;
+        }
+        /* 旁听链路断开：主会话还在，什么都别动 */
+        if (gatt_miot_is_connected() &&
+            event->disconnect.conn.conn_handle != gatt_miot_conn_handle()) {
+            ESP_LOGW(TAG, "listener conn=%u gone (reason=0x%x), primary keeps running",
+                     (unsigned)event->disconnect.conn.conn_handle,
+                     (unsigned)event->disconnect.reason);
+            return 0;
         }
         gatt_miot_on_disconnect();
         miot_auth_on_disconnect(&s_auth);
@@ -1947,10 +1968,21 @@ void app_main(void)
             static uint32_t last_stat_ms;
             if (t - last_stat_ms >= 30000) {
                 last_stat_ms = t;
-                ESP_LOGW(TAG, "STAT disc=%lu prov_pdu=%lu mesh_prov_on=%d provisioned=%d adv_mine=%d conn=%d",
+                ESP_LOGW(TAG, "STAT disc=%lu prov_pdu=%lu mesh_prov_on=%d provisioned=%d adv_mine=%d conn=%d ev=%d/%d heap=%lu",
                          (unsigned long)s_disc_cnt, (unsigned long)s_prov_pdu_cnt,
                          (int)mesh_miot_prov_active(), (int)mesh_miot_provisioned(),
-                         (int)(!mesh_miot_adv_owns_radio()), (int)gatt_miot_is_connected());
+                         (int)(!mesh_miot_adv_owns_radio()), (int)gatt_miot_is_connected(),
+                         ble_npl_ev_live_count(), ble_npl_ev_total_count(),
+                         (unsigned long)esp_get_free_heap_size());
+                {
+                    void *ras[24]; int cns[24];
+                    int hn = ble_npl_ev_hist(ras, cns, 24);
+                    for (int i = 0; i < hn; i++) {
+                        if (cns[i] >= 4) {
+                            ESP_LOGW(TAG, "  ev-alloc from %p x%d", ras[i], cns[i]);
+                        }
+                    }
+                }
             }
         }
 

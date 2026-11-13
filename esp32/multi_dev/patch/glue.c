@@ -73,19 +73,58 @@ bt_hex(const void *buf, size_t len)
     return str;
 }
 
+/* ev 地址 -> 已分配的事件池块（见 net_buf_put 里的 v3 说明） */
+#define EV_CACHE_N 24
+static void *s_evc_key[EV_CACHE_N];
+static void *s_evc_blk[EV_CACHE_N];
+
+static void *ev_cache_get(void *key)
+{
+    int i;
+    for (i = 0; i < EV_CACHE_N; i++) {
+        if (s_evc_key[i] == key) return s_evc_blk[i];
+    }
+    return NULL;
+}
+
+static void ev_cache_put(void *key, void *blk)
+{
+    int i, free_slot = -1;
+    for (i = 0; i < EV_CACHE_N; i++) {
+        if (s_evc_key[i] == key) { s_evc_blk[i] = blk; return; }
+        if (!s_evc_key[i] && free_slot < 0) free_slot = i;
+    }
+    if (free_slot >= 0) {
+        s_evc_key[free_slot] = key;
+        s_evc_blk[free_slot] = blk;
+    }
+}
+
 void
 net_buf_put(struct ble_npl_eventq *fifo, struct os_mbuf *om)
 {
     struct ble_npl_event *ev;
-
     assert(OS_MBUF_IS_PKTHDR(om));
     ev = &BT_MESH_ADV(om)->ev;
     assert(ev);
     /* ★patch 2026-11-13: freertos NPL 的 ble_npl_event 需要显式 init，
-     * mesh 源码多处漏 init（adv_update 静态 ev、adv_pool 缓冲 ev）。
-     * 与其逐处补，不如在这里自愈：arg 为空就现场 init 并挂上 om。 */
-    if (!ble_npl_event_get_arg(ev)) {
-        ble_npl_event_init(ev, NULL, om);
+     * mesh 源码多处漏 init（adv_update 静态 ev、adv_pool 缓冲 ev），
+     * 与其逐处补，不如在这里自愈。
+     *
+     * ★v3 修「每发一帧就新分配一个事件块」（实测 ev 池 +6/30s，12 分钟必崩）：
+     * adv 缓冲来自固定 mempool，
+     * 每个块内的 ev 地址稳定，但内存每次会被清零（ev->event 恒为 NULL）。
+     * 按 ev 地址缓存已分配的池块，同一缓冲永远复用同一块 ——
+     * 总分配量封顶在 adv 缓冲数（20），不再随发送次数线性上涨。 */
+    if (!ev->event) {
+        void *blk = ev_cache_get(ev);
+        if (blk) {
+            ev->event = blk;
+        }
+    }
+    ble_npl_event_init(ev, NULL, om);
+    if (ev->event) {
+        ev_cache_put(ev, ev->event);
     }
 
     ble_npl_eventq_put(fifo, ev);

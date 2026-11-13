@@ -102,8 +102,40 @@ static const char *TAG = "Timer";
  * (BLE_TOTAL_EV_COUNT ≈ 20)，而 NimBLE Mesh 的 adv 缓冲池单是 20 个，
  * 每个 adv 缓冲需要一个 ble_npl_event。Mesh 一开 beacon，池子立刻耗尽，
  * npl_freertos_event_init 的 BLE_LL_ASSERT(event) 断言重启。
- * 这里给事件池加 40 个余量（池只多占 ~40*20B RAM）。 */
-#define BLE_TOTAL_EV_COUNT_PATCHED (BLE_TOTAL_EV_COUNT + 40)
+ * 2026-11-13 二改：+40 在「家里一堆蓝牙设备同时广播」时仍会耗尽（7.5 分钟崩），
+ * 实证崩溃栈是 adv report → ble_hs_enqueue_hci_event，属突发打穿而非慢泄漏。
+ * 加到 +96，并用 s_ev_live 实时记账，STAT 里能看出是「突发」还是「泄漏」。 */
+#define BLE_TOTAL_EV_COUNT_PATCHED (BLE_TOTAL_EV_COUNT + 96)
+
+/* 事件池存活计数（排查泄漏：只增不减 = 泄漏） */
+static int s_ev_live;
+int ble_npl_ev_live_count(void) { return s_ev_live; }
+int ble_npl_ev_total_count(void) { return BLE_TOTAL_EV_COUNT_PATCHED; }
+
+/* 泄漏归因：按「谁调用 event_init」做直方图，STAT 里打印 top4，
+ * 再用 addr2line 反查 —— 实测 eb=+6/30s 的稳定增长必须落到具体调用点。 */
+#define EVH_SLOTS 24
+static void *s_evh_ra[EVH_SLOTS];
+static int   s_evh_cnt[EVH_SLOTS];
+static int   s_evh_n;
+static void evh_note(void *ra)
+{
+    int i;
+    for (i = 0; i < s_evh_n; i++) {
+        if (s_evh_ra[i] == ra) { s_evh_cnt[i]++; return; }
+    }
+    if (s_evh_n < EVH_SLOTS) {
+        s_evh_ra[s_evh_n] = ra;
+        s_evh_cnt[s_evh_n] = 1;
+        s_evh_n++;
+    }
+}
+int ble_npl_ev_hist(void **ras, int *cnts, int max)
+{
+    int i, n = 0;
+    for (i = 0; i < s_evh_n && n < max; i++) { ras[n] = s_evh_ra[i]; cnts[n] = s_evh_cnt[i]; n++; }
+    return n;
+}
 
 #define BLE_TOTAL_EVQ_COUNT (10)
 
@@ -258,6 +290,7 @@ npl_freertos_event_init(struct ble_npl_event *ev, ble_npl_event_fn *fn,
 #if OS_MEM_ALLOC
     if (!ev->event) {
         ev->event = os_memblock_get(&ble_freertos_ev_pool);
+        if (ev->event) { s_ev_live++; evh_note(__builtin_return_address(0)); }
     }
 
 #else
@@ -280,6 +313,7 @@ npl_freertos_event_deinit(struct ble_npl_event *ev)
 #if OS_MEM_ALLOC
 
     os_memblock_put(&ble_freertos_ev_pool,ev->event);
+    s_ev_live--;
 #else
     nimble_platform_mem_free(ev->event);
 #endif

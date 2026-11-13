@@ -22,6 +22,8 @@ P3="patch/glue.c:$MESH/host/mesh/src/glue.c"
 P4="patch/npl_os_freertos.c:$PORTING/npl/freertos/src/npl_os_freertos.c"
 # P5：proxy_srv.c 断连时 client==NULL 解引用（Load access fault，手机一断开就重启）
 P5="patch/proxy_srv.c:$MESH/host/mesh/src/proxy_srv.c"
+# P6：net.c 未配网时丢弃网络 PDU —— 加一行明文头打印（NID/TTL/SEQ/SRC）
+P6="patch/net.c:$MESH/host/mesh/src/net.c"
 
 # 强制重编：删掉对应 .obj（mtime 判断不可靠，补丁文件可能比 obj 旧）
 OBJ=build/esp-idf/bt/CMakeFiles/__idf_bt.dir
@@ -29,6 +31,7 @@ rm -f "$OBJ/host/nimble/nimble/nimble/host/mesh/src/adv_legacy.c.obj" \
       "$OBJ/host/nimble/nimble/nimble/host/mesh/src/adv.c.obj" \
       "$OBJ/host/nimble/nimble/nimble/host/mesh/src/glue.c.obj" \
       "$OBJ/host/nimble/nimble/nimble/host/mesh/src/proxy_srv.c.obj" \
+      "$OBJ/host/nimble/nimble/nimble/host/mesh/src/net.c.obj" \
       "$OBJ/host/nimble/nimble/nimble/porting/npl/freertos/src/npl_os_freertos.c.obj"
 
 # 踩过的坑（勿改回）：
@@ -39,11 +42,11 @@ rm -f "$OBJ/host/nimble/nimble/nimble/host/mesh/src/adv_legacy.c.obj" \
 #  3) 不要把 idf.py build 的输出接 `| head -N`：head 提前退出会让构建进程
 #     收到 SIGPIPE 半途被杀，留下旧/半成品对象。
 INNER=""
-for m in "$P1" "$P2" "$P3" "$P4" "$P5"; do
+for m in "$P1" "$P2" "$P3" "$P4" "$P5" "$P6"; do
   src="${m%%:*}"; dst="${m##*:}"
   INNER="$INNER cp -f /project/esp32/multi_dev/$src $dst &&"
 done
-INNER="$INNER echo -n 'patched adv_legacy hits: ' && grep -c ev_inited $MESH/host/mesh/src/adv_legacy.c && echo -n 'patched proxy_srv null-guards: ' && grep -c 'if (!client)' $MESH/host/mesh/src/proxy_srv.c"
+INNER="$INNER echo -n 'patched adv_legacy hits: ' && grep -c ev_inited $MESH/host/mesh/src/adv_legacy.c && echo -n 'patched proxy_srv null-guards: ' && grep -c 'if (!client)' $MESH/host/mesh/src/proxy_srv.c && echo -n 'patched net.c hdr-log: ' && grep -c 'NET PDU if=' $MESH/host/mesh/src/net.c"
 
 MSYS_NO_PATHCONV=1 docker run --rm \
   -v "D:/workspace/temp/miot-ble-sdk":/project \

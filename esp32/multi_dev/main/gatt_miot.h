@@ -72,6 +72,9 @@ void gatt_miot_dump_token(void);
 /** 当前是否有手机连着（决定要不要继续广播） */
 int gatt_miot_is_connected(void);
 
+/** 主会话连接句柄（BLE_HS_CONN_HANDLE_NONE=无），多连接旁听时分辨断的是哪条 */
+uint16_t gatt_miot_conn_handle(void);
+
 /** 最后一次收到手机写入的时刻（esp_timer ms），看门狗用 */
 uint32_t gatt_miot_rx_ms(void);
 
