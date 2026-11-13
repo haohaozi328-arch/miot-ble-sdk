@@ -43,9 +43,14 @@ bool mesh_miot_prov_active(void) { return s_link_active; }
 
 bool mesh_miot_adv_owns_radio(void)
 {
-    /* 只要配网承载开着，Mesh 层就可能在发 beacon（未配网 beacon 每 ~2s 一帧），
-     * 也可能持有 PB-GATT 的可连接广播。宿主 app 一律让位，避免 adv busy 打架。 */
-    return s_prov_on && !bt_mesh_is_provisioned();
+    /* ★2026-11-13 反转（原为 s_prov_on && !provisioned，导致 adv_mine 恒 0）：
+     * 真机米家 Mesh 设备的常态是「MiBeacon 常驻广播 + Mesh 栈后台待命」，
+     * MiBeacon 才是 App/网关扫描的入口。让它停发等于自断发现路径 ——
+     * 手机只是靠 NVS 里存着的 token 在直连，清缓存/换机就再也扫不到。
+     * 现在只在「配网链路真的建立」（PROV LINK OPEN）那一刻把广播让出去，
+     * 其余时间 MiBeacon 独占。Mesh 抢不到 legacy adv 时只会打
+     * "adv_send: Stopping advertising failed" 之类无害噪音。 */
+    return s_link_active;
 }
 
 /* ---------------- vendor model：所有下行一律记录（抓包窗口） ---------------- */
@@ -130,7 +135,7 @@ static void prov_reset(void)
 {
     ESP_LOGW(TAG, "*** MESH RESET -> 重新进入未配网 beacon ***");
     s_prov_on = true;
-    bt_mesh_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
+    bt_mesh_prov_enable(BT_MESH_PROV_GATT);
 }
 
 static const struct bt_mesh_prov prov = {
@@ -176,7 +181,11 @@ static void build_uuid_candidate0(uint16_t pid, const uint8_t mac_human[6])
 void mesh_miot_set_prov(bool on)
 {
     if (on && !s_prov_on) {
-        int rc = bt_mesh_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
+        /* ★只开 GATT bearer：PB-ADV 的 legacy 广播会跟 MiBeacon 抢唯一的
+         * legacy adv 实例（每 ~2s 抢一次，MiBeacon 就被反复 stop/start）。
+         * 配网走 PB-GATT 已足够（App 连上 0x1827 即可），PB-ADV 交给
+         * MiBeacon 的可连接广播 + GATT 服务承载。 */
+        int rc = bt_mesh_prov_enable(BT_MESH_PROV_GATT);
         ESP_LOGW(TAG, "prov_enable rc=%d (0=OK, beacon 开跑)", rc);
         s_prov_on = (rc == 0);
     } else if (!on && s_prov_on) {
