@@ -18,7 +18,7 @@
 ┌──────────────────────────────────────────────────────────┐
 │  你的产品逻辑（体重计 / 温湿度计 / 灯 / 任意 MIoT 设备）      │
 ├──────────────────────────────────────────────────────────┤
-│  miot_profiles 已验证设备档案（11 台设备，见下方设备清单）     │
+│  miot_profiles 已验证设备档案（12 台设备，见下方设备清单）     │
 │  miot_beacon   MiBeacon v5 加密广播帧（不建连接的传感器）      │
 ├──────────────────────────────────────────────────────────┤
 │  miot_device   组合层：加密通道+分派+属性表+主动上报           │
@@ -66,7 +66,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ### 想烧到板子上（自带工程，三条命令）
 
 仓库里已经有一个**可直接编译烧录**的 ESP-IDF 工程：[`esp32/multi_dev`](esp32/multi_dev)，
-内置 11 台设备的档案（默认启动体脂秤 S400），`sdkconfig.defaults` 已把目标芯片、
+内置 12 台设备的档案（默认启动体脂秤 S400），`sdkconfig.defaults` 已把目标芯片、
 NimBLE、mbedTLS、栈大小等全部预设好，克隆下来直接 build 就行，不需要改配置。
 
 装好 ESP-IDF **v6.0**（`idf.py --version` 能出版本号），然后：
@@ -145,7 +145,7 @@ void app_main(void) {
 }
 ```
 
-## 设备清单（11 台，米家 Android App 实测状态）
+## 设备清单（12 台，米家 Android App 实测状态）
 
 > **先看这一条**：各档案在**官方原版 App（无任何模块、未 root）**下能否添加，
 > 见 [docs/clean-app-matrix.md](docs/clean-app-matrix.md)。
@@ -181,12 +181,13 @@ void app_main(void) {
 | 8 | 人体传感器2 | RTCGQ02LM（PID 0x0A8D） | 0x000F 移动+光照 / 0x1017 无人时长 / 0x1001 按键 / 0x100A 电量 | ✓ | [examples/sensor_motion/](examples/sensor_motion/main.c) · `miot_beacon.h` |
 | 9 | 水浸传感器 | SJWS01LM（PID 0x0863） | 0x1014 漏水状态(0=正常 >0=漏水) / 0x100A 电量 | ✓ | [examples/sensor_leak/](examples/sensor_leak/main.c) · `miot_beacon.h` |
 | 10 | 温湿度计3 mini | MJWSD06MMC（国区 pdid 21941 = **0x55B5**；0x5BEA 是海外版 23530，国区扫不到） | 0x4C01 温度 float32 / 0x4C02 湿度 uint8 / 0x4803 电量 uint8（对象 ID 依 XiaomiGateway3 `mi`=19457/19458/18435） | ✓ | [examples/thermo_t3m/](examples/thermo_t3m/main.c) · `miot_beacon.h` |
+| 11 | 温湿度计3 Pro | MJWSD07MMC（PID **0x9AB9**） | 0x5C01 温度 float32 / 0x5C02 湿度 uint8 / 0x601D CO₂ uint16 / 0x4803 电量 uint8，四对象三帧轮换（一帧装不下）。**对象号是 3 Pro 专属的新系列，沿用 3 mini 的 0x4C01/0x4C02 会导致「设备在线但数值全空」**。真机为按键连接模式（平时不广播可连接态，按键后才 `solicited=1`） | ✓（广播 → 网关解密 → 云端 → 小爱语音查温湿度，全链路实测） | `esp32/multi_dev`（档案 `T3PRO`）· `miot_beacon.h` |
 
 ### C. 事件型按键（可连接用于绑定，事件本身走广播）
 
 | # | 设备名 | 型号 / PID | 描述 | 验证状态 | 详情（代码） |
 |---|--------|-----------|------|----------|--------------|
-| 11 | 小米无线开关（蓝牙版） | XMWXKG01CM / pdid 9095（**PID 0x2387**） | 单键：0x4E0C 单击 / 0x4E0D 双击 / 0x4E0E 长按，载荷恒 1；绑定走 legacy 移位应答，事件由网关收广播后触发自动化 | ✓（绑定 + 事件；自动化条件需重连网关后出现，上报有网关轮询延迟） | [examples/button_event/](examples/button_event/main.c) · `miot_beacon.h` |
+| 12 | 小米无线开关（蓝牙版） | XMWXKG01CM / pdid 9095（**PID 0x2387**） | 单键：0x4E0C 单击 / 0x4E0D 双击 / 0x4E0E 长按，载荷恒 1；绑定走 legacy 移位应答，事件由网关收广播后触发自动化 | ✓（绑定 + 事件；自动化条件需重连网关后出现，上报有网关轮询延迟） | [examples/button_event/](examples/button_event/main.c) · `miot_beacon.h` |
 
 > 各设备的验证均针对米家 Android App 实测（扫描添加 → 绑定 → 数据互通），
 > 逐设备回归步骤见 [docs/testing.md](docs/testing.md)。
@@ -202,6 +203,8 @@ void app_main(void) {
 | 「手机网络异常」/ `设备绑定账号失败 (104,did=…)` | ⚠️ 见 FAQ | 云端查不到该 did 的产品档案（自造 did、PID 不符、或 92B 帧未解出）。**与网络无关**，见 [docs/troubleshooting.md](docs/troubleshooting.md) Q1 |
 | 门锁 / security-chip 类 | ❌ 硬墙 | 云端强制 X.509 芯片证书链（`securityChip=1`），无法借壳 |
 | 「未连接蓝牙网关」提示 | ⚠️ 环境侧 | 网关/云端设备缓存问题，插拔网关 + 重启 App 可解；固件侧无拒连记录（多台复现） |
+| 3 Pro「未连接手机」/ 手机连不上 | ℹ️ 正常设计 | 真机 3 Pro 是**按键连接模式**：平时不发可连接广播，只有按键后才置 `solicited=1` 开 120s 唤醒窗口。App 平时显示「未连接手机」是常态，数据走广播→网关，**不依赖手机连接**；`esp32/multi_dev` 用 BOOT 键等价模拟按键 |
+| App 打开设备页即重启（`MEPC=0`） | ✅ 已修 | `MIOT_SPEC_MAX_ARGS=6` 装不下 3 Pro 一次 GET 的 8 个属性，越界写覆盖返回地址。现为 12，且解析层强制钳制 `argc`。详见提交 `fix(spec): App 读属性即重启` |
 
 ## 接口一览
 
