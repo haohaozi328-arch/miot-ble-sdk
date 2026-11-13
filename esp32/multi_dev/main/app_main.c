@@ -129,6 +129,10 @@ static const char       *TAG = "MIOT";
  *   0x58 = v5 | solicited=0 | authMode=2   ← 我们原来
  * 串口 `fc 58` / `fc 22` 可运行时切换，避免为这一个字节反复烧录。 */
 static uint8_t s_fc_hi;   /* 0 = 按档案自动（旧版绑定 0x22，其余 0x58） */
+/* FC 低字节（bit6 Object | bit7 Mesh | bit4 加密 | bit3 MAC）。
+ * 0 = 自动（0x58）。网关是 Mesh 网关，是否只接管「自报 mesh」的设备未知，
+ * 串口 `fc 59 D8` 可在运行时把 bit7 置 1 验证，不必反复烧录。 */
+static uint8_t s_fc_lo;
 /* 强制以「待绑定」形态广播（即使 NVS 里 bound=1）。
  * 现场唯一的全链路成功轮（AUTH_INIT → token → BOND → DeviceID → GETRAND →
  * LOGIN 全过）就发生在设备广播待绑定帧的时候；广播已绑定帧的每一次连接，
@@ -779,6 +783,7 @@ static int build_frame(int idx)
      * 夜灯2 是 legacy p21 绑的（0x0010 上 AUTH_INIT/BOND/GETRAND），
      * 页面会话能不能起来，就看 App 认哪种。 */
     if (s_fc_hi) s_frame[1] = s_fc_hi;
+    if (s_fc_lo) s_frame[0] = s_fc_lo;
     /* 离线称重窗口内强制 solicited=1：0x5B = v5|registered=1|solicited=1|authMode=2。
      * 真机称完、手机不在场时就是这个形态 —— 「我有数据要交，来连我」。
      * 网关的扫描策略正是按这一位决定要不要主动建链，所以窗口结束后必须回落，
@@ -1439,15 +1444,26 @@ static void cli_task(void *arg)
             ESP_LOGW(TAG, "spec 探针 = %d（0=关 1=ag2 START 2=mng 建链）",
                      gatt_miot_get_spec_probe());
         } else if (!strncmp(line, "fc", 2)) {
-            /* fc      -> 查询
-             * fc 22   -> v2|solicited=1|auth=0（旧工程跑通形态）
-             * fc 58   -> v5|solicited=0|auth=2 */
+            /* fc          -> 查询
+             * fc 22       -> 只改高字节（旧形态）
+             * fc 58       -> v5|solicited=0|auth=2
+             * fc 59 D8    -> 高字节 0x59 + 低字节 0xD8（bit7 Mesh=1）
+             * fc 59 58    -> 复位低字节（0x58 自动值） */
             const char *arg = line + 2;
             while (*arg == ' ') arg++;
-            if (*arg) s_fc_hi = (uint8_t)strtoul(arg, NULL, 16);
-            ESP_LOGW(TAG, "未绑定广播 FC 高字节 = 0x%02X%s",
-                     s_fc_hi ? s_fc_hi : 0x58,
-                     s_fc_hi ? "" : "（自动）");
+            if (*arg) {
+                char *end = NULL;
+                s_fc_hi = (uint8_t)strtoul(arg, &end, 16);
+                s_fc_lo = 0;
+                if (end) {
+                    while (*end == ' ') end++;
+                    if (*end) s_fc_lo = (uint8_t)strtoul(end, NULL, 16);
+                }
+            }
+            ESP_LOGW(TAG, "广播 FC = %02X %02X (hi=%02X%s lo=%02X%s)",
+                     s_fc_lo ? s_fc_lo : 0x58, s_fc_hi ? s_fc_hi : 0x59,
+                     s_fc_hi ? s_fc_hi : 0x59, s_fc_hi ? "" : "自动",
+                     s_fc_lo ? s_fc_lo : 0x58, s_fc_lo ? "" : "自动");
             build_frame(s_idx);
             adv_refresh();
         } else if (!strncmp(line, "advu", 4)) {
