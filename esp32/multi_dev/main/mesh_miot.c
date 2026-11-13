@@ -37,6 +37,10 @@ static bool     s_inited;
 
 bool mesh_miot_provisioned(void) { return bt_mesh_is_provisioned(); }
 
+/* bt_mesh_prov_active() 是 mesh 内部 API（prov.h 不对外），这里用回调自己记账 */
+static bool s_link_active;
+bool mesh_miot_prov_active(void) { return s_link_active; }
+
 bool mesh_miot_adv_owns_radio(void)
 {
     /* 只要配网承载开着，Mesh 层就可能在发 beacon（未配网 beacon 每 ~2s 一帧），
@@ -102,18 +106,21 @@ static const struct bt_mesh_comp comp = {
 /* ---------------- 配网事件（全部打日志） ---------------- */
 static void prov_link_open(bt_mesh_prov_bearer_t bearer)
 {
+    s_link_active = true;
     ESP_LOGW(TAG, "*** PROV LINK OPEN bearer=%s ***",
              bearer == BT_MESH_PROV_ADV ? "PB-ADV" : "PB-GATT");
 }
 
 static void prov_link_close(bt_mesh_prov_bearer_t bearer)
 {
+    s_link_active = false;
     ESP_LOGW(TAG, "*** PROV LINK CLOSE bearer=%s ***",
              bearer == BT_MESH_PROV_ADV ? "PB-ADV" : "PB-GATT");
 }
 
 static void prov_complete(uint16_t net_idx, uint16_t addr)
 {
+    s_link_active = false;
     ESP_LOGW(TAG, "*** PROVISIONED net_idx=%u primary=0x%04X ***", net_idx, addr);
     /* 配网完成后停止未配网 beacon；Mesh 层自己转入 Secure Beacon */
     s_prov_on = false;

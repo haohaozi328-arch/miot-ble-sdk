@@ -25,7 +25,11 @@
 
 /* Window and Interval are equal for continuous scanning */
 #define MESH_SCAN_INTERVAL    BT_MESH_ADV_SCAN_UNIT(BT_MESH_SCAN_INTERVAL_MS)
-#define MESH_SCAN_WINDOW      BT_MESH_ADV_SCAN_UNIT(BT_MESH_SCAN_WINDOW_MS)
+/* ★patch 2026-11-13 v4：原值 = 30ms（窗口==间隔，100% 占空比）。
+ * ESP32-C3 单射频下这会几乎吃光广播时隙：实测未配网 beacon 5 分钟只发
+ * 出 6 帧（正常应 ~150 帧/2s 一帧），手机/网关根本扫不到我们。
+ * 改成 30ms 间隔 / 15ms 窗口（50%），配网 PDU 会重传多次，50% 足够收到。 */
+#define MESH_SCAN_WINDOW      BT_MESH_ADV_SCAN_UNIT(15)
 
 const uint8_t bt_mesh_adv_type[BT_MESH_ADV_TYPES] = {
 	[BT_MESH_ADV_PROV]   = BT_DATA_MESH_PROV,

@@ -876,8 +876,10 @@ static void adv_start(void)
         p.itvl_max = 320;
     }
 
+    /* 回调传 NULL：事件统一由 gap_listener_install() 注册的全局监听器分发，
+     * 否则我们自己的广播和监听器会各收一份，CONNECT 被处理两次。 */
     rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &p,
-                           gap_event_cb, NULL);
+                           NULL, NULL);
     if (rc != 0 && rc != BLE_HS_EALREADY) ESP_LOGE(TAG, "adv_start rc=%d", rc);
 }
 
@@ -905,6 +907,9 @@ static int nl_mtu_cb(uint16_t conn_handle, const struct ble_gatt_error *error,
 /* 最近一次连接的 central 地址（排查手机/网关混连时用） */
 static uint8_t s_peer[6];
 static int     s_peer_ok;
+/* 诊断计数（每 30s 汇总一次，判断「对方有没有来找我们」） */
+static uint32_t s_disc_cnt;      /* 收到的广播帧数 */
+static uint32_t s_prov_pdu_cnt;  /* 其中 AD type 0x29 = Mesh 配网 PDU */
 
 static int gap_event_cb(struct ble_gap_event *event, void *arg)
 {
@@ -1001,7 +1006,37 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                                event->subscribe.cur_indicate);
         return 0;
 
+    case BLE_GAP_EVENT_DISC:
+        /* ★Mesh 栈为配网开了常开扫描（prov_enable → pb_adv.link_accept），
+         * 周围每一帧广播都会以 DISC 进来，全打会刷屏（实测 15s 三千多条）。
+         * 只挑真正有用的：AD type 0x29 = Mesh Provisioning PDU。
+         * 手机/网关一旦发 Provisioning Invite，这里就会打出来——这是判断
+         * 「对方到底有没有来找我们配网」最直接的证据。 */
+        {
+            const uint8_t *p = event->disc.data;
+            int left = event->disc.length_data;
+            s_disc_cnt++;
+            while (left >= 2 && p[0] >= 1 && p[0] + 1 <= left) {
+                uint8_t t = p[1];
+                if (t == 0x29) {   /* BT_DATA_MESH_PROV */
+                    s_prov_pdu_cnt++;
+                    ESP_LOGW(TAG, "PB-ADV PDU from %02X:%02X:%02X:%02X:%02X:%02X rssi=%d len=%d",
+                             event->disc.addr.val[5], event->disc.addr.val[4],
+                             event->disc.addr.val[3], event->disc.addr.val[2],
+                             event->disc.addr.val[1], event->disc.addr.val[0],
+                             event->disc.rssi, p[0] - 1);
+                    ESP_LOG_BUFFER_HEX_LEVEL(TAG, p + 2, p[0] - 1, ESP_LOG_WARN);
+                }
+                left -= p[0] + 1;
+                p += p[0] + 1;
+            }
+        }
+        return 0;
+
     default:
+        /* 排查期：把我们没显式处理的 GAP 事件也打出来（加密变更/参数更新等），
+         * 只看类型号，频率低，不影响时序。 */
+        ESP_LOGW(TAG, "GAP ev type=%d (unhandled)", (int)event->type);
         return 0;
     }
 }
@@ -1590,6 +1625,27 @@ static void btn_task(void *arg)
 }
 
 /* ---------------- 启动 ---------------- */
+/* ★2026-11-13 「-55」解药：Mesh 栈自己起广播时把 GAP 回调传成 NULL
+ * （glue.c bt_le_adv_start → ble_gap_adv_start(..., NULL, NULL)），
+ * 于是「Mesh 广播引来的那条连接」的 CONNECT/DISCONNECT/SUBSCRIBE 事件
+ * 一个都进不到 gap_event_cb：
+ *   - gatt_miot_on_connect() 不被调用 → s_conn 停在 BLE_HS_CONN_HANDLE_NONE
+ *   - notify_chr() 第一句就 return -1 → 认证/注册阶段每条回包全部发不出去
+ *   - 手机侧干等 notify → 超时 → 米家错误码 -55（官方码表：绑定时 notify 超时）
+ * 解法：注册 NimBLE 全局事件监听器，它在每条事件上都会调用（与 per-adv 回调
+ * 并行，不是替代），此后无论谁起的广播，连接都能落到我们的状态机里。
+ * 为避免同一事件被处理两次，adv_start 的 per-adv 回调改传 NULL。 */
+static struct ble_gap_event_listener s_gap_listener;
+static bool s_gap_listener_ok;
+
+static void gap_listener_install(void)
+{
+    if (s_gap_listener_ok) return;
+    int rc = ble_gap_event_listener_register(&s_gap_listener, gap_event_cb, NULL);
+    s_gap_listener_ok = (rc == 0);
+    ESP_LOGW(TAG, "gap listener register rc=%d (0=OK)", rc);
+}
+
 static void on_sync(void)
 {
     uint8_t addr[6];
@@ -1608,6 +1664,8 @@ static void on_sync(void)
 
     s_idx = 0;
     build_frame(s_idx);
+    /* 全局 GAP 监听器必须在任何广播起来之前装好（含 Mesh 的 beacon） */
+    gap_listener_install();
     /* ★2026-11-13 Mesh 承载层：云端档案是「蓝牙 Mesh」，网关只扫描 Mesh 广播。
      * host 同步后开启未配网 beacon；期间 Mesh 层持有广播实例，
      * MiBeacon 广播让位（见 adv_start 开头的门卫）。 */
@@ -1878,6 +1936,21 @@ void app_main(void)
             if (DEV_KIND == 0) {
                 if (s_sel == 0) night_light_tick(t);
                 do_report(t);
+            }
+        }
+
+        /* 诊断看门狗：每 30s 一行，回答三个问题——
+         * 1) Mesh 扫描有没有在跑（disc 计数持续增长 = 在扫）
+         * 2) 手机/网关有没有发配网 PDU（prov=0 就是人家没来找我们）
+         * 3) 未配网 beacon 有没有真的发出去（adv 是 mesh 持有还是我们持有） */
+        {
+            static uint32_t last_stat_ms;
+            if (t - last_stat_ms >= 30000) {
+                last_stat_ms = t;
+                ESP_LOGW(TAG, "STAT disc=%lu prov_pdu=%lu mesh_prov_on=%d provisioned=%d adv_mine=%d conn=%d",
+                         (unsigned long)s_disc_cnt, (unsigned long)s_prov_pdu_cnt,
+                         (int)mesh_miot_prov_active(), (int)mesh_miot_provisioned(),
+                         (int)(!mesh_miot_adv_owns_radio()), (int)gatt_miot_is_connected());
             }
         }
 

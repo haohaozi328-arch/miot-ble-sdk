@@ -49,4 +49,7 @@ void mesh_miot_status(char *out, size_t cap);
 
 bool mesh_miot_provisioned(void);
 
+/** true = 已有一条配网链路正在握手（收到 Invite 之后、完毕之前）。 */
+bool mesh_miot_prov_active(void);
+
 #endif /* MESH_MIOT_H */
