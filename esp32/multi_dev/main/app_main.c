@@ -1687,11 +1687,13 @@ static void on_sync(void)
     build_frame(s_idx);
     /* 全局 GAP 监听器必须在任何广播起来之前装好（含 Mesh 的 beacon） */
     gap_listener_install();
-    /* ★2026-11-13 Mesh 承载层：云端档案是「蓝牙 Mesh」，网关只扫描 Mesh 广播。
-     * host 同步后开启未配网 beacon；期间 Mesh 层持有广播实例，
-     * MiBeacon 广播让位（见 adv_start 开头的门卫）。 */
-    mesh_miot_on_sync();
+    /* ★顺序关键（2026-11-13）：MiBeacon 必须**先**占住 legacy adv，Mesh 后初始化。
+     * 反过来的话，Mesh 的 bt_le_adv_start 会先调 ble_gap_adv_set_data（全局写入）
+     * 把 MiBeacon 的 service data / 制造商数据覆盖成 mesh beacon；即便它随后的
+     * start 失败（实测 err 2），广播内容也已经废了，设备整个从空中消失。
+     * glue.c 的门卫（g_mesh_adv_owned）再兜一层：宿主占着广播时 Mesh 直接返回。 */
     adv_start();
+    mesh_miot_on_sync();
     gatt_miot_dump_handles();
     s_was_bound = s_auth.bound;
 }
@@ -1968,10 +1970,11 @@ void app_main(void)
             static uint32_t last_stat_ms;
             if (t - last_stat_ms >= 30000) {
                 last_stat_ms = t;
-                ESP_LOGW(TAG, "STAT disc=%lu prov_pdu=%lu mesh_prov_on=%d provisioned=%d adv_mine=%d conn=%d ev=%d/%d heap=%lu",
+                ESP_LOGW(TAG, "STAT disc=%lu prov_pdu=%lu mesh_prov_on=%d provisioned=%d adv_mine=%d adv_act=%d conn=%d ev=%d/%d heap=%lu",
                          (unsigned long)s_disc_cnt, (unsigned long)s_prov_pdu_cnt,
                          (int)mesh_miot_prov_active(), (int)mesh_miot_provisioned(),
-                         (int)(!mesh_miot_adv_owns_radio()), (int)gatt_miot_is_connected(),
+                         (int)(!mesh_miot_adv_owns_radio()), (int)ble_gap_adv_active(),
+                         (int)gatt_miot_is_connected(),
                          ble_npl_ev_live_count(), ble_npl_ev_total_count(),
                          (unsigned long)esp_get_free_heap_size());
                 {

@@ -890,6 +890,13 @@ error:
 }
 #else
 
+/* ★patch 2026-11-13: 广播实例归谁所有。
+ * 宿主（MiBeacon）和 Mesh 抢的是同一个 legacy adv 实例，而 NimBLE 的
+ * ble_gap_adv_set_data / ble_gap_adv_stop 都是「全局」的 ——
+ * Mesh 只要调一次就把宿主广播数据覆盖、甚至直接停掉。
+ * 这里记账：只有 Mesh 自己成功 start 过的广播，才允许它 stop。 */
+static bool g_mesh_adv_owned;
+
 int
 bt_le_adv_start(const struct ble_gap_adv_params *param,
                 const struct bt_data *ad, size_t ad_len,
@@ -898,6 +905,15 @@ bt_le_adv_start(const struct ble_gap_adv_params *param,
     uint8_t buf[BLE_HS_ADV_MAX_SZ];
     uint8_t buf_len = 0;
     int err;
+
+    /* 宿主 MiBeacon 在广播时，Mesh 一律让位：直接失败返回，**不写任何数据**。
+     * 关键在「不写」——下面第一句 ble_gap_adv_set_data 是全局字段写入，
+     * 一旦执行，即使随后 start 失败（实测 err 2），MiBeacon 的
+     * service data / 制造商数据也已经被 mesh beacon 覆盖，
+     * 结果两边都发不出可被 App 识别的帧（实测现象：设备整个扫不到）。 */
+    if (ble_gap_adv_active() && !g_mesh_adv_owned) {
+        return -2;
+    }
 
     err = set_ad(ad, ad_len, buf, &buf_len);
     if (err) {
@@ -932,12 +948,20 @@ bt_le_adv_start(const struct ble_gap_adv_params *param,
         return err;
     }
 
+    g_mesh_adv_owned = true;
     return 0;
 }
 #endif
 
 int bt_le_adv_stop()
 {
+    /* ★patch 2026-11-13: 只有 Mesh 自己启动的那次广播才允许停。
+     * ble_gap_adv_stop 是全局的，直接调用会把宿主的 MiBeacon 一起关掉，
+     * 设备随即从空中消失（App 扫不到、网关也看不到）。 */
+    if (!g_mesh_adv_owned) {
+        return 0;
+    }
+    g_mesh_adv_owned = false;
     return ble_gap_adv_stop();
 }
 
