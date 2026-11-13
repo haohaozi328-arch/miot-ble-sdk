@@ -95,6 +95,7 @@ App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](doc
 | 工程 | 模拟设备 | 说明 |
 |---|---|---|
 | [`esp32/t3pro_adv`](esp32/t3pro_adv) | 温湿度计 3 Pro（0x9AB9） | 温/湿/CO₂/电量加密广播 + spec 属性，米家添加后小爱可查 |
+| [`esp32/btn1_adv`](esp32/btn1_adv) | 无线开关 单键（0x2387） | BOOT 键 = 被模拟按键：单击/双击/长按事件加密广播上云；README 含与云端产品定义的逐层对比 |
 | [`esp32/thermo_gatt`](esp32/thermo_gatt) | 温湿度计 2（0x055B） | 同上骨架，链路注释最全，适合当模板改别的型号 |
 
 人类一页纸版本：[QUICKSTART.md](QUICKSTART.md)；让 AI 代劳的版本：[AGENTS.md](AGENTS.md)。
