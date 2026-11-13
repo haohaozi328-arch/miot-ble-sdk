@@ -90,3 +90,18 @@
 | `adv.c` | adv_alloc 惰性 init（`s_ev_ready[id]`） |
 | `glue.c` | net_buf_put 自愈：arg 为空时补 init |
 | `npl_os_freertos.c` | 事件池 `BLE_TOTAL_EV_COUNT + 40` |
+
+## 7. 构建脚本踩坑记录（2026-11-13 17:25）
+
+`build_mesh.sh` 一开始用「单文件 bind mount」把补丁盖到 IDF 源码上，在
+Git Bash + Docker Desktop 下**时灵时不灵**，多次出现"构建成功但固件是未打补丁原版"：
+- `-v /d/...`：Docker 不认，静默忽略
+- `cygpath -w` 反斜杠：`-v D:/...` 在 `D:` 处被截断，同样静默失效
+- 镜像自带 **ccache**：命中旧对象，把补丁顶回原版（必须 `CCACHE_DISABLE=1`）
+- `idf.py build | grep | head`：head 提前退出发 SIGPIPE，编译被半途杀掉
+- 路径层级陷阱：mesh 源码是 `nimble/nimble/nimble/host/mesh/src`（三层），
+  porting 是 `nimble/nimble/porting`（两层）
+
+最终方案：整个仓库挂 `/project`（这条可靠），在容器内 `cp -f` 覆盖 IDF 源码，
+`CCACHE_DISABLE=1` 构建，日志写文件不走管道。验证手段：
+`objdump -d --disassemble=bt_mesh_adv_update` 应有 **2 个 jalr**（init + eventq_put）。
