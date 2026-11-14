@@ -76,6 +76,14 @@ static const char *TAG = "SCALE";
 #define BOOT_PIN       9
 #define SOLICIT_MS     (10u * 60u * 1000u)   /* 离线称重后"请求被连接"窗口：10 分钟 */
 
+/* 离线补传时 8.2 的 weightDoneStatus（下标 5）——「待认领数据」的开关：
+ *   0 = normalData：App 把这条直接算到当前用户，进历史。BLE 直连唯一可用路径。
+ *   2 = userError ：App 弹「是你吗/选择用户」，不认领就整条丢弃（15:45 实测：
+ *       弹窗关不掉，强杀 App 后记录消失，待认领仍空）。官方「待认领数据」实际靠
+ *       云端/网关上传通道产生，见 docs/known-issues.md §2.2.1。
+ * 所以：接上真网关/云端取数、且 App 侧能落「待认领」时，才把这里改成 2。 */
+#define OFFQ_REPLAY_STATUS  0
+
 /* 7 步节流的帧间隔：过程流 250ms 一跳，结果前 400ms，收尾各 900ms */
 static const uint16_t k_wgap[SCALE_S400_STEPS] = { 250, 250, 250, 400, 900, 900, 0 };
 /* 点「测量」触发的慢节奏：App 要 4~5s 才切到"请上秤"，等待期发出去的全丢 */
@@ -688,10 +696,9 @@ void app_main(void)
                 s_widx = (s_widx + 1) % (int)(sizeof(k_wcycle) / sizeof(k_wcycle[0]));
                 s_wts = scale_now();
                 scale_s400_store_offline(s_ww, s_wimp, s_wts);
-                /* 一律 normalData(0)：App 直接归到当前用户历史。
-                 * 待认领需要 userError(2)，但 BLE 重放时 App 只会弹「是你吗」，
-                 * 不认领就丢弃（15:45 实测强杀 App 后记录消失），所以不发 2。 */
-                offq_push(s_ww, s_wimp, s_wts, 0);
+                /* 默认 normalData：App 直接归到当前用户历史。想走「待认领」就把
+                 * OFFQ_REPLAY_STATUS 改成 2（需云端/网关取数通道，BLE 直连会丢数据）。 */
+                offq_push(s_ww, s_wimp, s_wts, OFFQ_REPLAY_STATUS);
                 s_solicit_until = t + SOLICIT_MS;
                 s_fcnt++;
                 adv_refresh();
