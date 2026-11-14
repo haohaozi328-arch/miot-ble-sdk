@@ -101,7 +101,7 @@ App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](doc
 | [`esp32/thermo_gatt`](esp32/thermo_gatt) | 温湿度计 2（0x055B） | 745 行 | ✅ 2026-11-07 绑定 + 设备页实时读数；链路注释最全，适合当模板改别的型号 |
 | [`esp32/scale_adv`](esp32/scale_adv) | 体脂秤 S400（0x30D9） | 870 行 | ✅ 2026-11-14 实机：绑定一次过 → `13.1 sync` 应答 5 个 out → 点「测量」`ACTION 10.1` → 7 帧称重全部 `rc>0`、连称三条各自入库 → **离线称重**（断手机 + 短按 BOOT）后下次连手机整段 7 帧重放、App 直接出报告；记录时间由 `13.1` 的手机时间校准。**烧后必调**：`CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192`，默认 4096 会在 spec 解析时栈溢出复位 |
 | [`esp32/door_adv`](esp32/door_adv) | 门窗传感器 2（0x098B） | 420 行 | ✅ 2026-11-14 实机：米家添加一次过 → 会话建立 → 短按 BOOT 开/关门事件各连发 3 帧上云（`0x1019` 0/1 + `0x1018` 光照 + `0x100A` 电量）。**小白版**：参数全在文件头、日志中文、派生 MAC `…:5D:03` |
-| [`esp32/motion_adv`](esp32/motion_adv) | 人体传感器 2（0x0A8D） | 430 行 | ⚠️ 编译通过；与 `door_adv` 同构，广播对象 `0x000F` 移动+光照 / `0x1017` 无人秒数 / `0x100A` 电量，待真机验证 |
+| [`esp32/motion_adv`](esp32/motion_adv) | 人体传感器 2（0x0A8D） | 430 行 | ✅ 2026-11-14 实机：米家添加一次过（`REGISTER COMPLETE 0x11`）→ 短按 BOOT 连发 3 帧 `0x000F=1`（有人）→ 60s 后自动回落无人。**小白版**，与 `door_adv` 同骨架，派生 MAC `…:5E:03` |
 | [`esp32/wx08zm_gatt`](esp32/wx08zm_gatt) | 驱蚊器 智能版（0x040A） | 944 行 | ⚠️ 编译通过、能回待绑定态；legacy PSK 握手是否被云端接受**尚未真机验证** |
 
 骨架同构（`thermo_gatt` 是最干净的那份，`door_adv`/`motion_adv` 是最适合照抄改型号的小白版），换型号只改三处：**PID、spec 属性表、广播对象号**。
