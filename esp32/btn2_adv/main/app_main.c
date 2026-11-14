@@ -58,19 +58,10 @@ static const char *TAG = "BTN2";
 #define ADV_PERIOD_MS  3000      /* 心跳帧周期：常态只发电量 */
 #define REPEAT_MS      2500      /* 事件帧重复广播时长（网关轮询去重用） */
 /* ★命名空间必须独立（multi_dev 用 "miot"/"miotN"，btn1_adv 用 "btn1"），
- * 否则会读到别的工程的 did/bind_key，米家把这台"开关"记到别人名下。
- * ★2026-11-14 12:0x：改成 "btn2_1"（第二版身份）。上一版 namespace "btn2" 里
- * 可能残留过 did/bind_key，米家按 did 认出"已添加过"就不再显示在附近设备里。 */
-#define NVS_NS         "btn2_1"
+ * 否则会读到别的工程的 did/bind_key，米家把这台"开关"记到别人名下。 */
+#define NVS_NS         "btn2"
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
-
-/* ★芯片物理 MAC 已经被米家当成"温湿度计 3 Pro"绑过了（t3pro_adv 用同一颗芯片），
- * 米家按 MAC 去重：同一个 MAC 只当成那台已添加的设备，不会出现在「附近设备」里，
- * 于是"扫描不到"。这里像 multi_dev 那样派生一个本项目专属的基础 MAC，
- * BT MAC = 基础 MAC 末字节 +1（ESP32-C3 的派生规则）→ 90:...:5B:02。 */
-#define BASE_MAC_B4    0x5B        /* 第 5 字节：本项目专属；scale_adv 用 0x5C */
-#define BASE_MAC_B5    0x01        /* 末字节 0x01 → 空中 BT MAC 末字节 0x02 */
 
 /* 1=平时也保持可连接（默认，方便添加与调试）；0=只在按键后开唤醒窗口 */
 #define ADV_CONN_ALWAYS  1
@@ -448,12 +439,6 @@ void app_main(void)
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         nvs_flash_erase();
         nvs_flash_init();
-    }
-
-    /* ★必须在任何 BLE/协议栈初始化之前落定 MAC：米家按 MAC 认设备 */
-    {
-        uint8_t base[6] = { 0x10, 0x00, 0x3B, 0xCE, BASE_MAC_B4, BASE_MAC_B5 };
-        esp_base_mac_addr_set(base);
     }
 
     gpio_config_t io = {
