@@ -62,9 +62,15 @@ static const char *TAG = "SCALE";
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
 
-/* MAC 用芯片出厂物理 MAC（不覆盖 esp_base_mac_addr_set）。
- * ★若这颗芯片的 MAC 已被米家绑成别的设备，附近设备会扫不到 →
- *   见 docs/troubleshooting.md Q2 第 6 条。 */
+/* MAC 开关：1 = 用派生 MAC（推荐），0 = 用芯片出厂物理 MAC。
+ * 米家按 MAC 认设备：同一个 MAC 只要在账号里绑过（这颗芯片跑过 t3pro_adv，
+ * 已被绑成温湿度计 3 Pro），「附近设备」就会把它当"已添加的设备"过滤掉 → 扫不到。
+ * 换一颗从未绑定过的板子时可以置 0。 */
+#define USE_CUSTOM_MAC  1
+#if USE_CUSTOM_MAC
+#define BASE_MAC_B4    0x5C        /* 第 5 字节：体脂秤专属（btn2_adv 用 0x5B） */
+#define BASE_MAC_B5    0x01        /* 末字节 0x01 → 空中 BT MAC 末字节 0x02 */
+#endif
 
 #define BOOT_PIN       9
 #define SOLICIT_MS     (10u * 60u * 1000u)   /* 离线称重后"请求被连接"窗口：10 分钟 */
@@ -427,6 +433,14 @@ void app_main(void)
         nvs_flash_erase();
         nvs_flash_init();
     }
+
+#if USE_CUSTOM_MAC
+    /* ★必须在任何 BLE/协议栈初始化之前落定 MAC：米家按 MAC 认设备 */
+    {
+        uint8_t base[6] = { 0x10, 0x00, 0x3B, 0xCE, BASE_MAC_B4, BASE_MAC_B5 };
+        esp_base_mac_addr_set(base);
+    }
+#endif
 
     gpio_config_t io = {
         .pin_bit_mask = 1ULL << BOOT_PIN,

@@ -64,9 +64,13 @@ static const char *TAG = "BTN2";
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
 
-/* MAC 用芯片出厂物理 MAC（不覆盖 esp_base_mac_addr_set）。
- * ★若这颗芯片的 MAC 已被米家绑成别的设备，Add device → 附近设备会扫不到：
- *   解法见 docs/troubleshooting.md Q2 第 6 条（临时派生专属 MAC）。 */
+/* MAC 开关：1 = 用派生 MAC（推荐），0 = 用芯片出厂物理 MAC。
+ * 米家按 MAC 认设备，物理 MAC 已被 t3pro_adv 绑成 3 Pro → 默认派生一个专属的。 */
+#define USE_CUSTOM_MAC  1
+#if USE_CUSTOM_MAC
+#define BASE_MAC_B4    0x5B        /* 第 5 字节：本项目专属；scale_adv 用 0x5C */
+#define BASE_MAC_B5    0x01        /* 末字节 0x01 → 空中 BT MAC 末字节 0x02 */
+#endif
 
 /* 1=平时也保持可连接（默认，方便添加与调试）；0=只在按键后开唤醒窗口 */
 #define ADV_CONN_ALWAYS  1
@@ -445,6 +449,14 @@ void app_main(void)
         nvs_flash_erase();
         nvs_flash_init();
     }
+
+#if USE_CUSTOM_MAC
+    /* ★必须在任何 BLE/协议栈初始化之前落定 MAC：米家按 MAC 认设备 */
+    {
+        uint8_t base[6] = { 0x10, 0x00, 0x3B, 0xCE, BASE_MAC_B4, BASE_MAC_B5 };
+        esp_base_mac_addr_set(base);
+    }
+#endif
 
     gpio_config_t io = {
         .pin_bit_mask = (1ULL << KEY1_PIN) | (1ULL << KEY2_PIN),

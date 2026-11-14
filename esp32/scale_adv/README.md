@@ -56,9 +56,9 @@ idf.py -p COM6 flash monitor
 
 ## 已知边界
 
-- **MAC 用芯片出厂物理 MAC**（不覆盖 `esp_base_mac_addr_set`）。米家按 MAC 认设备：
-  这颗芯片若之前跑过别的工程并绑定过，附近设备会扫不到 → 先 `erase-flash`，再不行按
-  `docs/troubleshooting.md` Q2 第 6 条临时派生一个专属 MAC。
+- **MAC 默认是派生出来的**（`USE_CUSTOM_MAC 1`）：米家按 MAC 去重，这颗芯片的物理 MAC
+  已被 `t3pro_adv` 绑成温湿度计 3 Pro，直接用会扫不到。本工程派生 `10:00:3B:CE:5C:01`
+  → 空中 `…:5C:03`。扫不到就换个没绑过的 `BASE_MAC_B4` 重烧；全新芯片可把宏置 0 用物理 MAC。
 - **NVS 命名空间 `scale`**：与 multi_dev 的 `miot`/`miotN` 隔离，不会读到别的设备的 did/bind_key。
 - **时间戳是编译时刻锚点**：板上没有 RTC 也没联网，记录时间 = 编译时间 + 运行时长，
   误差等于"编译到上电"的间隔。所以**不要用几个月前的 bin 反复烧**，重新 `idf.py build` 一次再烧。
