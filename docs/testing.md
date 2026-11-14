@@ -209,7 +209,8 @@
 > 米家添加一次过 —— `phone connected` → `CMD_REGISTER(0xA2)` → `REGISTER COMPLETE (0x11)`
 > → `bound=1`（`did[0..3]=00 62 6C 74`），App 断开 reason=0x213 后广播转已绑定帧。
 > 左键单击 `0x4E0C key=1`、双击 `0x4E0D key=1` 均立刻广播并在 2.5s 后回落电量帧。
-> **右键（GPIO3）与长按本轮未测**，判定方法见 13.4 / 13.5。
+> **右键**（GPIO3 对 GND）**2026-11-14 15:5x 实测通过**：`0x4E0C key=2` 正常上云、App 收到事件。
+> **长按本轮未测**，判定方法见 13.5。
 > ★踩坑：第一次烧上去米家完全扫不到，根因是**物理 MAC 已被 `t3pro_adv` 绑成 3 Pro，
 > 米家按 MAC 去重**（详见 [troubleshooting.md](troubleshooting.md) Q2 第 6 条）；
 > 改成派生 MAC `…5B:03` + NVS `btn2_1` 后立刻可见。
@@ -219,7 +220,7 @@
 | 13.1 | `idf.py -p COM6 erase-flash flash monitor` | `host synced … bound=0`，广播 FC `70 2A` |
 | 13.2 | 米家添加，提示时短按左键 | `REGISTER COMPLETE (0x11)` → `bound=1`，广播转 `0x59` |
 | 13.3 | 左键单击 / 双击 / 长按 | `K1(左键) -> event 0x4E0C/0D/0E … key=1` |
-| 13.4 | GPIO3 与 GND 碰一下（右键单击） | `K2(右键) -> event 0x4E0C CLICK key=2` |
+| 13.4 | GPIO3 与 GND 碰一下（右键单击） | `K2(右键) -> event 0x4E0C CLICK key=2` ✅ 2026-11-14 实测上云 |
 | 13.5 | 右键双击 / 长按 | `key=2`；右键长按**不**恢复出厂 |
 | 13.6 | 左键按住 5s | `K1 held 5s -> erase NVS` 后重启回 `bound=0` |
 | 13.7 | 自动化条件 | 同 12.3：云端同步延迟，先造事件再重启 App/网关 |
@@ -292,5 +293,5 @@ weigh step 1/7 rc=16 … 7/7 rc=24 → weigh-in done
 | 10 | 温湿度计3 mini | ✅ 通过 | 2026-11-04 | v88/v90（**PID 0x55B5**，国区 pdid 21941）：绑定一次过（`ACK order=AIR` → `BOND confirmed`）。**对象 ID 定案**：温度 `0x4C01` float32、湿度 `0x4C02` uint8、电量 `0x4803` uint8（早期误用 0x4801/0x4802 → 页面有值但云端影子缺 2.1001/2.1002 → **自动化条件里选不到温湿度**，改后恢复）。**PID 坑**：0x5BEA 是海外版 pdid 23530 `xiaomi.sensor_ht.minigl`，国区 App 无此映射 → 扫不到 |
 | 11 | 温湿度计3 Pro | ✅ 通过 | 2026-11-13 | MJWSD07MMC（**PID 0x9AB9**）：绑定一次过，设备被网关收进列表。**对象号定案为新系列** `0x5C01` 温度 f32 / `0x5C02` 湿度 u8 / `0x601D` CO₂ u16 / `0x4803` 电量 u8；沿用 3 mini 的 `0x4C01/0x4C02` 时「在线但数值全空」，换 `0x5C01/0x5C02` 后立即出数（26.1℃），小爱语音可查 → 广播→网关解密→云端→语音全链路通。同期修掉两个硬 bug：① 网关连不进（`MAX_CONNECTIONS=1`）② App 打开设备页必重启（`MIOT_SPEC_MAX_ARGS=6` 越界）。真机为按键连接模式，App 显示「未连接手机」属正常 |
 | 12 | 小米无线开关（蓝牙版） | ✅ 通过 | 2026-11-04 | 单键 XMWXKG01CM（PID **0x2387** = pdid 9095），复用双键壳事件骨架：对象 `0x4E0C` 单击 / `0x4E0D` 双击 / `0x4E0E` 长按，载荷恒 1（v92）。绑定：`BOND confirmed (token cand=0)` → `LOGIN fallback (shifted reply)`（该型号走 legacy 移位应答）→ 广播已绑定帧；串口实证对象正确发出（`BTN obj 0x4E0C/0D/0E btn=1`）。**自动化触发条件需重启几次米家 + 网关后才出现**，事件上报有延迟（网关轮询周期） |
-| 13 | 无线开关 双键（独立工程） | ✅ 通过（左键）·右键待测 | 2026-11-14 | XMWXKG01YL（PID **0x1949**），`esp32/btn2_adv` 790 行。派生 MAC `10:00:3B:CE:5B:03` + NVS `btn2_1`；米家添加一次过（`REGISTER COMPLETE 0x11`），左键单击 `0x4E0C key=1` / 双击 `0x4E0D key=1` 上云。**教训**：物理 MAC 已被 3 Pro 绑过 → 米家按 MAC 去重，附近设备直接扫不到，必须换 MAC。右键（GPIO3）与长按待测 |
+| 13 | 无线开关 双键（独立工程） | ✅ 通过（左键 + 右键） | 2026-11-14 | XMWXKG01YL（PID **0x1949**），`esp32/btn2_adv` 790 行。派生 MAC `10:00:3B:CE:5B:03` + NVS `btn2_1`；米家添加一次过（`REGISTER COMPLETE 0x11`），左键单击 `0x4E0C key=1` / 双击 `0x4E0D key=1` / **右键单击 `0x4E0C key=2`** 均上云。**教训**：物理 MAC 已被 3 Pro 绑过 → 米家按 MAC 去重，附近设备直接扫不到，必须换 MAC。长按（右键/左键 5s 复位）待测 |
 | 14 | 体脂秤 S400（独立工程） | ✅ 通过 | 2026-11-14 | MJTZC01YM（PID **0x30D9**），`esp32/scale_adv`。绑定一次过 → `13.1 sync`（267B）应答 5 个 out → 点「测量」`ACTION 10.1` → 7 帧 `rc=16/18/18/83/16/30/24` → 报告出数（64.5kg）；连称三条各自独立入库；**离线称重**（断手机 + 短按 BOOT）→ 下次连手机整段 7 帧重放 → App 直接弹报告（15:15 / 64.5kg）；记录时间由 `13.1` 的手机时间校准。**四个必修坑**：① 忘了 `miot_device_set_session_keys()` → 7 帧全 `rc=-1`；② `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE` 默认 4096 → 第一条 spec 请求即栈溢出复位（App 侧「点测量一直重连」）；③ 时间锚点用编译时刻 → 记录慢 26 分钟；④ 离线补传只发 8.2 → App 只 ACK 不入库。离线队列 8 条环形 + NVS（逐条补传/逐条清计数）；**「待认领数据」BLE 模拟不可达**（`status=2` 只弹「是你吗」，不认领即丢弃）。遗留：网关主动取数（`docs/known-issues.md` §2.2）仍未打通 |
