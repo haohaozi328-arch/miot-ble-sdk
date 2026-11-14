@@ -32,6 +32,9 @@ static uint32_t s400_imp     = 0;       /* 最近阻抗 0.1Ω */
 static uint16_t s400_plugin_ver = 3;    /* 13.1 pluginversion */
 static uint8_t  s400_time_flag  = 1;    /* 13.3 */
 static uint8_t  s400_offline_cnt = 0;   /* 13.6 offline-msg-cnt */
+static uint32_t s400_off_w   = 0;       /* 待补传的离线体重（克，原始入参） */
+static uint32_t s400_off_imp = 0;       /* 待补传的离线阻抗 */
+static uint32_t s400_off_ts  = 0;       /* 离线称重时刻（unix 秒），0=没有待传记录 */
 static uint32_t s400_now = 0;           /* 13.4 current-time */
 
 /* 13.1 sync 的 out 参数里要回给 App 的身份信息（真机从 flash 读，这里由 app 层填入） */
@@ -136,10 +139,31 @@ static uint32_t s400_kg10(uint32_t grams) { return grams / 100u; }
  * 真机「体重称重模式：无需连接蓝牙，上秤即可完成测量」——数据先存秤里，
  * 等网关/手机连上来取。我们这里把值写进属性表，spec GET 3.1005/3.1006
  * 会直接返回它，所以网关一登录就能读到这次离线测量的结果。 */
-void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01)
+void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01, uint32_t ts)
 {
     s400_weight = s400_kg10(weight_01g);
     s400_imp    = impedance_01;
+    s400_off_w  = weight_01g;
+    s400_off_imp = impedance_01;
+    s400_off_ts = ts;
+    /* ★离线消息计数据必须 +1：App 开屏 13.1 sync 读的就是它（out[0]/13.6），
+     * 一直是 0 的话 App 认为"秤里没东西"，页面不会有任何离线记录（实测踩到）。 */
+    if (s400_offline_cnt < 0xFF) s400_offline_cnt++;
+}
+
+int scale_s400_offline_take(uint32_t *weight_01g, uint32_t *impedance_01, uint32_t *ts)
+{
+    if (s400_offline_cnt == 0 || s400_off_ts == 0) return 0;
+    if (weight_01g)   *weight_01g   = s400_off_w;
+    if (impedance_01) *impedance_01 = s400_off_imp;
+    if (ts)           *ts           = s400_off_ts;
+    return 1;
+}
+
+void scale_s400_offline_clear(void)
+{
+    s400_offline_cnt = 0;
+    s400_off_ts = 0;
 }
 
 /* 一帧一步：0..3 = 8.1 过程流，4 = 8.2 结果，5 = 11.1022，6 = 11.2/11.3 属性变更。

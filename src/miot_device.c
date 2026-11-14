@@ -281,6 +281,14 @@ __attribute__((weak)) void miot_demo_app_action_hook(uint8_t siid, uint16_t aiid
     (void)siid; (void)aiid;
 }
 
+/* 设备可拿到 ACTION 的入参本体：体脂秤 13.1 sync 的第 3 个入参（piid=4）就是
+ * 手机当前时间，板子没有 RTC，只能靠它把 13.4 current-time 校准对。 */
+__attribute__((weak)) void miot_demo_action_args_hook(uint8_t siid, uint16_t aiid,
+                                                      const miot_spec_value_t *args, int argc)
+{
+    (void)siid; (void)aiid; (void)args; (void)argc;
+}
+
 /* 设备可接管 action 的 out 参数（返回个数，0=按旧格式只回 respCode）。
  * 13.1 sync 需要 5 个 out，缺了 App 的同步流程就停在开屏。 */
 __attribute__((weak)) int miot_device_action_out(uint8_t siid, uint16_t aiid,
@@ -341,6 +349,7 @@ void miot_device_dispatch_plain(miot_device_t *d, const uint8_t *pt, size_t len)
                 dev_log(d, MIOT_LOG_INFO, "  act in[%d] piid=%u t=%u val=%u",
                         i, a->piid, a->type, (unsigned)a->val.u32);
         }
+        miot_demo_action_args_hook(pkt.siid, pkt.piid, pkt.args, (int)pkt.argc);
         /* 应答：默认 `[06][respCode16]`；若设备侧能提供 out 参数就按 kt4 带齐
          * （13.1 sync 的 6/7/8/9/10，缺一个 App 都不推进同步流程） */
         uint8_t r[192];

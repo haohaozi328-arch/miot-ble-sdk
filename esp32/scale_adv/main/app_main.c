@@ -100,6 +100,12 @@ static const uint16_t *s_wgap_p = k_wgap;
 static volatile int s_weigh_req;
 static volatile int s_click_pending;
 
+/* 离线补传状态机：手机下次连上来时，把离线那次称重按 8.2 → done → 11.1022 → 11.2/11.3
+ * 重放一遍。真机就是这么"自动上传"的（说明书 §3），不重放的话 App 只是读到 3.1005
+ * 一个静态值，历史里不会多出一条记录。 */
+static int      s_rep_step = -1;
+static uint32_t s_rep_next, s_rep_ww, s_rep_imp, s_rep_ts;
+
 static miot_auth_t   s_auth;
 static miot_device_t s_dev;
 static miot_port_t   s_port;
@@ -137,7 +143,15 @@ static uint32_t build_epoch(void)
     return (uint32_t)(days * 86400L + hh * 3600 + mm * 60 + ss);
 }
 
-static uint32_t scale_now(void) { return build_epoch() + now_ms() / 1000; }
+/** 手机上电后 13.1 sync 会给一次真实时间，用它的偏移把编译锚点掰正。
+ *  编译锚点本身只保证"量级对"（编译到上电的间隔恒等于误差），
+ *  实测误差就是 26 分钟（14:09 编译、14:35 上电），App 记录串全飘。 */
+static int32_t s_ts_off;
+
+static uint32_t scale_now(void)
+{
+    return (uint32_t)((int64_t)build_epoch() + now_ms() / 1000 + s_ts_off);
+}
 
 static uint32_t port_time_now(void *user)
 {
@@ -397,6 +411,26 @@ void miot_demo_app_action_hook(uint8_t siid, uint16_t aiid)
     s_weigh_req = 1;
 }
 
+/** 13.1 sync 的入参里第 3 项（piid=4）是手机当前时间 —— 板子没有 RTC，
+ *  这是唯一能拿到真实时间的入口。拿到就把编译锚点的偏差整段掰掉。 */
+void miot_demo_action_args_hook(uint8_t siid, uint16_t aiid,
+                                const miot_spec_value_t *args, int argc)
+{
+    if (siid != 13 || aiid != 1) return;
+    for (int i = 0; i < argc; i++) {
+        const miot_spec_value_t *a = &args[i];
+        if (a->piid != 4) continue;
+        uint32_t phone = a->val.u32;
+        if (phone < 1600000000u) continue;      /* 明显不是 unix 秒，别把时钟带跑 */
+        uint32_t local = build_epoch() + now_ms() / 1000u;
+        s_ts_off = (int32_t)(phone - local);
+        scale_s400_set_now(phone);
+        ESP_LOGW(TAG, "time sync from phone: %u (local est %u, off %+lds)",
+                 (unsigned)phone, (unsigned)local, (long)s_ts_off);
+        return;
+    }
+}
+
 /** 13.1 sync 的 5 个 out 参数：离线消息数 / SN / MAC / 固件 / 电量。
  *  ★App 开屏第一件事就是发这条动作，应答缺 out 时同步流程不推进。 */
 int miot_device_action_out(uint8_t siid, uint16_t aiid,
@@ -532,6 +566,18 @@ void app_main(void)
              * 退订重连，页面永远停在"设备初始化中"。 */
             scale_s400_push_status(&s_dev);
             ESP_LOGI(TAG, "initial status pushed (weight/time/battery)");
+            /* ★离线补传：说明书 §3「数据将在下一次连接手机时自动上传」。
+             * 只写属性表是不够的 —— App 要走事件流程才会生成历史记录。 */
+            if (scale_s400_offline_take(&s_rep_ww, &s_rep_imp, &s_rep_ts)) {
+                s_rep_step = 0;             /* ★整段 7 帧重放：8.1 过程流三轮 → 8.2 → done
+                                             *   → 11.1022 → 11.2/3。只发 8.2 时 App 只
+                                             *   ACK 但不出记录（15:05 实测），插件要靠
+                                             *   8.1 才能进"称重中"状态。 */
+                s_rep_next = t + 5000;      /* 等插件把订阅/13.1 sync 做完（实测 13.1 会发两次） */
+                ESP_LOGW(TAG, "offline pending: %u.%03ukg imp=%u ts=%u -> replay after 5s",
+                         (unsigned)(s_rep_ww / 1000u), (unsigned)(s_rep_ww % 1000u),
+                         (unsigned)s_rep_imp, (unsigned)s_rep_ts);
+            }
         }
 
         /* 13.4 current-time：每秒刷一次，App 用它给记录打时间戳 */
@@ -566,7 +612,7 @@ void app_main(void)
                 s_wimp = k_wcycle[s_widx][1];
                 s_widx = (s_widx + 1) % (int)(sizeof(k_wcycle) / sizeof(k_wcycle[0]));
                 s_wts  = scale_now();
-                scale_s400_store_offline(s_ww, s_wimp);
+                scale_s400_store_offline(s_ww, s_wimp, s_wts);
                 s_solicit_until = t + SOLICIT_MS;
                 s_fcnt++;
                 adv_refresh();
@@ -603,6 +649,21 @@ void app_main(void)
             }
         }
 
+        /* 离线补传：整段 7 帧，节奏与在线称重完全一致 */
+        if (s_rep_step >= 0 && s_wstep < 0 && (int32_t)(t - s_rep_next) >= 0) {
+            int st = s_rep_step;
+            int rc = scale_s400_report_step(&s_dev, st, s_rep_ww, s_rep_imp, s_rep_ts);
+            ESP_LOGW(TAG, "offline replay step %d/%d rc=%d", st + 1, SCALE_S400_STEPS, rc);
+            if (++s_rep_step >= SCALE_S400_STEPS) {
+                s_rep_step = -1;
+                scale_s400_offline_clear();
+                ESP_LOGW(TAG, "offline replay done (7/7) -> 13.6 count cleared");
+            } else {
+                s_rep_next = t + k_wgap[st];
+            }
+        }
+
+        /* 广播心跳：断连期间按 ADV_PERIOD_MS 刷新，fcnt 递增防重放过滤 */
         if (!gatt_miot_is_connected() && t - last_adv >= ADV_PERIOD_MS) {
             last_adv = t;
             s_fcnt++;

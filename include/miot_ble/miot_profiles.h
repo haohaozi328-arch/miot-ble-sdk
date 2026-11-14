@@ -31,9 +31,13 @@ void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
 int  scale_s400_report_step(miot_device_t *dev, int step,
                             uint32_t weight_01g, uint32_t impedance_01, uint32_t ts);
 /** 离线称重落库：手机不在场（无会话）时也要把体重/阻抗写进属性表。
- *  真机此时把数据存秤里，网关或手机下次连上来 GET 3.1005 / 3.1006 就能读到；
- *  实现上只需写 s400_weight / s400_imp —— spec 属性 GET 直接读这两个变量。 */
-void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01);
+ *  真机此时把数据存秤里，等"下一次连上手机"补传给 App（说明书 §3 原文）。
+ *  ★离线计数 13.6 / 13.1 out[0] 必须同步 +1，否则 App 认为秤里没数据。 */
+void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01, uint32_t ts);
+/** 取一条待补传的离线记录（先进先出只留最近一条），返回 1=有、0=没有 */
+int  scale_s400_offline_take(uint32_t *weight_01g, uint32_t *impedance_01, uint32_t *ts);
+/** 补传完成：清计数，13.1 out[0] 回落 0 */
+void scale_s400_offline_clear(void);
 /** siid 扫射（私有 spec 事件 siid 未知时探查） */
 void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2);
 /** 13.1 sync 的 out 参数（离线消息数 / SN / MAC / 固件 / 电量）。
