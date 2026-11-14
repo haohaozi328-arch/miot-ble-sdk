@@ -61,6 +61,7 @@ static const char *TAG = "SCALE";
 #define NVS_NS         "scale"     /* 与其他工程隔离，避免串 did/bind_key；换身份用 erase-flash */
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
+#define NVS_KEY_OFFQ   "offq"      /* 离线称重队列（官方说明真机可存 160 条，我们存 8 条） */
 
 /* MAC 开关：1 = 用派生 MAC（推荐），0 = 用芯片出厂物理 MAC。
  * 米家按 MAC 认设备：同一个 MAC 只要在账号里绑过（这颗芯片跑过 t3pro_adv，
@@ -88,6 +89,16 @@ static const uint32_t k_wcycle[][2] = {
 };
 static int s_widx;
 
+/* 离线称重队列：官方说明真机最多存 160 条，这里 8 条环形队列 + NVS 持久化 */
+#define OFFQ_N 8
+typedef struct { uint32_t w, imp, ts; uint8_t st; } off_rec_t;   /* st=8.2 weightDoneStatus */
+typedef struct {
+    uint8_t   n;                /* 有效条数 0..OFFQ_N */
+    uint8_t   head;             /* 最老一条的下标（满时新记录覆盖 head，等效丢最老） */
+    off_rec_t rec[OFFQ_N];
+} off_q_t;
+static off_q_t s_offq;
+
 static uint32_t s_fcnt;
 static uint8_t  v_batt = 92;
 static uint32_t s_solicit_until;        /* 离线称重后的 solicited 窗口截止（ms） */
@@ -105,6 +116,7 @@ static volatile int s_click_pending;
  * 一个静态值，历史里不会多出一条记录。 */
 static int      s_rep_step = -1;
 static uint32_t s_rep_next, s_rep_ww, s_rep_imp, s_rep_ts;
+static uint8_t  s_rep_st;           /* 该条的 weightDoneStatus：0=历史 / 2=待认领 */
 
 static miot_auth_t   s_auth;
 static miot_device_t s_dev;
@@ -205,6 +217,65 @@ static void fcnt_save(void)
     nvs_set_u32(h, NVS_KEY_FCNT, s_fcnt);
     nvs_commit(h);
     nvs_close(h);
+}
+
+/* ---------------- 离线称重队列（NVS 持久化，断电不丢） ---------------- */
+static void offq_sync_count(void) { scale_s400_offline_set_count(s_offq.n); }
+
+static void offq_save(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_blob(h, NVS_KEY_OFFQ, &s_offq, sizeof(s_offq));
+    nvs_commit(h);
+    nvs_close(h);
+}
+
+static void offq_load(void)
+{
+    nvs_handle_t h;
+    size_t len = sizeof(s_offq);
+    memset(&s_offq, 0, sizeof(s_offq));
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) return;
+    if (nvs_get_blob(h, NVS_KEY_OFFQ, &s_offq, &len) != ESP_OK || len != sizeof(s_offq)) {
+        memset(&s_offq, 0, sizeof(s_offq));
+    } else if (s_offq.n > OFFQ_N || s_offq.head >= OFFQ_N) {
+        memset(&s_offq, 0, sizeof(s_offq));     /* 旧版本/损坏 blob，别带脏数据 */
+    }
+    nvs_close(h);
+    if (s_offq.n)
+        ESP_LOGI(TAG, "offline queue restored: %u record(s)", (unsigned)s_offq.n);
+    offq_sync_count();
+}
+
+/** 入队（满时丢最老一条），并同步 13.6 计数。
+ *  st = 8.2 的 weightDoneStatus：0=已识别（进历史）/ 2=未识别（进「待认领」） */
+static void offq_push(uint32_t w, uint32_t imp, uint32_t ts, uint8_t st)
+{
+    uint8_t tail;
+    if (s_offq.n == OFFQ_N) {               /* 满：丢最老 */
+        s_offq.head = (uint8_t)((s_offq.head + 1) % OFFQ_N);
+        s_offq.n--;
+        ESP_LOGW(TAG, "offline queue full -> dropped oldest");
+    }
+    tail = (uint8_t)((s_offq.head + s_offq.n) % OFFQ_N);
+    s_offq.rec[tail].w = w;
+    s_offq.rec[tail].imp = imp;
+    s_offq.rec[tail].ts = ts;
+    s_offq.rec[tail].st = st;
+    s_offq.n++;
+    offq_save();
+    offq_sync_count();
+}
+
+/** 弹出最老一条（补传完成后调用），并同步 13.6 计数 */
+static void offq_pop(void)
+{
+    if (!s_offq.n) return;
+    s_offq.head = (uint8_t)((s_offq.head + 1) % OFFQ_N);
+    s_offq.n--;
+    offq_save();
+    offq_sync_count();
 }
 
 static void port_log(void *user, int level, const char *tag, const char *fmt, ...)
@@ -501,6 +572,7 @@ void app_main(void)
 
     miot_port_esp32_crypto_init();
     fcnt_load();
+    offq_load();        /* 恢复离线称重队列 + 13.6 计数（断电不丢，官方说明真机 160 条） */
 
     memset(&s_port, 0, sizeof(s_port));
     s_port.send_notify = gatt_miot_notify_spec;
@@ -568,15 +640,18 @@ void app_main(void)
             ESP_LOGI(TAG, "initial status pushed (weight/time/battery)");
             /* ★离线补传：说明书 §3「数据将在下一次连接手机时自动上传」。
              * 只写属性表是不够的 —— App 要走事件流程才会生成历史记录。 */
-            if (scale_s400_offline_take(&s_rep_ww, &s_rep_imp, &s_rep_ts)) {
+            if (s_offq.n && s_rep_step < 0) {
+                const off_rec_t *r = &s_offq.rec[s_offq.head];
+                s_rep_ww = r->w; s_rep_imp = r->imp; s_rep_ts = r->ts; s_rep_st = r->st;
                 s_rep_step = 0;             /* ★整段 7 帧重放：8.1 过程流三轮 → 8.2 → done
                                              *   → 11.1022 → 11.2/3。只发 8.2 时 App 只
                                              *   ACK 但不出记录（15:05 实测），插件要靠
                                              *   8.1 才能进"称重中"状态。 */
                 s_rep_next = t + 5000;      /* 等插件把订阅/13.1 sync 做完（实测 13.1 会发两次） */
-                ESP_LOGW(TAG, "offline pending: %u.%03ukg imp=%u ts=%u -> replay after 5s",
+                ESP_LOGW(TAG, "offline pending: %u.%03ukg imp=%u ts=%u status=%u (queued=%u) -> replay after 5s",
                          (unsigned)(s_rep_ww / 1000u), (unsigned)(s_rep_ww % 1000u),
-                         (unsigned)s_rep_imp, (unsigned)s_rep_ts);
+                         (unsigned)s_rep_imp, (unsigned)s_rep_ts, (unsigned)s_rep_st,
+                         (unsigned)s_offq.n);
             }
         }
 
@@ -606,19 +681,23 @@ void app_main(void)
         if (s_weigh_req) {
             s_weigh_req = 0;
             if (!s_auth.logged_in) {
-                /* 手机不在场 = 说明书里的"离线称重"：数值存进属性表，
-                 * 广播置 solicited 10 分钟，等网关/手机来 GET 3.1005。 */
+                /* 手机不在场 = 说明书里的"离线称重"：入队（NVS 持久化），
+                 * 广播置 solicited 10 分钟，等手机下次连上来整段补传。 */
                 s_ww   = k_wcycle[s_widx][0];
                 s_wimp = k_wcycle[s_widx][1];
                 s_widx = (s_widx + 1) % (int)(sizeof(k_wcycle) / sizeof(k_wcycle[0]));
-                s_wts  = scale_now();
+                s_wts = scale_now();
                 scale_s400_store_offline(s_ww, s_wimp, s_wts);
+                /* 一律 normalData(0)：App 直接归到当前用户历史。
+                 * 待认领需要 userError(2)，但 BLE 重放时 App 只会弹「是你吗」，
+                 * 不认领就丢弃（15:45 实测强杀 App 后记录消失），所以不发 2。 */
+                offq_push(s_ww, s_wimp, s_wts, 0);
                 s_solicit_until = t + SOLICIT_MS;
                 s_fcnt++;
                 adv_refresh();
-                ESP_LOGW(TAG, "offline weigh-in %u.%03ukg imp=%u (no session) -> "
-                              "solicited=1 10min, gateway may GET 3.1005",
-                         (unsigned)(s_ww / 1000u), (unsigned)(s_ww % 1000u), (unsigned)s_wimp);
+                ESP_LOGW(TAG, "offline weigh-in %u.%03ukg imp=%u queued=%u -> solicited=1 10min",
+                         (unsigned)(s_ww / 1000u), (unsigned)(s_ww % 1000u), (unsigned)s_wimp,
+                         (unsigned)s_offq.n);
             } else if (s_wstep < 0) {
                 int from_click = s_click_pending;
                 s_click_pending = 0;
@@ -649,15 +728,25 @@ void app_main(void)
             }
         }
 
-        /* 离线补传：整段 7 帧，节奏与在线称重完全一致 */
+        /* 离线补传：整段 7 帧，节奏与在线称重完全一致；一条传完接着下一条 */
         if (s_rep_step >= 0 && s_wstep < 0 && (int32_t)(t - s_rep_next) >= 0) {
             int st = s_rep_step;
-            int rc = scale_s400_report_step(&s_dev, st, s_rep_ww, s_rep_imp, s_rep_ts);
+            int rc = scale_s400_report_step_ex(&s_dev, st, s_rep_ww, s_rep_imp, s_rep_ts, s_rep_st);
             ESP_LOGW(TAG, "offline replay step %d/%d rc=%d", st + 1, SCALE_S400_STEPS, rc);
             if (++s_rep_step >= SCALE_S400_STEPS) {
-                s_rep_step = -1;
-                scale_s400_offline_clear();
-                ESP_LOGW(TAG, "offline replay done (7/7) -> 13.6 count cleared");
+                offq_pop();
+                if (s_offq.n) {
+                    const off_rec_t *r = &s_offq.rec[s_offq.head];
+                    s_rep_ww = r->w; s_rep_imp = r->imp; s_rep_ts = r->ts; s_rep_st = r->st;
+                    s_rep_step = 0;
+                    s_rep_next = t + 900;
+                    ESP_LOGW(TAG, "offline replay next: %u.%03ukg status=%u (queued=%u)",
+                             (unsigned)(s_rep_ww / 1000u), (unsigned)(s_rep_ww % 1000u),
+                             (unsigned)s_rep_st, (unsigned)s_offq.n);
+                } else {
+                    s_rep_step = -1;
+                    ESP_LOGW(TAG, "offline replay all done -> queue empty, 13.6=0");
+                }
             } else {
                 s_rep_next = t + k_wgap[st];
             }

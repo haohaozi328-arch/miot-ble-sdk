@@ -26,18 +26,26 @@ void scale_s400_init(miot_device_t *dev, miot_port_t *port,
  *  因为 App 的 ag2 接收窗口同一毫秒只吃第一帧（docs/testing.md 关键要点 2）。 */
 void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
                        uint32_t impedance_01, uint32_t ts);
-/** 分步版：step = 0..SCALE_S400_STEPS-1，每步只发一帧，由调用方按 gap 表节流 */
+/** 分步版：step = 0..SCALE_S400_STEPS-1，每步只发一帧，由调用方按 gap 表节流。
+ *  weightDoneStatus 只影响 step 3（8.2 结果）的下标 5 字段：
+ *    0=normalData 直接入库 / 2=userError「是你吗」 / 4=multipleUsers 弹选人。
+ *  ★离线且用户识别不出来（真机屏显 "----"）时必须发 2/4，App 才会把这条
+ *  放进「待认领数据」；一直发 0 的话不管体重多少都直接进当前用户历史。 */
 #define SCALE_S400_STEPS 7
+int  scale_s400_report_step_ex(miot_device_t *dev, int step,
+                               uint32_t weight_01g, uint32_t impedance_01, uint32_t ts,
+                               uint8_t weight_done_status);
+/** 默认 normalData 版（等价 _ex(..., 0)），在线称重继续用它 */
 int  scale_s400_report_step(miot_device_t *dev, int step,
                             uint32_t weight_01g, uint32_t impedance_01, uint32_t ts);
 /** 离线称重落库：手机不在场（无会话）时也要把体重/阻抗写进属性表。
- *  真机此时把数据存秤里，等"下一次连上手机"补传给 App（说明书 §3 原文）。
- *  ★离线计数 13.6 / 13.1 out[0] 必须同步 +1，否则 App 认为秤里没数据。 */
+ *  真机此时把数据存秤里（最多 160 条，官方说明），等"下一次连上手机"补传。
+ *  ★队列本体和 NVS 持久化在 app_main（设备层）；这里只写属性表 + 由调用方
+ *  通过 scale_s400_offline_set_count() 同步 13.6 / 13.1 out[0] 的条数。 */
 void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01, uint32_t ts);
-/** 取一条待补传的离线记录（先进先出只留最近一条），返回 1=有、0=没有 */
-int  scale_s400_offline_take(uint32_t *weight_01g, uint32_t *impedance_01, uint32_t *ts);
-/** 补传完成：清计数，13.1 out[0] 回落 0 */
-void scale_s400_offline_clear(void);
+/** 同步离线消息计数（13.6 属性 + 13.1 out[0]）：存一条 +1、补传一条 -1。
+ *  一直是 0 的话 App 认为"秤里没数据"，待认领/历史都不会有（实测踩到）。 */
+void scale_s400_offline_set_count(uint8_t n);
 /** siid 扫射（私有 spec 事件 siid 未知时探查） */
 void scale_s400_sweep(miot_device_t *dev, const char *s1, const char *s2);
 /** 13.1 sync 的 out 参数（离线消息数 / SN / MAC / 固件 / 电量）。

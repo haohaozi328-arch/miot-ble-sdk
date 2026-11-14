@@ -31,10 +31,7 @@ static uint32_t s400_weight  = 0;       /* 最近体重，0.1kg 单位（页面�
 static uint32_t s400_imp     = 0;       /* 最近阻抗 0.1Ω */
 static uint16_t s400_plugin_ver = 3;    /* 13.1 pluginversion */
 static uint8_t  s400_time_flag  = 1;    /* 13.3 */
-static uint8_t  s400_offline_cnt = 0;   /* 13.6 offline-msg-cnt */
-static uint32_t s400_off_w   = 0;       /* 待补传的离线体重（克，原始入参） */
-static uint32_t s400_off_imp = 0;       /* 待补传的离线阻抗 */
-static uint32_t s400_off_ts  = 0;       /* 离线称重时刻（unix 秒），0=没有待传记录 */
+static uint8_t  s400_offline_cnt = 0;   /* 13.6 offline-msg-cnt（由 app_main 队列同步） */
 static uint32_t s400_now = 0;           /* 13.4 current-time */
 
 /* 13.1 sync 的 out 参数里要回给 App 的身份信息（真机从 flash 读，这里由 app 层填入） */
@@ -141,35 +138,23 @@ static uint32_t s400_kg10(uint32_t grams) { return grams / 100u; }
  * 会直接返回它，所以网关一登录就能读到这次离线测量的结果。 */
 void scale_s400_store_offline(uint32_t weight_01g, uint32_t impedance_01, uint32_t ts)
 {
+    (void)ts;
     s400_weight = s400_kg10(weight_01g);
     s400_imp    = impedance_01;
-    s400_off_w  = weight_01g;
-    s400_off_imp = impedance_01;
-    s400_off_ts = ts;
-    /* ★离线消息计数据必须 +1：App 开屏 13.1 sync 读的就是它（out[0]/13.6），
-     * 一直是 0 的话 App 认为"秤里没东西"，页面不会有任何离线记录（实测踩到）。 */
-    if (s400_offline_cnt < 0xFF) s400_offline_cnt++;
+    /* 队列与计数由 app_main（设备层）管理，存一条后它会调 offline_set_count()。
+     * 这里只保证 spec GET 3.1005/3.1006 拿到最新一次离线测量的值。 */
 }
 
-int scale_s400_offline_take(uint32_t *weight_01g, uint32_t *impedance_01, uint32_t *ts)
+void scale_s400_offline_set_count(uint8_t n)
 {
-    if (s400_offline_cnt == 0 || s400_off_ts == 0) return 0;
-    if (weight_01g)   *weight_01g   = s400_off_w;
-    if (impedance_01) *impedance_01 = s400_off_imp;
-    if (ts)           *ts           = s400_off_ts;
-    return 1;
-}
-
-void scale_s400_offline_clear(void)
-{
-    s400_offline_cnt = 0;
-    s400_off_ts = 0;
+    s400_offline_cnt = n;
 }
 
 /* 一帧一步：0..3 = 8.1 过程流，4 = 8.2 结果，5 = 11.1022，6 = 11.2/11.3 属性变更。
  * ★必须由调用方节流（App 的 ag2 接收窗口同一毫秒只吃一帧，连发会整帧丢）。*/
-int scale_s400_report_step(miot_device_t *dev, int step,
-                           uint32_t weight_01g, uint32_t impedance_01, uint32_t ts)
+int scale_s400_report_step_ex(miot_device_t *dev, int step,
+                              uint32_t weight_01g, uint32_t impedance_01, uint32_t ts,
+                              uint8_t weight_done_status)
 {
     char s[160];
     uint32_t w = s400_kg10(weight_01g);
@@ -197,9 +182,12 @@ int scale_s400_report_step(miot_device_t *dev, int step,
          *   插件 uploadBodyDataObj 按下标取：
          *   [3]=weight(kg×10) [4]=heartRate [5]=weightDoneStatus(0=正常)
          *   [6]=设备时间(unix 秒) [7]=bfp 体脂率 [8]=slm 骨骼肌 */
+        /* [5]=weightDoneStatus：0=normalData 直接入库 / 2=userError / 4=multipleUsers。
+         * ★离线且用户认不出来（真机屏显 "----"）必须非 0，App 才进「待认领数据」；
+         *  恒发 0 的话不管体重多少都被算到当前用户头上（15:37 实测：45.6kg 也进历史）。 */
         snprintf(s, sizeof(s),
-                 "0,0,0,%u,0,0,%u,185,275,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
-                 (unsigned)w, (unsigned)ts);
+                 "0,0,0,%u,0,%u,%u,185,275,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+                 (unsigned)w, (unsigned)weight_done_status, (unsigned)ts);
         return send_event_str(dev, 8, 2, 1, s);
     }
 
@@ -227,6 +215,12 @@ int scale_s400_report_step(miot_device_t *dev, int step,
     pc[0].siid = 11; pc[0].piid = 2; pc[0].type = MIOT_TYPE_U32; pc[0].val.u32 = metrics;
     pc[1].siid = 11; pc[1].piid = 3; pc[1].type = MIOT_TYPE_U32; pc[1].val.u32 = ts;
     return miot_device_send_props_changed(dev, pc, 2);
+}
+
+int scale_s400_report_step(miot_device_t *dev, int step,
+                           uint32_t weight_01g, uint32_t impedance_01, uint32_t ts)
+{
+    return scale_s400_report_step_ex(dev, step, weight_01g, impedance_01, ts, 0);
 }
 
 void scale_s400_report(miot_device_t *dev, uint32_t weight_01g,
