@@ -89,7 +89,7 @@ App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](doc
 **换一台设备**：串口发 `dev` 看 12 个序号，`dev 1` 切到温湿度计2，设备会擦身份自动重启。
 **板载 BOOT 键**：短按 = 触发一次称重（等价于真机上「人踩上去」）；长按 5 秒 = 清 NVS 恢复出厂。
 
-**只想要一台设备的最小工程？** 不用动 multi_dev，直接用下面这 6 个（各自独立、互不依赖，
+**只想要一台设备的最小工程？** 不用动 multi_dev，直接用下面这 4 个（各自独立、互不依赖，
 每个都是 `app_main.c` + `gatt_miot.c` 两个文件、700~950 行，不含 Mesh 栈，
 `idf.py erase-flash flash monitor` 就能烧）：
 
@@ -97,12 +97,10 @@ App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](doc
 |---|---|---|---|
 | [`esp32/t3pro_adv`](esp32/t3pro_adv) | 温湿度计 3 Pro（0x9AB9） | 866 行 | ✅ 2026-11-13 绑定后温/湿/CO₂ 三项同时出数，小爱可查，云端有历史曲线 |
 | [`esp32/btn1_adv`](esp32/btn1_adv) | 无线开关 单键（0x2387） | 799 行 | ✅ 绑定通过 + 单击/双击/长按事件加密广播上云；README 含与云端产品定义的逐层对比 |
-| [`esp32/btn2_adv`](esp32/btn2_adv) | 无线开关 双键（0x1949） | 790 行 | ⚙️ 与单键同骨架，另加 GPIO3 右键；载荷 1B 键位（1 左 / 2 右）。编译 0 warning，待实机添加 |
 | [`esp32/thermo_gatt`](esp32/thermo_gatt) | 温湿度计 2（0x055B） | 745 行 | ✅ 2026-11-07 绑定 + 设备页实时读数；链路注释最全，适合当模板改别的型号 |
-| [`esp32/scale_adv`](esp32/scale_adv) | 体脂秤 S400（0x30D9） | 824 行 | ⚙️ 7 帧节流称重 + 13.1 sync 应答（逻辑取自 multi_dev 已实测档案）；编译 0 warning，待实机称重 |
 | [`esp32/wx08zm_gatt`](esp32/wx08zm_gatt) | 驱蚊器 智能版（0x040A） | 944 行 | ⚠️ 编译通过、能回待绑定态；legacy PSK 握手是否被云端接受**尚未真机验证** |
 
-六者骨架同构（`thermo_gatt` 是最干净的那份），换型号只改三处：**PID、spec 属性表、广播对象号**。
+四者骨架同构（`thermo_gatt` 是最干净的那份），换型号只改三处：**PID、spec 属性表、广播对象号**。
 
 人类一页纸版本：[QUICKSTART.md](QUICKSTART.md)；让 AI 代劳的版本：[AGENTS.md](AGENTS.md)。
 
