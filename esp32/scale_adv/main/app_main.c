@@ -58,9 +58,14 @@ static const char *TAG = "SCALE";
 #define SCALE_PID      0x30D9      /* 米家体脂秤 S400（国区） */
 #define SCALE_NAME     "MJJ"       /* 扫描响应名；真机也是这个短名 */
 #define ADV_PERIOD_MS  3000
-#define NVS_NS         "scale"     /* ★与其他工程隔离，避免串 did/bind_key */
+#define NVS_NS         "scale_1"   /* ★与其他工程隔离，避免串 did/bind_key */
 #define NVS_KEY_ID     "ident"
 #define NVS_KEY_FCNT   "fcnt"
+
+/* ★芯片物理 MAC 已被米家当成"温湿度计 3 Pro"绑过，米家按 MAC 去重 → 不再出现在
+ * 「附近设备」。派生本项目专属基础 MAC，BT MAC = 基础末字节 +1 → …:5C:02。 */
+#define BASE_MAC_B4    0x5C        /* 第 5 字节：体脂秤专属（btn2_adv 用 0x5B） */
+#define BASE_MAC_B5    0x01
 
 #define BOOT_PIN       9
 #define SOLICIT_MS     (10u * 60u * 1000u)   /* 离线称重后"请求被连接"窗口：10 分钟 */
@@ -422,6 +427,12 @@ void app_main(void)
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         nvs_flash_erase();
         nvs_flash_init();
+    }
+
+    /* ★必须在任何 BLE/协议栈初始化之前落定 MAC：米家按 MAC 认设备 */
+    {
+        uint8_t base[6] = { 0x10, 0x00, 0x3B, 0xCE, BASE_MAC_B4, BASE_MAC_B5 };
+        esp_base_mac_addr_set(base);
     }
 
     gpio_config_t io = {
