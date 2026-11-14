@@ -102,6 +102,7 @@ App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](doc
 | [`esp32/scale_adv`](esp32/scale_adv) | 体脂秤 S400（0x30D9） | 870 行 | ✅ 2026-11-14 实机：绑定一次过 → `13.1 sync` 应答 5 个 out → 点「测量」`ACTION 10.1` → 7 帧称重全部 `rc>0`、连称三条各自入库 → **离线称重**（断手机 + 短按 BOOT）后下次连手机整段 7 帧重放、App 直接出报告；记录时间由 `13.1` 的手机时间校准。**烧后必调**：`CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192`，默认 4096 会在 spec 解析时栈溢出复位 |
 | [`esp32/door_adv`](esp32/door_adv) | 门窗传感器 2（0x098B） | 420 行 | ✅ 2026-11-14 实机：米家添加一次过 → 会话建立 → 短按 BOOT 开/关门事件各连发 3 帧上云（`0x1019` 0/1 + `0x1018` 光照 + `0x100A` 电量）。**小白版**：参数全在文件头、日志中文、派生 MAC `…:5D:03` |
 | [`esp32/motion_adv`](esp32/motion_adv) | 人体传感器 2（0x0A8D） | 430 行 | ✅ 2026-11-14 实机：米家添加一次过（`REGISTER COMPLETE 0x11`）→ 短按 BOOT 连发 3 帧 `0x000F=1`（有人）→ 60s 后自动回落无人。**小白版**，与 `door_adv` 同骨架，派生 MAC `…:5E:03` |
+| [`esp32/leak_adv`](esp32/leak_adv) | 水浸传感器（0x0863） | 430 行 | ✅ 2026-11-14 实机：米家添加一次过（`REGISTER COMPLETE 0x11`）→ 短按 BOOT 连发 3 帧 `0x1014=1`（漏水），设备页转「漏水」并进感应记录。**小白版**，派生 MAC `…:5F:03` |
 | [`esp32/wx08zm_gatt`](esp32/wx08zm_gatt) | 驱蚊器 智能版（0x040A） | 944 行 | ⚠️ 编译通过、能回待绑定态；legacy PSK 握手是否被云端接受**尚未真机验证** |
 
 骨架同构（`thermo_gatt` 是最干净的那份，`door_adv`/`motion_adv` 是最适合照抄改型号的小白版），换型号只改三处：**PID、spec 属性表、广播对象号**。
@@ -194,9 +195,9 @@ void app_main(void) {
 | # | 设备名 | 型号 / PID | 描述 | 验证状态 | 详情（代码） |
 |---|--------|-----------|------|----------|--------------|
 | 6 | 甲醛检测仪 | JQJCY01YM（PID 0x02DF） | 0x1010 甲醛(0.01mg/m³) / 0x1004 温度 / 0x1006 湿度 / 0x100A 电量，三路轮换分帧 | ✓ | [examples/sensor_hcho/](examples/sensor_hcho/main.c) · `miot_beacon.h` |
-| 7 | 门窗传感器2 | MCCGQ02HL（PID 0x098B） | 0x1019 开合(开/关/超时未关/复位) / 0x1018 光照 / 0x100A 电量 | ✓ | [examples/sensor_door/](examples/sensor_door/main.c) · `miot_beacon.h` |
-| 8 | 人体传感器2 | RTCGQ02LM（PID 0x0A8D） | 0x000F 移动+光照 / 0x1017 无人时长 / 0x1001 按键 / 0x100A 电量 | ✓ | [examples/sensor_motion/](examples/sensor_motion/main.c) · `miot_beacon.h` |
-| 9 | 水浸传感器 | SJWS01LM（PID 0x0863） | 0x1014 漏水状态(0=正常 >0=漏水) / 0x100A 电量 | ✓ | [examples/sensor_leak/](examples/sensor_leak/main.c) · `miot_beacon.h` |
+| 7 | 门窗传感器2 | MCCGQ02HL（PID 0x098B） | 0x1019 开合(开/关/超时未关/复位) / 0x1018 光照 / 0x100A 电量 | ✓（2026-11-14 独立工程实机） | [esp32/door_adv/](esp32/door_adv) · [examples/sensor_door/](examples/sensor_door/main.c) |
+| 8 | 人体传感器2 | RTCGQ02LM（PID 0x0A8D） | 0x000F 移动+光照 / 0x1017 无人时长 / 0x100A 电量 | ✓（2026-11-14 独立工程实机） | [esp32/motion_adv/](esp32/motion_adv) · [examples/sensor_motion/](examples/sensor_motion/main.c) |
+| 9 | 水浸传感器 | SJWS01LM（PID 0x0863） | 0x1014 漏水状态(0=正常 >0=漏水) / 0x100A 电量 | ✓（2026-11-14 独立工程实机） | [esp32/leak_adv/](esp32/leak_adv) · [examples/sensor_leak/](examples/sensor_leak/main.c) |
 | 10 | 温湿度计3 mini | MJWSD06MMC（国区 pdid 21941 = **0x55B5**；0x5BEA 是海外版 23530，国区扫不到） | 0x4C01 温度 float32 / 0x4C02 湿度 uint8 / 0x4803 电量 uint8（对象 ID 依 XiaomiGateway3 `mi`=19457/19458/18435） | ✓ | [examples/thermo_t3m/](examples/thermo_t3m/main.c) · `miot_beacon.h` |
 | 11 | 温湿度计3 Pro | MJWSD07MMC（PID **0x9AB9**） | 0x5C01 温度 float32 / 0x5C02 湿度 uint8 / 0x601D CO₂ uint16 / 0x4803 电量 uint8，四对象三帧轮换（一帧装不下）。**对象号是 3 Pro 专属的新系列，沿用 3 mini 的 0x4C01/0x4C02 会导致「设备在线但数值全空」**。真机为按键连接模式（平时不广播可连接态，按键后才 `solicited=1`） | ✓（广播 → 网关解密 → 云端 → 小爱语音查温湿度，全链路实测；2026-11-13 23:12 独立工程实机三项同时出数：温度 / 湿度 / CO₂） | [esp32/t3pro_adv/](esp32/t3pro_adv)（单设备完整工程，`idf.py build` 即烧）· `multi_dev` 档案 `T3PRO` |
 
