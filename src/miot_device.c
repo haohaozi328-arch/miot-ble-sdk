@@ -56,7 +56,8 @@ static void ag2_frame_cb(void *user, const uint8_t *k61, size_t n)
     static int n_dump;
     if (n_dump < 4) {
         n_dump++;
-        char hx[3 * 40 + 4];
+        /* ★static：本函数跑在 nimble_host 栈上，这 124B 的转储缓冲没必要压栈 */
+        static char hx[3 * 40 + 4];
         for (size_t off = 0; off < ct_len; off += 40) {
             size_t dn = ct_len - off;
             if (dn > 40) dn = 40;

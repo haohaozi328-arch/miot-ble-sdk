@@ -348,6 +348,8 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_SUBSCRIBE:
         ESP_LOGI(TAG, "subscribe attr=%u notify=%d",
                  event->subscribe.attr_handle, event->subscribe.cur_notify);
+        gatt_miot_on_subscribe(event->subscribe.attr_handle,
+                               event->subscribe.cur_notify);
         return 0;
 
     default:
@@ -506,6 +508,7 @@ void app_main(void)
     ble_svc_gap_device_name_set(SCALE_NAME);
     gatt_miot_register_svcs();
     gatt_miot_bind(&s_auth, &s_dev);
+    gatt_miot_set_pid(SCALE_PID);   /* 0x0002 只读特征，App 靠它认型号 */
     ble_att_set_preferred_mtu(247);
 
     nimble_port_freertos_init(host_task);
@@ -515,6 +518,21 @@ void app_main(void)
     for (;;) {
         uint32_t t = now_ms();
         miot_auth_poll(&s_auth, t);
+
+        /* ★登录完成后必须把会话密钥交给 spec 层。
+         * miot_device_send_event() 开头是 `if (!d->session_ok) return -1;`，
+         * 不调这一步 → 7 帧称重数据全是 rc=-1：日志里"连上了、也在称"，
+         * App 端却一片空白（2026-11-14 实测踩到）。断开时 session_reset 会清回去，
+         * 所以每次重连都要重新交一次。 */
+        if (s_auth.logged_in && !s_dev.session_ok) {
+            miot_device_set_session_keys(&s_dev, miot_auth_session_keys(&s_auth));
+            ESP_LOGW(TAG, "*** session established: spec channel ready (mtu=%u) ***",
+                     (unsigned)gatt_miot_mtu());
+            /* ★立刻吐一帧：App 订阅完 spec 通道后最多等 1s，收不到任何东西就
+             * 退订重连，页面永远停在"设备初始化中"。 */
+            scale_s400_push_status(&s_dev);
+            ESP_LOGI(TAG, "initial status pushed (weight/time/battery)");
+        }
 
         /* 13.4 current-time：每秒刷一次，App 用它给记录打时间戳 */
         if (t - last_clock >= 1000) {

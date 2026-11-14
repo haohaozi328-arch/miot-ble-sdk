@@ -87,6 +87,19 @@ static miot_prop_t s400_props[] = {
 
 void scale_s400_set_now(uint32_t epoch) { s400_now = epoch; }
 
+/* 登录成功后立刻推一帧当前状态（体重 / 时间 / 电量）。
+ * 真机行为：App 订阅完 spec 通道后等设备主动说话，1s 内零收包就退订重连，
+ * 界面停在「设备初始化中」。所以连接一建立就得先吐一帧，不能等用户操作。 */
+void scale_s400_push_status(miot_device_t *dev)
+{
+    miot_spec_value_t p[3];
+    memset(p, 0, sizeof(p));
+    p[0].siid = 3;  p[0].piid = 1005; p[0].type = MIOT_TYPE_U32; p[0].val.u32 = s400_weight;
+    p[1].siid = 3;  p[1].piid = 1003; p[1].type = MIOT_TYPE_U8;  p[1].val.u8  = s400_battery;
+    p[2].siid = 13; p[2].piid = 4;    p[2].type = MIOT_TYPE_U32; p[2].val.u32 = s400_now;
+    miot_device_send_props_changed(dev, p, 3);
+}
+
 static bool s400_get(void *user, uint8_t siid, uint16_t piid, miot_spec_value_t *out)
 {
     (void)user;

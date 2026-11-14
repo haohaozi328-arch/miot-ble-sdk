@@ -42,6 +42,17 @@ void gatt_miot_dump_handles(void);
 /** 当前是否有手机连着（决定要不要继续广播） */
 int gatt_miot_is_connected(void);
 
+/** 当前协商出来的 ATT MTU（23 = 没协商，单帧上限 20B；大帧发不出去时会 drop） */
+uint16_t gatt_miot_mtu(void);
+
+/** 记录 App 的订阅状态（BLE_GAP_EVENT_SUBSCRIBE 里调）。
+ * ★应答要投给「App 真正订阅并写入的那条特征」，否则它收不到 ACK，
+ *   会每 6 秒重发同一条 ag2 帧、spec 请求一条都不发。 */
+void gatt_miot_on_subscribe(uint16_t attr_handle, int notify);
+
+/** 设置 0x0002 Product ID 的只读值（App 用它确认型号） */
+void gatt_miot_set_pid(uint16_t pid);
+
 /** spec 通道 notify 出口，直接塞给 miot_port_t.send_notify */
 int gatt_miot_notify_spec(void *user, const uint8_t *d, size_t len);
 

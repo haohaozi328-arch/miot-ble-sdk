@@ -44,6 +44,9 @@ int  scale_s400_action_out(uint8_t siid, uint8_t aiid,
 void scale_s400_set_identity(const char *mac, const char *sn, const char *fw);
 /** 13.4 current-time：App 用它对时，同时也是记录时间戳的来源 */
 void scale_s400_set_now(uint32_t epoch);
+/** 登录成功后主动推一帧状态（3.1005 体重 / 3.1003 电量 / 13.4 时间）：
+ *  App 订阅完 spec 通道后等设备说话，1s 内零收包就退订重连 */
+void scale_s400_push_status(miot_device_t *dev);
 
 /* ============ 2. 温湿度计（cgllc-cgdk3 / miaomiaoce-t9 双 spec 兼容） ============
  * 验证状态：绑定 + spec 读写 ✓（温度 float 2.1001 / 3.1001，湿度、电量） */

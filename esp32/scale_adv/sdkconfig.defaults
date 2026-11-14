@@ -18,3 +18,14 @@ CONFIG_MBEDTLS_ECP_C=y
 CONFIG_MBEDTLS_ECDH_C=y
 CONFIG_MBEDTLS_MD_C=y
 CONFIG_MBEDTLS_SHA256_C=y
+
+# ★spec 解析链路整个跑在 NimBLE host 任务（nimble_host）里，默认 4096 不够：
+# 2026-11-14 实测 App 发 13.1 sync（pt=91B）后立刻
+#   Guru Meditation (Stack protection fault), task "nimble_host", SP 低于栈下界
+# → 芯片复位 → App 重连 → 再崩，表现为「点测量一直重新连接」。
+# 栈帧构成：miot_spec_packet_t(~600B) + set_reply 结果数组(~600B)
+# + spec_reply 的 out(306B)/hex(124B) + 日志 vsnprintf，故给到 8192（同 multi_dev）。
+CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192
+
+# 主任务同样要在登录后处理 GET/主动推帧，3584 不够，对齐 multi_dev 的 8192。
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
