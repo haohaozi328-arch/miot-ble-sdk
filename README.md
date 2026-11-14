@@ -99,7 +99,7 @@ App 建立会话后 `login=1`。三态的含义见 [docs/troubleshooting.md](doc
 | [`esp32/btn1_adv`](esp32/btn1_adv) | 无线开关 单键（0x2387） | 799 行 | ✅ 绑定通过 + 单击/双击/长按事件加密广播上云；README 含与云端产品定义的逐层对比 |
 | [`esp32/btn2_adv`](esp32/btn2_adv) | 无线开关 双键（0x1949） | 790 行 | ✅ 2026-11-14 实机：米家添加一次过，左键单击 `0x4E0C` / 双击 `0x4E0D`（载荷 `key=1`）上云；右键（GPIO3）与长按待测。**烧前必看**：派生 MAC，直接烧物理 MAC 会被米家去重扫不到 |
 | [`esp32/thermo_gatt`](esp32/thermo_gatt) | 温湿度计 2（0x055B） | 745 行 | ✅ 2026-11-07 绑定 + 设备页实时读数；链路注释最全，适合当模板改别的型号 |
-| [`esp32/scale_adv`](esp32/scale_adv) | 体脂秤 S400（0x30D9） | 824 行 | ⚙️ 7 帧节流称重 + 13.1 sync 应答（逻辑取自 multi_dev 已实测档案）；编译 0 warning，待实机称重 |
+| [`esp32/scale_adv`](esp32/scale_adv) | 体脂秤 S400（0x30D9） | 830 行 | ✅ 2026-11-14 实机：绑定一次过 → 设备页 `13.1 sync`（267B）应答 5 个 out → App 点「测量」`ACTION 10.1` → 7 帧称重全部 `rc>0`、无崩溃。**烧后必调**：`CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192`，默认 4096 会在 spec 解析时栈溢出复位 |
 | [`esp32/wx08zm_gatt`](esp32/wx08zm_gatt) | 驱蚊器 智能版（0x040A） | 944 行 | ⚠️ 编译通过、能回待绑定态；legacy PSK 握手是否被云端接受**尚未真机验证** |
 
 六者骨架同构（`thermo_gatt` 是最干净的那份），换型号只改三处：**PID、spec 属性表、广播对象号**。

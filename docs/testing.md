@@ -230,19 +230,43 @@
 
 > PID `0x30D9`。称重序列 / 13.1 sync 应答直接复用 multi_dev 已实测通过的
 > `scale_s400_*` 实现，抽成单设备工程后**协议层未改一行**。
-> 2026-11-14 编译 0 warning（824 行），**待实机称重验证**。
+> 2026-11-14 实机验收通过（见下），830 行，0 warning。
+
+**2026-11-14 14:1x 实测记录**（MAC `10:00:3B:CE:5C:03`，`_scale7.log`）：
+
+```
+rd 0004 → wr 0010 cmd=A4 → wr 0010 cmd=24(LOGIN) → STD LOGIN COMPLETE
+spec session ready (keys set) / mtu=247
+initial status pushed (weight/time/battery)
+spec req seq=0 pt=5B      ← 版本交换
+spec req seq=1 pt=267B    ← 13.1 sync，应答 outs=5
+spec req seq=2 pt=8B      ← App ACTION 10.1 = 点「测量」
+weigh step 1/7 rc=16 … 7/7 rc=24 → weigh-in done
+0 次 Guru Meditation
+```
+
+**这一步踩了三个坑，都已固化进工程**：
+
+1. **密钥没交给 spec 层** → 7 帧全部 `rc=-1`。`miot_device_set_session_keys()` 原只有
+   `multi_dev` 调过，广播型工程不走 spec 通道所以从未暴露。现由主循环在
+   `s_auth.logged_in` 时补交，断开时 `session_reset`。
+2. **`nimble_host` 栈溢出** → 收到第一条 spec 请求即 `Stack protection fault` +
+   `RTC_SW_CPU_RST` 复位，App 侧表现为「点测量一直重新连接」。默认 4096 不够，
+   已设 `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192`（`sdkconfig.defaults` 有注释）。
+3. 附带：GATT 特征从 8 条补到真机的 **12 条**（补 `0001`/`0016`/`0017`/`0018`，
+   `001B` 加 notify），否则 App 服务发现后走另一套分支，登录完一条 GET 都不发。
 
 | 步骤 | 操作 | 预期 |
 |------|------|------|
-| 14.1 | 烧录后开机 | `host synced … bound=0`，广播名 `MJJ`，FC `70 2A` |
-| 14.2 | 米家添加 | `REGISTER COMPLETE (0x11)` → `bound=1` |
-| 14.3 | 打开设备页 | 串口出现 `spec ACTION siid=13 aiid=1`，应答带 5 个 out；页面不卡死 |
-| 14.4 | 短按 BOOT | `weigh-in start 64.500kg` → `weigh step 1/7…7/7` → `weigh-in done`（250ms 节流） |
-| 14.5 | App 页面 | 体重出数、报告页出体脂率；记录进云端历史 |
+| 14.1 | 烧录后开机 | `host synced … bound=0`，广播名 `MJJ`，FC `70 2A` ✅ |
+| 14.2 | 米家添加 | `REGISTER COMPLETE (0x11)` → `bound=1` ✅ |
+| 14.3 | 打开设备页 | 串口出现 `spec ACTION siid=13 aiid=1`，应答带 5 个 out；页面不卡死 ✅ |
+| 14.4 | 短按 BOOT | `weigh-in start 64.500kg` → `weigh step 1/7…7/7` → `weigh-in done`（250ms 节流） ✅ |
+| 14.5 | App 页面 | 体重出数、报告页出体脂率；记录进云端历史 ✅（用户确认；串口侧 `tx#9` 的 8.2 结果帧 `…645…1794636911` 与 64.5kg 一致） |
 | 14.6 | 再短按两次 | 63.8kg / 65.2kg 两条独立记录（不是覆盖） |
 | 14.7 | 断开手机后短按 | `offline weigh-in … solicited=1 10min`，FC 切 `0x5B` |
-| 14.8 | App 点「测量」 | `App ACTION 10.1` → 4s 后慢节奏 7 帧（1800ms/帧） |
-| 14.9 | 看记录时间 | 应为「编译时间 + 运行时长」，**不能是 1970**（是 1970 就说明 `build_epoch` 没生效） |
+| 14.8 | App 点「测量」 | `App ACTION 10.1` → 4s 后慢节奏 7 帧（1800ms/帧） ✅ |
+| 14.9 | 看记录时间 | 应为「编译时间 + 运行时长」，**不能是 1970**（是 1970 就说明 `build_epoch` 没生效） ✅ 帧里为 `1794636911`（2026-11-14） |
 
 ## 结果汇总表
 
@@ -261,4 +285,4 @@
 | 11 | 温湿度计3 Pro | ✅ 通过 | 2026-11-13 | MJWSD07MMC（**PID 0x9AB9**）：绑定一次过，设备被网关收进列表。**对象号定案为新系列** `0x5C01` 温度 f32 / `0x5C02` 湿度 u8 / `0x601D` CO₂ u16 / `0x4803` 电量 u8；沿用 3 mini 的 `0x4C01/0x4C02` 时「在线但数值全空」，换 `0x5C01/0x5C02` 后立即出数（26.1℃），小爱语音可查 → 广播→网关解密→云端→语音全链路通。同期修掉两个硬 bug：① 网关连不进（`MAX_CONNECTIONS=1`）② App 打开设备页必重启（`MIOT_SPEC_MAX_ARGS=6` 越界）。真机为按键连接模式，App 显示「未连接手机」属正常 |
 | 12 | 小米无线开关（蓝牙版） | ✅ 通过 | 2026-11-04 | 单键 XMWXKG01CM（PID **0x2387** = pdid 9095），复用双键壳事件骨架：对象 `0x4E0C` 单击 / `0x4E0D` 双击 / `0x4E0E` 长按，载荷恒 1（v92）。绑定：`BOND confirmed (token cand=0)` → `LOGIN fallback (shifted reply)`（该型号走 legacy 移位应答）→ 广播已绑定帧；串口实证对象正确发出（`BTN obj 0x4E0C/0D/0E btn=1`）。**自动化触发条件需重启几次米家 + 网关后才出现**，事件上报有延迟（网关轮询周期） |
 | 13 | 无线开关 双键（独立工程） | ✅ 通过（左键）·右键待测 | 2026-11-14 | XMWXKG01YL（PID **0x1949**），`esp32/btn2_adv` 790 行。派生 MAC `10:00:3B:CE:5B:03` + NVS `btn2_1`；米家添加一次过（`REGISTER COMPLETE 0x11`），左键单击 `0x4E0C key=1` / 双击 `0x4E0D key=1` 上云。**教训**：物理 MAC 已被 3 Pro 绑过 → 米家按 MAC 去重，附近设备直接扫不到，必须换 MAC。右键（GPIO3）与长按待测 |
-| 14 | 体脂秤 S400（独立工程） | ⚙️ 编译通过·待实机 | 2026-11-14 | MJTZC01YM（PID **0x30D9**），`esp32/scale_adv` 824 行。称重 7 帧节流与 13.1 sync 应答直接复用 #1 已实测实现；BOOT 短按=上秤、无会话则离线落库 + solicited 10 分钟、App 点「测量」走 4s 慢节奏。待做：绑定 + 一次称重出报告 + 历史记录 |
+| 14 | 体脂秤 S400（独立工程） | ✅ 通过 | 2026-11-14 | MJTZC01YM（PID **0x30D9**），`esp32/scale_adv` 830 行。绑定一次过 → 设备页 `13.1 sync`（267B）应答 5 个 out → App 点「测量」`ACTION 10.1` → 7 帧称重 `rc=16/18/18/83/16/30/24` 全部送达 → 报告出数（64.5kg）。**两个必修坑**：① 忘了 `miot_device_set_session_keys()` → 7 帧全 `rc=-1`；② `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE` 默认 4096 → 收到第一条 spec 请求即栈溢出复位，App 表现为「点测量一直重连」。未测：离线称重（14.7）、再称两次的历史多记录（14.6） |
