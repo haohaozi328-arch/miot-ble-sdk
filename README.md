@@ -203,6 +203,7 @@ void app_main(void) {
 | 32 | 米家恒温电水壶 Pro | `yunmi.kettle.v13` | `0x1809` | spec 直连 | ✅ 17 属性全读 + 档位/时长/水温双向<br>★3.3 官方标 R 但 App 当可写下发，必须注册 RW 并联动水温；水温由传感器回推 | [`kettle_adv`](esp32/kettle_adv) |
 | 33 | 米家智能香氛机-杯托版 | `xiaomi.diffuser.xwczxf` | `0x39E6` | spec 直连 | ✅ 11 属性全读 + 浓度/香型双向<br>★官方标 R 但 App 当可写下发，全部注册 RW；浓度 u16 val=150=5档 | [`diffuser_adv`](esp32/diffuser_adv) |
 | 34 | 小米磁吸散热背夹 | `xiaomi.cooler.r02p` | `0x52AA` | spec 直连 | ✅ 14 属性全读 + 模式/温度/灯效全控<br>★修复 SDK 两坑：I8 编码缺失致温度 `--`；BOOL SET 新格式帧被旧格式分支误判 rc=-4 卡死延时开关 | [`cooler_adv`](esp32/cooler_adv) |
+| 35 | 米家标签打印机 | `xiaomi.printer.label` | `0x34FE` | spec 直连 | ✅ 7 属性 + 3 action；设备页完整渲染（素材广场/打印历史/按键标签）<br>★首个 string 属性设备，on_get/on_set 兜底抓取打印内容；打印图片走私有 BLE 指令未覆盖 | [`printer_label_adv`](esp32/printer_label_adv) |
 
 **入门推荐**：蓝牙温湿度计 2 —— 标准认证、免网关、属性可验证，链路注释最全，最适合当模板改新型号。
 
