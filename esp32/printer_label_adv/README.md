@@ -41,11 +41,30 @@ action 2.1 start / 2.2 continue / 2.3 end：通过 `miot_demo_app_action_hook`
 - 内层命令：`11 <grp> <cmd> <len LE16> <body>`
   - grp01 控制：`1E` 连接握手 / `0E` / `13` 状态 / `19` 校时
   - grp05 打印：`0B` start（宽/长）→ `0D` 位图块（idx,total,≤1800B/块）→ `0C` 提交（more_pages）
-  - 提交后设备回 `21 05 0C 00 00`（print_complete）
+  - 提交后设备回 `21 05 0C 00 00`（准确语义是「提交已应答」，artrix 实机证据；
+    App 另需状态通知里的 flags bit7 翻转判断打印生命周期）
 - 心跳：设备→App `A3 00` 明文帧 + TLV（tag1 buffer LE32、tag2 flags、tag3 电量）
+  - tag1 buffer = 打印队列空闲 RAM，插件流控阈值 >500 才继续发下一块
+  - tag2 flagsA：bit0 盖开 / bit1 缺纸 / bit2 卡纸 / bit3 过热 / **bit7 正在打印**
+  - tag2 flagsB：bit0 刀具 / bit1 字库 / bit2 PSRAM / bit3 纸校准 / bit4-5 关机 / bit6 电池过热
+
+**打印状态机（2026-11-25 二版，对齐 artrix 实机时序）**：
+
+```
+空闲(bit7=0, buffer 16384)
+  → 05/0B    bit7=1「打印中」，buffer 满格
+  → 05/0D ×n buffer 按块占用递减（模拟队列消化，保持 >500）
+  → 05/0C II=1  多页：保持 bit7=1，等下一轮 05/0B
+  → 05/0C II=0  ACK 后保持 bit7=1 一小段（出纸延时，按行数 2~8s）
+  → 到点     bit7=0 回空闲，buffer 复位  ← App 这才算「打印完成」
+```
+
+断连即复位状态机（flags/buffer/定时器全清）。
 
 实测会话时序：App 订阅 5 个 notify → 001F 握手（1E/0E/13/19）→ 05/0B →
 3× 05/0D（1800+1800+1164B）→ 05/0C → 固件解密出完整位图并串口输出 ASCII 预览。
+一版实测：App 显示「传输成功」；约 12s 后 App 重发同任务，推测就是在等
+bit7 翻转的状态通知（二版已补）。
 
 实现见 `main/print_channel.c`（组帧/解密/分发）与 `main/gatt_miot.c`（GATT 表 14 特征值）。
 

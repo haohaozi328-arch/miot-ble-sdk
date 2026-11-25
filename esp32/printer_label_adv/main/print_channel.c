@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 #include "esp_log.h"
+#include "esp_timer.h"
 /* mbedTLS 4.x（IDF v6.0）：aes.h 搬进 private/，同 port 层一样做双路径探测 */
 #if __has_include("mbedtls/private/aes.h")
 #include "mbedtls/private/aes.h"
@@ -46,6 +47,16 @@ static uint16_t s_chunk_idx, s_chunk_total;
 static uint8_t  s_job_width, s_printing;
 static uint32_t s_cmds;
 static uint32_t s_crc_fail, s_aes_fail, s_overflow;
+
+/* ── 打印状态机（artrix 实机时序：提交 → ACK → 状态 bit7=1 printing → 出纸 → bit7=0 空闲）──
+ * flagsA: bit0 盖开 / bit1 缺纸 / bit2 卡纸 / bit3 过热 / bit7 正在打印
+ * flagsB: bit0 刀具故障 / bit1 字库 / bit2 PSRAM / bit3 纸校准 / bit4-5 关机流程 / bit6 电池过热 */
+#define FLAG_PRINTING   0x80
+static uint8_t  s_flags_a, s_flags_b;
+static uint32_t s_buffer_free = 16384;  /* 模拟打印队列空闲 RAM（插件流控阈值 >500） */
+static uint32_t s_pages_done;
+static esp_timer_handle_t s_finish_timer;
+static volatile int s_finishing;        /* 出纸延时进行中 */
 
 static uint16_t rd_le16(const uint8_t *p) { return (uint16_t)(p[0] | (p[1] << 8)); }
 static uint32_t rd_le32(const uint8_t *p)
@@ -104,17 +115,51 @@ static int send_plain(const uint8_t *plain, size_t len)
     return gatt_miot_notify_0020(frame, (uint16_t)(4 + len + 4));
 }
 
-/* 心跳：buffer_free 必须足够大，插件靠它做流控（>500 才继续发下一块） */
+/* 心跳：buffer_free 必须足够大，插件靠它做流控（>500 才继续发下一块）；
+ * tag2 flags：bit7=1 正在打印（artrix 实机：提交后 App 等这个位翻转判断打印生命周期） */
 static void send_heartbeat(void)
 {
-    /* 10 01 1F <len LE16> TLV{tag1: buffer LE32, tag2: flags 4B, tag3: 1B} */
-    static const uint8_t hb[23] = {
+    uint8_t hb[23] = {
         0x10, 0x01, 0x1F, 0x12, 0x00,
-        0x01, 0x04, 0x00, 0x00, 0x40, 0x00, 0x00,   /* tag1: buffer=16384 */
-        0x02, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,   /* tag2: 状态全 0 = 一切正常 */
+        0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,   /* tag1: buffer LE32（下方填） */
+        0x02, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,   /* tag2: flagsA flagsB 0 0 */
         0x03, 0x01, 0x00, 0x20,                     /* tag3: 电量（原始值 32） */
     };
+    wr_le32(&hb[8], (uint16_t)s_buffer_free);
+    hb[14] = s_flags_a;
+    hb[15] = s_flags_b;
     send_plain(hb, sizeof(hb));
+}
+
+/* 出纸延时到点：bit7 清零回空闲、buffer 复位，App 才认为这一页真正打完 */
+static void finish_timer_cb(void *arg)
+{
+    s_finishing = 0;
+    s_flags_a &= (uint8_t)~FLAG_PRINTING;
+    s_buffer_free = 16384;
+    ESP_LOGI(TAG, "=== 第 %u 页出纸完成，状态回空闲（bit7=0） ===", s_pages_done);
+    send_heartbeat();
+}
+
+static void start_finish_timer(void)
+{
+    /* 出纸时长按位图行数估算：真机约 6 行/100ms，clamp 2~8 秒 */
+    uint32_t rows = (uint32_t)(s_raster_len / 12u);
+    uint32_t ms = rows * 100u / 60u;
+    if (ms < 2000) ms = 2000;
+    if (ms > 8000) ms = 8000;
+    s_finishing = 1;
+    const esp_timer_create_args_t args = {
+        .callback = finish_timer_cb, .name = "print_fin",
+    };
+    if (s_finish_timer) {
+        esp_timer_stop(s_finish_timer);
+        esp_timer_start_once(s_finish_timer, (uint64_t)ms * 1000u);
+    } else {
+        esp_timer_create(&args, &s_finish_timer);
+        esp_timer_start_once(s_finish_timer, (uint64_t)ms * 1000u);
+    }
+    ESP_LOGI(TAG, ">>> 状态 printing=1 已上报，%u ms 后回空闲 <<<", (unsigned)ms);
 }
 
 /* 应答帧：21 <grp> <cmd> <len LE16> <body> */
@@ -207,7 +252,10 @@ static void handle_command(const uint8_t *plain, size_t plain_len)
             s_raster_len = 0;
             s_printing = 1;
             s_chunk_idx = s_chunk_total = 0;
-            ESP_LOGI(TAG, ">>> 打印开始：宽 %u 点（%u B/行）长 %u 点 <<<", w, s_job_width, h);
+            s_buffer_free = 16384;
+            s_flags_a |= FLAG_PRINTING;     /* ★bit7=1：进入「正在打印」 */
+            ESP_LOGI(TAG, ">>> 打印开始：第 %u 页，宽 %u 点（%u B/行）长 %u 点 <<<",
+                     s_pages_done + 1, w, s_job_width, h);
             send_ack(grp, cmd);
             send_heartbeat();
             break;
@@ -230,17 +278,29 @@ static void handle_command(const uint8_t *plain, size_t plain_len)
             s_raster_len += rlen;
             ESP_LOGI(TAG, "位图块 %u/%u：%uB（累计 %uB）",
                      idx, total, (unsigned)rlen, (unsigned)s_raster_len);
-            /* 真机不逐块 ACK；心跳里 buffer 充足即可让插件继续 */
+            /* 真机不逐块 ACK；心跳里 buffer 模拟队列占用（出纸消化），保持 >500 流控即可 */
+            s_buffer_free = (s_buffer_free > rlen + 8192u) ? s_buffer_free - rlen : 12288u;
             send_heartbeat();
             break;
         }
-        case 0x0C: {                        /* 提交：<…> II（0=最后一页 1=还有） */
+        case 0x0C: {                        /* 提交：<…> II（0=最后一页 1=还有下一页） */
             uint8_t more = blen >= 9 ? body[8] : 0;
-            ESP_LOGI(TAG, "*** 打印任务提交完毕（more_pages=%u），位图共 %uB / %u 行 ***",
-                     more, (unsigned)s_raster_len, (unsigned)(s_raster_len / 12u));
+            s_pages_done++;
+            ESP_LOGI(TAG, "*** 第 %u 页提交完毕（more_pages=%u），位图 %uB / %u 行 ***",
+                     s_pages_done, more, (unsigned)s_raster_len, (unsigned)(s_raster_len / 12u));
             dump_raster_preview(32);
-            send_ack(grp, cmd);             /* 真机实测：21 05 0C 00 00 = print_complete */
-            s_printing = 0;
+            send_ack(grp, cmd);             /* 真机实测：21 05 0C 00 00（artrix 称「提交已应答」） */
+            if (more) {
+                /* 多页：保持 printing，位图等下一个 05/0B 重置 */
+                ESP_LOGI(TAG, ">>> more_pages=1：保持打印中，等待下一页 <<<");
+                send_heartbeat();
+                s_printing = 1;
+            } else {
+                /* 单页/末页：保持 bit7=1 一小段（模拟出纸），到点回空闲 */
+                send_heartbeat();
+                start_finish_timer();
+                s_printing = 0;
+            }
             break;
         }
         default:
@@ -351,6 +411,11 @@ void print_channel_reset(void)
     s_rx_len = 0;
     s_raster_len = 0;
     s_printing = 0;
+    s_flags_a = s_flags_b = 0;
+    s_buffer_free = 16384;
+    s_pages_done = 0;
+    s_finishing = 0;
+    if (s_finish_timer) esp_timer_stop(s_finish_timer);
 }
 
 uint32_t print_channel_cmd_count(void) { return s_cmds; }
