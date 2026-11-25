@@ -31,3 +31,6 @@ void print_channel_reset(void);
 
 /** 调试用：已完整解出的命令帧计数。 */
 uint32_t print_channel_cmd_count(void);
+
+/** 按键打印（模拟真机物理键双击）：输出已下载的自定义标签模板位图预览。 */
+void print_channel_btn_print(void);

@@ -48,6 +48,15 @@ static uint8_t  s_job_width, s_printing;
 static uint32_t s_cmds;
 static uint32_t s_crc_fail, s_aes_fail, s_overflow;
 
+/* ── 按键标签模板（App「替换」经 grp02 RAM 下载推到设备，按键打印=脱机打这份内容）──
+ * 实测（2026-11-25）：02/01 body 25B：
+ *   [8..11]=total_len LE32(4764) [18..19]=宽 LE16(96点) [23..24]=标签长 LE16(397点)
+ * 02/03 body：[0..1]=idx [2..3]=块字节数 [4..7]=偏移 LE32 [8..]=位图数据（块≤1792B）
+ * 位图格式与 05/0D 打印位图一致：1bpp MSB=左，12B/行（96 点宽） */
+static uint8_t  s_tpl[RASTER_CAP];
+static size_t   s_tpl_len;
+static uint16_t s_tpl_w_dots, s_tpl_h_dots;
+
 /* ── 打印状态机（artrix 实机时序：提交 → ACK → 状态 bit7=1 printing → 出纸 → bit7=0 空闲）──
  * flagsA: bit0 盖开 / bit1 缺纸 / bit2 卡纸 / bit3 过热 / bit7 正在打印
  * flagsB: bit0 刀具故障 / bit1 字库 / bit2 PSRAM / bit3 纸校准 / bit4-5 关机流程 / bit6 电池过热 */
@@ -310,26 +319,35 @@ static void handle_command(const uint8_t *plain, size_t plain_len)
         }
         break;
 
-    case 0x02:                              /* RAM 下载（资源/模板） */
+    case 0x02:                              /* RAM 下载（资源/模板，实测=按键标签「替换」内容） */
         switch (cmd) {
         case 0x01:
-            ESP_LOGI(TAG, "下载开始（总长 %uB）", blen >= 13 ? (unsigned)rd_le32(&body[7]) : 0);
-            s_raster_len = 0;
+            if (blen >= 25) {
+                s_tpl_w_dots = rd_le16(&body[18]);
+                s_tpl_h_dots = rd_le16(&body[23]);
+                ESP_LOGI(TAG, "下载开始：模板 %u 点宽 × %u 点长（共 %uB）",
+                         s_tpl_w_dots, s_tpl_h_dots, (unsigned)rd_le32(&body[8]));
+            } else {
+                ESP_LOGI(TAG, "下载开始（%uB）", blen);
+            }
+            s_tpl_len = 0;
             send_ack(grp, cmd);
             break;
         case 0x03: {
             if (blen < 10) break;
             size_t clen = rd_le16(&body[2]);
-            if (s_raster_len + clen > RASTER_CAP) { s_overflow++; break; }
-            memcpy(&s_raster[s_raster_len], &body[10], clen);
-            s_raster_len += clen;
+            if (s_tpl_len + clen > RASTER_CAP) { s_overflow++; break; }
+            /* 数据在 body[8]（idx 2B + 块字节数 2B + 偏移 LE32 4B） */
+            memcpy(&s_tpl[s_tpl_len], &body[8], clen);
+            s_tpl_len += clen;
             ESP_LOGI(TAG, "下载块 idx=%u：%uB（累计 %uB）",
-                     rd_le16(&body[0]), (unsigned)clen, (unsigned)s_raster_len);
+                     rd_le16(&body[0]), (unsigned)clen, (unsigned)s_tpl_len);
             send_heartbeat();
             break;
         }
         case 0x02:
-            ESP_LOGI(TAG, "*** 下载完成：%uB ***", (unsigned)s_raster_len);
+            ESP_LOGI(TAG, "*** 模板下载完成：%uB（%u 点宽 × %u 点长）——已存为按键标签内容 ***",
+                     (unsigned)s_tpl_len, s_tpl_w_dots, s_tpl_h_dots);
             send_ack(grp, cmd);
             break;
         default:
@@ -404,6 +422,26 @@ void print_channel_on_rx(const uint8_t *data, size_t len)
     while (s_rx_len && (s_rx[0] != 0xA3)) {
         memmove(s_rx, &s_rx[1], --s_rx_len);
     }
+}
+
+/* ---------------- 按键打印：模拟真机物理键，脱机打印已下载的自定义标签 ---------------- */
+void print_channel_btn_print(void)
+{
+    if (s_tpl_len == 0) {
+        ESP_LOGW(TAG, "按键打印：无模板（先在 App「按键标签→替换」下发）");
+        return;
+    }
+    ESP_LOGW(TAG, ">>> 按键打印（双击）：自定义标签 %u 点宽 × %u 点长，%uB <<<",
+             s_tpl_w_dots, s_tpl_h_dots, (unsigned)s_tpl_len);
+    /* 借打印预览通道输出模板位图 */
+    uint8_t saved_w = s_job_width;
+    size_t saved_len = s_raster_len;
+    memcpy(s_raster, s_tpl, s_tpl_len);
+    s_job_width = (uint8_t)(s_tpl_w_dots / 8u);
+    s_raster_len = s_tpl_len;
+    dump_raster_preview(24);
+    s_job_width = saved_w;
+    s_raster_len = saved_len;
 }
 
 void print_channel_reset(void)

@@ -28,6 +28,7 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "print_channel.h"
 #include "esp_mac.h"
 #include "esp_random.h"
 #include "esp_timer.h"
@@ -380,9 +381,21 @@ static void btn_task(void *arg)
                 }
             }
             if (ms >= 60) {
-                v_state = v_state ? 0 : 1;
-                s_dirty_siid = 2; s_dirty_piid = 1;
-                ESP_LOGW(TAG, ">>> 按键：state=%u", v_state);
+                /* 等最多 600ms 看有没有第二按：双击 = 按键打印（真机「双击按键打印自定义标签」） */
+                int dbl = 0;
+                for (int w = 0; w < 600; w += 20) {
+                    vTaskDelay(pdMS_TO_TICKS(20));
+                    if (gpio_get_level(BOOT_PIN) == 0) { dbl = 1; break; }
+                }
+                if (dbl) {
+                    while (gpio_get_level(BOOT_PIN) == 0) vTaskDelay(pdMS_TO_TICKS(20));
+                    ESP_LOGW(TAG, ">>> BOOT 双击 → 按键打印自定义标签 <<<");
+                    print_channel_btn_print();
+                } else {
+                    v_state = v_state ? 0 : 1;
+                    s_dirty_siid = 2; s_dirty_piid = 1;
+                    ESP_LOGW(TAG, ">>> 按键：state=%u", v_state);
+                }
             }
         }
         vTaskDelay(pdMS_TO_TICKS(30));
