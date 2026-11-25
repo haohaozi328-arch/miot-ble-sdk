@@ -1,15 +1,17 @@
 # 米家标签打印机 可绑定固件 —— ESP32-C3
 
-**可以直接编译烧录、被米家 App 绑定、设备页完整渲染的固件。**
+**可以直接编译烧录、被米家 App 绑定、设备页完整渲染、真实打印任务端到端接收的固件。**
 2026-11-24 实测：米家「添加设备」发现「米家标签打印机」→ 绑定 `REGISTER COMPLETE 0x11`
 → 设备页完整渲染（素材广场/消息管理/我的标签/打印历史/按键标签）。
+2026-11-25 实测：米家 App 编辑标签点打印 → **私有打印通道全链路打通**，
+4764B 位图（96 点宽 × 397 行）加密下发、固件解密还原出用户手绘内容，App 显示「传输成功」。
 
 - 目标芯片：ESP32-C3（USB-Serial/JTAG）
 - 模拟型号：米家标签打印机 `xiaomi.printer.label`，PID **0x34FE**（pdid 13502）
   - 官方产品库 `resolve_type=3` 广播可识别（米家自家）
   - spec：`urn:miot-spec-v2:device:printer:0000A060:xiaomi-label:1`（7 属性 + 3 action）
 - 通道：MiBeacon V5 加密广播（4 帧轮播 state/paper/fault/battery → 网关）
-  + 0xFE95 GATT（手机设备页，12 特征值）
+  + 0xFE95 GATT（手机设备页，14 特征值，含打印通道 001F/0020）
 
 ## 属性与控制
 
@@ -27,15 +29,25 @@
 action 2.1 start / 2.2 continue / 2.3 end：通过 `miot_demo_app_action_hook`
 抓 App 打印动作，start→state=1、end→state=2 并回推。
 
-## ★关于"BLE 传图片/打印内容"
+## ★私有打印通道（已打通，2026-11-25 实测）
 
-标签打印机的**打印内容不走标准 spec 属性**：
-- `source-material`(2.2) 是状态描述字符串，不是图片数据入口；
-- 真实打印流程 = App 从云端 HTTP 拉素材 → 转成私有打印指令 → 走私有 BLE 通道下发，
-  需要逆向 App 的打印指令生成逻辑（独立课题，本固件未覆盖）。
+标签打印机的**打印内容不走标准 spec 属性**，`source-material`(2.2) 只是状态描述字符串。
+真实打印走 0xFE95 服务下的私有 GATT 通道 + 私有二进制协议，协议栈如下：
 
-本工程已实现 string 属性的 on_get/on_set 兜底，若 App 通过标准 SET 2.2 下发内容，
-固件会完整抓取并打印到串口（`App set 2.2 source-material len=N data=...`）。
+- 通道：`001F` Write-NoRsp（App→设备）+ `0020` Notify（设备→App）
+- 外层帧：`A3 20 <len LE16> <AES-128-CBC 密文> <CRC32 LE>`
+  - AES-128-CBC：KEY `99B829436CDD5647AADB8816F73E8644`，IV `0001020F3CF899ABABCD25318DF446B1`，零填充
+  - CRC32：zlib 多项式表算法，初值 `0x76953521`（错则被设备静默丢弃）
+- 内层命令：`11 <grp> <cmd> <len LE16> <body>`
+  - grp01 控制：`1E` 连接握手 / `0E` / `13` 状态 / `19` 校时
+  - grp05 打印：`0B` start（宽/长）→ `0D` 位图块（idx,total,≤1800B/块）→ `0C` 提交（more_pages）
+  - 提交后设备回 `21 05 0C 00 00`（print_complete）
+- 心跳：设备→App `A3 00` 明文帧 + TLV（tag1 buffer LE32、tag2 flags、tag3 电量）
+
+实测会话时序：App 订阅 5 个 notify → 001F 握手（1E/0E/13/19）→ 05/0B →
+3× 05/0D（1800+1800+1164B）→ 05/0C → 固件解密出完整位图并串口输出 ASCII 预览。
+
+实现见 `main/print_channel.c`（组帧/解密/分发）与 `main/gatt_miot.c`（GATT 表 14 特征值）。
 
 ## 编译 / 烧录
 
