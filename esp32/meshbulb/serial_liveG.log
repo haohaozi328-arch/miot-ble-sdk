@@ -1,0 +1,235 @@
+
+===== capture start 13:29:05 =====
+[reset pulse sent]
+I (130) esp_image: segment 4: paddr=000abab8 vaddr=40380b20 sizeESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (24) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (26) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1c838h (116792) map
+I (46) esp_image: segment 1: paddr=0002c860 vaddr=3fc91a00 size=02c90h ( 11408) load
+I (48) esp_image: segment 2: paddr=0002f4f8 vaddr=40380000 size=00b20h (  2848) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7ba90h (506512) map
+I (130) esp_image: segment 4: paddr=000abab8 vaddr=40380b20 size=10dd8h ( 69080) load
+I (143) esp_image: segment 5: paddr=000bc898 vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (149) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (158) app_init: App version:      8089566-dirty
+I (158) app_init: Compile time:     Nov 16 2026 14:19:56
+I (158) app_init: ELF file SHA256:  d356e97c9...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (159) heap_init: At 3FC98D80 len 00027280 (156 KiB): RAM
+I (159) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (343) BULB: ECDH prepare 182ms
+I (343) BLE_INIT: BT controller compile version [1bb2f50]
+I (343) BLE_INIT: Using main XTAL as clock source
+I (343) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (393) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)
+I (403) MIOT-GATT: 0xFE95 service registered (0004/0010/0013/0019/001A/001B/0017/0018), ver=9.9.9_9999
+I (403) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (403) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (413) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (413) MIOT-GATT: handles: 0004=16 0010=18 0013=21 0019=23 001A=26 001B=29 0017=31 0018=34
+I (963) MIOT-GATT: connected conn=1 mtu=23
+I (963) BULB: phone connected -> adv stopped
+I (1753) BULB: subscribe attr=23 (other) notify=1
+I (1793) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (1793) MIOT-GATT:   om not empty: pre=1B, dropping
+I (1793) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (5543) BULB: subscribe attr=23 (other) notify=0
+I (5543) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (5543) BULB: disconnected reason=0x213 -> adv resumed
+I (8133) MIOT-GATT: connected conn=1 mtu=23
+I (8133) BULB: phone connected -> adv stopped
+I (8923) BULB: subscribe attr=23 (other) notify=1
+I (8953) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (8953) MIOT-GATT:   om not empty: pre=1B, dropping
+I (8953) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (10643) BULB: subscribe attr=23 (other) notify=0
+I (10643) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (10643) BULB: disconnected reason=0x213 -> adv resumed
+I (13233) MIOT-GATT: connected conn=1 mtu=23
+I (13233) BULB: phone connected -> adv stopped
+I (14033) BULB: subscribe attr=23 (other) notify=1
+I (14063) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (14063) MIOT-GATT:   om not empty: pre=1B, dropping
+I (14063) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (15683) BULB: subscribe attr=23 (other) notify=0
+I (15683) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (15683) BULB: disconnected reason=0x213 -> adv resumed
+I (18273) MIOT-GATT: connected conn=1 mtu=23
+I (18273) BULB: phone connected -> adv stopped
+I (19063) BULB: subscribe attr=23 (other) notify=1
+I (19103) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (19103) MIOT-GATT:   om not empty: pre=1B, dropping
+I (19103) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (20753) BULB: subscribe attr=23 (other) notify=0
+I (20753) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (20753) BULB: disconnected reason=0x213 -> adv resumed
+I (23853) MIOT-GATT: connected conn=1 mtu=23
+I (23853) BULB: phone connected -> adv stopped
+I (24633) BULB: subscribe attr=23 (other) notify=1
+I (24673) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (24683) MIOT-GATT:   om not empty: pre=1B, dropping
+I (24683) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (25813) BULB: subscribe attr=23 (other) notify=0
+I (25823) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (25823) BULB: disconnected reason=0x213 -> adv resumed
+I (28443) MIOT-GATT: connected conn=1 mtu=23
+I (28443) BULB: phone connected -> adv stopped
+I (29263) BULB: subscribe attr=23 (other) notify=1
+I (29293) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (29303) MIOT-GATT:   om not empty: pre=1B, dropping
+I (29303) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (30883) BULB: subscribe attr=23 (other) notify=0
+I (30893) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (30893) BULB: disconnected reason=0x213 -> adv resumed
+I (33963) MIOT-GATT: connected conn=1 mtu=23
+I (33963) BULB: phone connected -> adv stopped
+I (34753) BULB: subscribe attr=23 (other) notify=1
+I (34783) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (34783) MIOT-GATT:   om not empty: pre=1B, dropping
+I (34783) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (35983) BULB: subscribe attr=23 (other) notify=0
+I (35993) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (35993) BULB: disconnected reason=0x213 -> adv resumed
+I (38583) MIOT-GATT: connected conn=1 mtu=23
+I (38583) BULB: phone connected -> adv stopped
+I (39373) BULB: subscribe attr=23 (other) notify=1
+I (39413) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (39413) MIOT-GATT:   om not empty: pre=1B, dropping
+I (39413) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (41033) BULB: subscribe attr=23 (other) notify=0
+I (41033) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (41033) BULB: disconnected reason=0x213 -> adv resumed
+I (43623) MIOT-GATT: connected conn=1 mtu=23
+I (43623) BULB: phone connected -> adv stopped
+I (44423) BULB: subscribe attr=23 (other) notify=1
+I (44453) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (44453) MIOT-GATT:   om not empty: pre=1B, dropping
+I (44453) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (46133) BULB: subscribe attr=23 (other) notify=0
+I (46133) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (46133) BULB: disconnected reason=0x213 -> adv resumed
+I (48753) MIOT-GATT: connected conn=1 mtu=23
+I (48753) BULB: phone connected -> adv stopped
+I (49543) BULB: subscribe attr=23 (other) notify=1
+I (49573) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (49573) MIOT-GATT:   om not empty: pre=1B, dropping
+I (49573) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (51203) BULB: subscribe attr=23 (other) notify=0
+I (51203) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (51203) BULB: disconnected reason=0x213 -> adv resumed
+I (53793) MIOT-GATT: connected conn=1 mtu=23
+I (53793) BULB: phone connected -> adv stopped
+I (54583) BULB: subscribe attr=23 (other) notify=1
+I (54623) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (54623) MIOT-GATT:   om not empty: pre=1B, dropping
+I (54623) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (56273) BULB: subscribe attr=23 (other) notify=0
+I (56273) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (56273) BULB: disconnected reason=0x213 -> adv resumed
+I (58833) MIOT-GATT: connected conn=1 mtu=23
+I (58833) BULB: phone connected -> adv stopped
+I (59653) BULB: subscribe attr=23 (other) notify=1
+I (59683) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (59683) MIOT-GATT:   om not empty: pre=1B, dropping
+I (59683) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (61343) BULB: subscribe attr=23 (other) notify=0
+I (61343) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (61343) BULB: disconnected reason=0x213 -> adv resumed
+I (64443) MIOT-GATT: connected conn=1 mtu=23
+I (64443) BULB: phone connected -> adv stopped
+I (65213) BULB: subscribe attr=23 (other) notify=1
+I (65243) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (65243) MIOT-GATT:   om not empty: pre=1B, dropping
+I (65243) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (66413) BULB: subscribe attr=23 (other) notify=0
+I (66413) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (66413) BULB: disconnected reason=0x213 -> adv resumed
+I (69003) MIOT-GATT: connected conn=1 mtu=23
+I (69003) BULB: phone connected -> adv stopped
+I (69783) BULB: subscribe attr=23 (other) notify=1
+I (69813) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (69813) MIOT-GATT:   om not empty: pre=1B, dropping
+I (69813) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (71513) BULB: subscribe attr=23 (other) notify=0
+I (71513) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (71513) BULB: disconnected reason=0x213 -> adv resumed
+I (74103) MIOT-GATT: connected conn=1 mtu=23
+I (74103) BULB: phone connected -> adv stopped
+I (74883) BULB: subscribe attr=23 (other) notify=1
+I (74933) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (74933) MIOT-GATT:   om not empty: pre=1B, dropping
+I (74933) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (76553) BULB: subscribe attr=23 (other) notify=0
+I (76553) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (76553) BULB: disconnected reason=0x213 -> adv resumed
+I (79143) MIOT-GATT: connected conn=1 mtu=23
+I (79143) BULB: phone connected -> adv stopped
+I (79923) BULB: subscribe attr=23 (other) notify=1
+I (79953) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (79953) MIOT-GATT:   om not empty: pre=1B, dropping
+I (79953) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (81653) BULB: subscribe attr=23 (other) notify=0
+I (81653) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (81653) BULB: disconnected reason=0x213 -> adv resumed
+I (87273) MIOT-GATT: connected conn=1 mtu=23
+I (87273) BULB: phone connected -> adv stopped
+I (88053) BULB: subscribe attr=23 (other) notify=1
+I (88083) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (88083) MIOT-GATT:   om not empty: pre=1B, dropping
+I (88083) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B
+I (118133) BULB: subscribe attr=23 (other) notify=0
+I (118133) MIOT-GATT: disconnected (wr 0010=0 0019=0 001A=0 001B=0)
+I (118133) BULB: disconnected reason=0x213 -> adv resumed
+I (121713) MIOT-GATT: connected conn=1 mtu=23
+I (121713) BULB: phone connected -> adv stopped
+I (122503) BULB: subscribe attr=23 (other) notify=1
+I (122533) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+W (122533) MIOT-GATT:   om not empty: pre=1B, dropping
+I (122533) MIOT-GATT:   -> ver '9.9.9_9999' off=0 send=20B rc=0 om=20B

@@ -1,0 +1,1058 @@
+I (384279) MIOT-GATT: connected conn=1 mtu=23
+I (384279) BULB: phone connected -> adv stopped
+I (384999) BULB: subscribe attr=23 (other) notify=1
+I (385059) MIOT-GATT: rd 0004
+I (385119) MIOT-GATT: mtu -> 247
+I (385209) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (385299) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (385389) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] device info sent (did=0B, 4B payload)
+I (385479) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (385509) MIOT-GATT: wr 0010 #2 len=4 cmd=15
+[miot-auth] device info sent (did=0B, 4B payload)
+[miot-auth] 0x15 #1: device info resent (occ 语义，等 App 出公钥)
+I (385539) BULB: subscribe attr=18 (other) notify=1
+I (385599) MIOT-GATT: wr 0019 #4 len=6 cmd=00
+I (385629) MIOT-GATT: wr 0010 #3 len=4 cmd=A2
+[miot-auth] CMD_REGISTER(0xA2) -> register flow
+[miot-auth] device info sent (did=0B, 4B payload)
+I (385689) MIOT-GATT: wr 0019 #5 len=20 cmd=01
+I (385689) MIOT-GATT: wr 0019 #6 len=20 cmd=02
+I (385689) MIOT-GATT: wr 0019 #7 len=20 cmd=03
+I (385689) MIOT-GATT: wr 0019 #8 len=12 cmd=04
+[miot-auth] ag tx START pkg=3 cnt=4 (64B)
+[miot-auth] ag tx parcel done 4 frames
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] REGISTER: pubkey + devRandom + devConfirm sent
+I (385959) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (385959) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (386319) MIOT-GATT: wr 0010 #4 len=4 cmd=13
+I (386319) BULB: identity saved (ok), did[0..3]=00 00 00 00
+[miot-auth] *** STD REGISTER(0x0010): bind result OK (bound=1) ***
+I (386329) BULB: *** bind state -> 1 ***
+I (386349) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (386439) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (386439) MIOT-GATT: wr 0019 #13 len=20 cmd=02
+I (386439) MIOT-GATT: wr 0019 #14 len=20 cmd=03
+I (386469) MIOT-GATT: wr 0019 #15 len=20 cmd=04
+I (386469) MIOT-GATT: wr 0019 #16 len=20 cmd=05
+I (386469) MIOT-GATT: wr 0019 #17 len=4 cmd=06
+I (386479) BULB: identity saved (ok), did[0..3]=00 62 6C 74
+[miot-auth] REGISTER: did stored (utc=1795013285) bound=1
+I (386559) MIOT-GATT: wr 0019 #18 len=6 cmd=00
+I (386649) MIOT-GATT: wr 0019 #19 len=20 cmd=01
+I (386649) MIOT-GATT: wr 0019 #20 len=20 cmd=02
+I (386649) MIOT-GATT: wr 0019 #21 len=20 cmd=03
+I (386649) MIOT-GATT: wr 0019 #22 len=20 cmd=04
+I (386649) MIOT-GATT: wr 0019 #23 len=20 cmd=05
+I (386649) MIOT-GATT: wr 0019 #24 len=20 cmd=06
+I (386649) MIOT-GATT: wr 0019 #25 len=20 cmd=07
+I (386679) MIOT-GATT: wr 0019 #26 len=20 cmd=08
+I (386679) MIOT-GATT: wr 0019 #27 len=20 cmd=09
+I (386679) MIOT-GATT: wr 0019 #28 len=20 cmd=0A
+I (386709) MIOT-GATT: wr 0019 #29 len=20 cmd=0B
+I (386709) MIOT-GATT: wr 0019 #30 len=20 cmd=0C
+I (386709) MIOT-GATT: wr 0019 #31 len=20 cmd=0D
+I (386709) MIOT-GATT: wr 0019 #32 len=20 cmd=0E
+I (386709) MIOT-GATT: wr 0019 #33 len=20 cmd=0F
+I (386709) MIOT-GATT: wr 0019 #34 len=20 cmd=10
+I (386719) MIOT-GATT: wr 0019 #35 len=20 cmd=11
+I (386739) MIOT-GATT: wr 0019 #36 len=20 cmd=12
+I (386739) MIOT-GATT: wr 0019 #37 len=20 cmd=13
+I (386739) MIOT-GATT: wr 0019 #38 len=20 cmd=14
+I (386739) MIOT-GATT: wr 0019 #39 len=20 cmd=15
+I (386739) MIOT-GATT: wr 0019 #40 len=3 cmd=16
+[miot-auth] REGISTER COMPLETE (result 0x11 on 0x0010)
+I (386889) MIOT-GATT: rd 0004
+I (388179) BULB: subscribe attr=18 (other) notify=0
+I (388179) BULB: subscribe attr=23 (other) notify=0
+I (388179) MIOT-GATT: disconnected (wr 0010=4 0019=40 001A=0 001B=0)
+I (388179) BULB: disconnected reason=0x213 -> adv resumed
+I (729009) MIOT-GATT: connected conn=1 mtu=23
+I (729019) BULB: phone connected -> adv stopped
+I (729719) BULB: subscribe attr=23 (other) notify=1
+I (729759) MIOT-GATT: rd 0004
+I (729819) MIOT-GATT: mtu -> 247
+I (729879) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (729969) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (730029) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (730119) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (730119) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (730149) BULB: subscribe attr=18 (other) notify=1
+I (730209) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (730239) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (730299) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (730359) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (730389) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (730539) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (730539) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (730539) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (730629) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (730629) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (730659) miot: spec session ready (keys set)
+I (730659) BULB: *** session established: spec channel ready ***
+I (730719) MIOT-GATT: rd 0004
+I (731979) BULB: subscribe attr=18 (other) notify=0
+I (731979) BULB: subscribe attr=23 (other) notify=0
+I (731979) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (731979) BULB: disconnected reason=0x213 -> adv resumed
+I (735069) MIOT-GATT: connected conn=1 mtu=23
+I (735079) BULB: phone connected -> adv stopped
+I (735759) BULB: subscribe attr=23 (other) notify=1
+I (735789) MIOT-GATT: rd 0004
+I (735819) MIOT-GATT: mtu -> 247
+I (735849) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (735909) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (735999) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (737019) BULB: subscribe attr=23 (other) notify=0
+I (737019) MIOT-GATT: disconnected (wr 0010=1 0019=2 001A=0 001B=0)
+I (737019) BULB: disconnected reason=0x213 -> adv resumed
+I (740109) MIOT-GATT: connected conn=1 mtu=23
+I (740119) BULB: phone connected -> adv stopped
+I (740769) BULB: subscribe attr=23 (other) notify=1
+I (740799) MIOT-GATT: rd 0004
+I (740859) MIOT-GATT: mtu -> 247
+I (740919) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (741009) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (741099) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (742119) BULB: subscribe attr=23 (other) notify=0
+I (742119) MIOT-GATT: disconnected (wr 0010=1 0019=2 001A=0 001B=0)
+I (742129) BULB: disconnected reason=0x213 -> adv resumed
+I (744729) MIOT-GATT: connected conn=1 mtu=23
+I (744739) BULB: phone connected -> adv stopped
+I (745409) BULB: subscribe attr=23 (other) notify=1
+I (745439) MIOT-GATT: rd 0004
+I (745479) MIOT-GATT: mtu -> 247
+I (745539) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (745629) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (745719) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (745809) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (745809) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (745809) BULB: subscribe attr=18 (other) notify=1
+I (745869) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (745899) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (745989) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (746079) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (746079) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (747189) BULB: subscribe attr=18 (other) notify=0
+I (747189) BULB: subscribe attr=23 (other) notify=0
+I (747189) MIOT-GATT: disconnected (wr 0010=2 0019=8 001A=0 001B=0)
+I (747199) BULB: disconnected reason=0x213 -> adv resumed
+I (753279) MIOT-GATT: connected conn=1 mtu=23
+I (753289) BULB: phone connected -> adv stopped
+I (753949) BULB: subscribe attr=23 (other) notify=1
+I (753979) MIOT-GATT: rd 0004
+I (754029) MIOT-GATT: mtu -> 247
+I (754089) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (754179) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (754269) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (754359) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (754359) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (754389) BULB: subscribe attr=18 (other) notify=1
+I (754449) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (754479) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (754539) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (754629) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (754629) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (754779) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (754779) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (754779) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (754869) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (754869) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (754919) miot: spec session ready (keys set)
+I (754919) BULB: *** session established: spec channel ready ***
+I (754959) MIOT-GATT: rd 0004
+I (756189) BULB: subscribe attr=18 (other) notify=0
+I (756189) BULB: subscribe attr=23 (other) notify=0
+I (756189) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (756199) BULB: disconnected reason=0x213 -> adv resumed
+I (759369) MIOT-GATT: connected conn=1 mtu=23
+I (759379) BULB: phone connected -> adv stopped
+I (760039) BULB: subscribe attr=23 (other) notify=1
+I (760069) MIOT-GATT: rd 0004
+I (760119) MIOT-GATT: mtu -> 247
+I (760179) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (760239) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (761259) BULB: subscribe attr=23 (other) notify=0
+I (761259) MIOT-GATT: disconnected (wr 0010=1 0019=1 001A=0 001B=0)
+I (761259) BULB: disconnected reason=0x213 -> adv resumed
+I (932449) MIOT-GATT: connected conn=1 mtu=23
+I (932449) BULB: phone connected -> adv stopped
+I (933119) BULB: subscribe attr=23 (other) notify=1
+I (933139) MIOT-GATT: rd 0004
+I (933189) MIOT-GATT: mtu -> 247
+I (933249) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (933339) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (933399) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (933489) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (933489) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (933549) BULB: subscribe attr=18 (other) notify=1
+I (933609) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (933639) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (933729) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (933819) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (933819) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (933939) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (933969) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (933969) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (934059) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (934059) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (934089) miot: spec session ready (keys set)
+I (934089) BULB: *** session established: spec channel ready ***
+I (934149) MIOT-GATT: rd 0004
+I (935349) BULB: subscribe attr=18 (other) notify=0
+I (935349) BULB: subscribe attr=23 (other) notify=0
+I (935349) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (935359) BULB: disconnected reason=0x213 -> adv resumed
+I (936949) MIOT-GATT: connected conn=1 mtu=23
+I (936949) BULB: phone connected -> adv stopped
+I (937619) BULB: subscribe attr=23 (other) notify=1
+I (937639) MIOT-GATT: rd 0004
+I (937659) MIOT-GATT: mtu -> 247
+I (937689) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (937719) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (937779) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (937869) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (937869) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (937929) BULB: subscribe attr=18 (other) notify=1
+I (937989) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (938019) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (939039) BULB: subscribe attr=18 (other) notify=0
+I (939039) BULB: subscribe attr=23 (other) notify=0
+I (939039) MIOT-GATT: disconnected (wr 0010=2 0019=5 001A=0 001B=0)
+I (939039) BULB: disconnected reason=0x213 -> adv resumed
+I (1242349) MIOT-GATT: connected conn=1 mtu=23
+I (1242349) BULB: phone connected -> adv stopped
+I (1243069) BULB: subscribe attr=23 (other) notify=1
+I (1243119) MIOT-GATT: rd 0004
+I (1243179) MIOT-GATT: mtu -> 247
+I (1243239) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1243329) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1243419) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1243509) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1243539) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (1243539) BULB: subscribe attr=18 (other) notify=1
+I (1243629) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1243719) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (1243839) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1243959) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (1243989) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1244079) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (1244109) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (1244139) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (1244229) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (1244229) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (1244249) miot: spec session ready (keys set)
+I (1244249) BULB: *** session established: spec channel ready ***
+I (1244319) MIOT-GATT: rd 0004
+I (1245519) BULB: subscribe attr=18 (other) notify=0
+I (1245519) BULB: subscribe attr=23 (other) notify=0
+I (1245519) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (1245519) BULB: disconnected reason=0x213 -> adv resumed
+I (1249099) MIOT-GATT: connected conn=1 mtu=23
+I (1249099) BULB: phone connected -> adv stopped
+I (1249809) BULB: subscribe attr=23 (other) notify=1
+I (1249839) MIOT-GATT: rd 0004
+I (1249899) MIOT-GATT: mtu -> 247
+I (1249959) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1250049) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1250139) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1250199) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1250259) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (1250259) BULB: subscribe attr=18 (other) notify=1
+I (1250319) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1250349) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (1250409) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1250499) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (1250499) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1250649) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (1250709) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (1250709) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (1250799) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (1250799) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (1250849) miot: spec session ready (keys set)
+I (1250849) BULB: *** session established: spec channel ready ***
+I (1250889) MIOT-GATT: rd 0004
+I (1252089) BULB: subscribe attr=18 (other) notify=0
+I (1252089) BULB: subscribe attr=23 (other) notify=0
+I (1252089) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (1252099) BULB: disconnected reason=0x213 -> adv resumed
+I (1255189) MIOT-GATT: connected conn=1 mtu=23
+I (1255189) BULB: phone connected -> adv stopped
+I (1255899) BULB: subscribe attr=23 (other) notify=1
+I (1255929) MIOT-GATT: rd 0004
+I (1255989) MIOT-GATT: mtu -> 247
+I (1256049) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1256139) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1257159) BULB: subscribe attr=23 (other) notify=0
+I (1257159) MIOT-GATT: disconnected (wr 0010=1 0019=1 001A=0 001B=0)
+I (1257169) BULB: disconnected reason=0x213 -> adv resumed
+I (1260259) MIOT-GATT: connected conn=1 mtu=23
+I (1260259) BULB: phone connected -> adv stopped
+I (1260969) BULB: subscribe attr=23 (other) notify=1
+I (1260989) BULB: subscribe attr=18 (other) notify=1
+I (1261029) MIOT-GATT: rd 0004
+I (1261089) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1261119) MIOT-GATT: mtu -> 247
+I (1261179) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1261209) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1262259) BULB: subscribe attr=18 (other) notify=0
+I (1262259) BULB: subscribe attr=23 (other) notify=0
+I (1262259) MIOT-GATT: disconnected (wr 0010=2 0019=1 001A=0 001B=0)
+I (1262269) BULB: disconnected reason=0x213 -> adv resumed
+I (1265359) MIOT-GATT: connected conn=1 mtu=23
+I (1265359) BULB: phone connected -> adv stopped
+I (1266079) BULB: subscribe attr=23 (other) notify=1
+I (1266109) BULB: subscribe attr=18 (other) notify=1
+I (1266159) MIOT-GATT: rd 0004
+I (1266219) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1266249) MIOT-GATT: mtu -> 247
+I (1266309) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1267959) BULB: subscribe attr=18 (other) notify=0
+I (1267959) BULB: subscribe attr=23 (other) notify=0
+I (1267959) MIOT-GATT: disconnected (wr 0010=2 0019=0 001A=0 001B=0)
+I (1267969) BULB: disconnected reason=0x213 -> adv resumed
+I (1271059) MIOT-GATT: connected conn=1 mtu=23
+I (1271069) BULB: phone connected -> adv stopped
+I (1271729) BULB: subscribe attr=18 (other) notify=1
+I (1271759) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1271769) BULB: subscribe attr=23 (other) notify=1
+I (1271799) MIOT-GATT: rd 0004
+I (1271859) MIOT-GATT: mtu -> 247
+I (1271919) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1273029) BULB: subscribe attr=18 (other) notify=0
+I (1273029) BULB: subscribe attr=23 (other) notify=0
+I (1273029) MIOT-GATT: disconnected (wr 0010=2 0019=0 001A=0 001B=0)
+I (1273029) BULB: disconnected reason=0x213 -> adv resumed
+I (1275889) MIOT-GATT: connected conn=1 mtu=23
+I (1275899) BULB: phone connected -> adv stopped
+I (1276589) BULB: subscribe attr=23 (other) notify=1
+I (1276629) MIOT-GATT: rd 0004
+I (1276689) MIOT-GATT: mtu -> 247
+I (1276749) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1276869) BULB: subscribe attr=18 (other) notify=1
+I (1276929) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1278099) BULB: subscribe attr=18 (other) notify=0
+I (1278099) BULB: subscribe attr=23 (other) notify=0
+I (1278099) MIOT-GATT: disconnected (wr 0010=2 0019=0 001A=0 001B=0)
+I (1278099) BULB: disconnected reason=0x213 -> adv resumed
+I (1288669) MIOT-GATT: connected conn=1 mtu=23
+I (1288679) BULB: phone connected -> adv stopped
+I (1289359) BULB: subscribe attr=23 (other) notify=1
+I (1289389) MIOT-GATT: rd 0004
+I (1289439) MIOT-GATT: mtu -> 247
+I (1289499) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1289589) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1289679) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1289769) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1289769) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (1289799) BULB: subscribe attr=18 (other) notify=1
+I (1289859) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1289919) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (1289979) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1290069) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (1290069) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1290249) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (1290249) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (1290279) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (1290339) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (1290339) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (1290369) miot: spec session ready (keys set)
+I (1290369) BULB: *** session established: spec channel ready ***
+I (1290429) MIOT-GATT: rd 0004
+I (1291659) BULB: subscribe attr=18 (other) notify=0
+I (1291659) BULB: subscribe attr=23 (other) notify=0
+I (1291659) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (1291669) BULB: disconnected reason=0x213 -> adv resumed
+I (1295269) MIOT-GATT: connected conn=1 mtu=23
+I (1295279) BULB: phone connected -> adv stopped
+I (1295979) BULB: subscribe attr=23 (other) notify=1
+I (1296009) MIOT-GATT: rd 0004
+I (1296069) MIOT-GATT: mtu -> 247
+I (1296129) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1296219) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1296279) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1296369) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1296399) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (1296429) BULB: subscribe attr=18 (other) notify=1
+I (1296489) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1296519) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (1296609) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1296699) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (1296699) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1296849) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (1296849) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (1296879) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (1296969) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (1296969) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (1297019) miot: spec session ready (keys set)
+I (1297019) BULB: *** session established: spec channel ready ***
+I (1297059) MIOT-GATT: rd 0004
+I (1298259) BULB: subscribe attr=18 (other) notify=0
+I (1298259) BULB: subscribe attr=23 (other) notify=0
+I (1298259) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (1298269) BULB: disconnected reason=0x213 -> adv resumed
+I (1301359) MIOT-GATT: connected conn=1 mtu=23
+I (1301369) BULB: phone connected -> adv stopped
+I (1302059) BULB: subscribe attr=23 (other) notify=1
+I (1302099) MIOT-GATT: rd 0004
+I (1302159) MIOT-GATT: mtu -> 247
+I (1302219) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1302309) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1303329) BULB: subscribe attr=23 (other) notify=0
+I (1303329) MIOT-GATT: disconnected (wr 0010=1 0019=1 001A=0 001B=0)
+I (1303329) BULB: disconnected reason=0x213 -> adv resumed
+I (1306439) MIOT-GATT: connected conn=1 mtu=23
+I (1306439) BULB: phone connected -> adv stopped
+I (1307139) BULB: subscribe attr=23 (other) notify=1
+I (1307199) BULB: subscribe attr=18 (other) notify=1
+I (1307259) MIOT-GATT: rd 0004
+I (1307319) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1307349) MIOT-GATT: mtu -> 247
+I (1308429) BULB: subscribe attr=18 (other) notify=0
+I (1308429) BULB: subscribe attr=23 (other) notify=0
+I (1308429) MIOT-GATT: disconnected (wr 0010=1 0019=0 001A=0 001B=0)
+I (1308439) BULB: disconnected reason=0x213 -> adv resumed
+I (1311539) MIOT-GATT: connected conn=1 mtu=23
+I (1311539) BULB: phone connected -> adv stopped
+I (1312229) BULB: subscribe attr=23 (other) notify=1
+I (1312259) MIOT-GATT: rd 0004
+I (1312299) MIOT-GATT: mtu -> 247
+I (1312389) BULB: subscribe attr=18 (other) notify=1
+I (1312449) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1312479) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1312479) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1312569) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1312659) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1312659) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1312809) MIOT-GATT: wr 0019 #5 len=4 cmd=00
+I (1312809) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (1314099) BULB: subscribe attr=18 (other) notify=0
+I (1314099) BULB: subscribe attr=23 (other) notify=0
+I (1314099) MIOT-GATT: disconnected (wr 0010=2 0019=6 001A=0 001B=0)
+I (1314109) BULB: disconnected reason=0x213 -> adv resumed
+I (1316699) MIOT-GATT: connected conn=1 mtu=23
+I (1316699) BULB: phone connected -> adv stopped
+I (1317369) BULB: subscribe attr=18 (other) notify=1
+I (1317399) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1317409) BULB: subscribe attr=23 (other) notify=1
+I (1317459) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1317489) MIOT-GATT: rd 0004
+I (1317549) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1317579) MIOT-GATT: mtu -> 247
+I (1317639) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1317639) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1317669) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1317729) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1317789) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+I (1317819) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1318089) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (1318089) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (1319199) BULB: subscribe attr=18 (other) notify=0
+I (1319199) BULB: subscribe attr=23 (other) notify=0
+I (1319199) MIOT-GATT: disconnected (wr 0010=2 0019=9 001A=0 001B=0)
+I (1319209) BULB: disconnected reason=0x213 -> adv resumed
+I (1321799) MIOT-GATT: connected conn=1 mtu=23
+I (1321799) BULB: phone connected -> adv stopped
+I (1322489) BULB: subscribe attr=23 (other) notify=1
+I (1322519) MIOT-GATT: rd 0004
+I (1322579) BULB: subscribe attr=18 (other) notify=1
+I (1322639) MIOT-GATT: mtu -> 247
+I (1322699) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1322699) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1322729) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1322819) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1322909) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1322909) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1323059) MIOT-GATT: wr 0019 #5 len=4 cmd=00
+I (1323059) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (1324259) BULB: subscribe attr=18 (other) notify=0
+I (1324259) BULB: subscribe attr=23 (other) notify=0
+I (1324259) MIOT-GATT: disconnected (wr 0010=2 0019=6 001A=0 001B=0)
+I (1324259) BULB: disconnected reason=0x213 -> adv resumed
+I (1327349) MIOT-GATT: connected conn=1 mtu=23
+I (1327349) BULB: phone connected -> adv stopped
+I (1328019) BULB: subscribe attr=18 (other) notify=1
+I (1328049) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1328059) BULB: subscribe attr=23 (other) notify=1
+I (1328109) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1328109) MIOT-GATT: rd 0004
+I (1328169) MIOT-GATT: mtu -> 247
+I (1328229) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1328259) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1328319) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (1329339) BULB: subscribe attr=18 (other) notify=0
+I (1329339) BULB: subscribe attr=23 (other) notify=0
+I (1329339) MIOT-GATT: disconnected (wr 0010=2 0019=3 001A=0 001B=0)
+I (1329349) BULB: disconnected reason=0x213 -> adv resumed
+I (1331969) MIOT-GATT: connected conn=1 mtu=23
+I (1331969) BULB: phone connected -> adv stopped
+I (1332629) BULB: subscribe attr=23 (other) notify=1
+I (1332669) MIOT-GATT: rd 0004
+I (1332729) MIOT-GATT: mtu -> 247
+I (1332819) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1332909) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1332999) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1333089) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1333089) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (1333119) BULB: subscribe attr=18 (other) notify=1
+I (1333239) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1333269) MIOT-GATT: wr 0010 #3 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1333269) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (1333359) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (1334409) BULB: subscribe attr=18 (other) notify=0
+I (1334409) BULB: subscribe attr=23 (other) notify=0
+I (1334409) MIOT-GATT: disconnected (wr 0010=3 0019=6 001A=0 001B=0)
+I (1334409) BULB: disconnected reason=0x213 -> adv resumed
+I (1337009) MIOT-GATT: connected conn=1 mtu=23
+I (1337009) BULB: phone connected -> adv stopped
+I (1337939) BULB: subscribe attr=23 (other) notify=1
+I (1337979) MIOT-GATT: rd 0004
+I (1338039) MIOT-GATT: mtu -> 247
+I (1338099) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1339479) BULB: subscribe attr=23 (other) notify=0
+I (1339479) MIOT-GATT: disconnected (wr 0010=1 0019=0 001A=0 001B=0)
+I (1339479) BULB: disconnected reason=0x213 -> adv resumed
+I (1342559) MIOT-GATT: connected conn=1 mtu=23
+I (1342559) BULB: phone connected -> adv stopped
+I (1343189) BULB: subscribe attr=18 (other) notify=1
+I (1343219) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1343229) BULB: subscribe attr=23 (other) notify=1
+I (1343289) MIOT-GATT: rd 0004
+I (1343349) MIOT-GATT: mtu -> 247
+I (1343409) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1344549) BULB: subscribe attr=18 (other) notify=0
+I (1344549) BULB: subscribe attr=23 (other) notify=0
+I (1344549) MIOT-GATT: disconnected (wr 0010=2 0019=0 001A=0 001B=0)
+I (1344559) BULB: disconnected reason=0x213 -> adv resumed
+I (1347659) MIOT-GATT: connected conn=1 mtu=23
+I (1347659) BULB: phone connected -> adv stopped
+I (1348349) BULB: subscribe attr=23 (other) notify=1
+I (1348379) BULB: subscribe attr=18 (other) notify=1
+I (1348419) MIOT-GATT: rd 0004
+I (1348479) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1348509) MIOT-GATT: mtu -> 247
+I (1348569) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1350279) BULB: subscribe attr=18 (other) notify=0
+I (1350279) BULB: subscribe attr=23 (other) notify=0
+I (1350279) MIOT-GATT: disconnected (wr 0010=2 0019=0 001A=0 001B=0)
+I (1350289) BULB: disconnected reason=0x213 -> adv resumed
+I (1352849) MIOT-GATT: connected conn=1 mtu=23
+I (1352849) BULB: phone connected -> adv stopped
+I (1353519) BULB: subscribe attr=18 (other) notify=1
+I (1353549) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1353559) BULB: subscribe attr=23 (other) notify=1
+I (1353609) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1353639) MIOT-GATT: rd 0004
+I (1353669) MIOT-GATT: mtu -> 247
+I (1353729) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1353759) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1353819) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1353849) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1353969) MIOT-GATT: wr 0019 #5 len=4 cmd=00
+I (1353969) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (1355349) BULB: subscribe attr=18 (other) notify=0
+I (1355349) BULB: subscribe attr=23 (other) notify=0
+I (1355349) MIOT-GATT: disconnected (wr 0010=2 0019=6 001A=0 001B=0)
+I (1355359) BULB: disconnected reason=0x213 -> adv resumed
+I (1357979) MIOT-GATT: connected conn=1 mtu=23
+I (1357979) BULB: phone connected -> adv stopped
+I (1358659) BULB: subscribe attr=23 (other) notify=1
+I (1358689) BULB: subscribe attr=18 (other) notify=1
+I (1358739) MIOT-GATT: rd 0004
+I (1358799) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1358829) MIOT-GATT: mtu -> 247
+I (1358889) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1358919) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1358979) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1359069) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1359069) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1359219) MIOT-GATT: wr 0019 #5 len=4 cmd=00
+I (1359219) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (1360389) BULB: subscribe attr=18 (other) notify=0
+I (1360389) BULB: subscribe attr=23 (other) notify=0
+I (1360389) MIOT-GATT: disconnected (wr 0010=2 0019=6 001A=0 001B=0)
+I (1360399) BULB: disconnected reason=0x213 -> adv resumed
+I (1364009) MIOT-GATT: connected conn=1 mtu=23
+I (1364009) BULB: phone connected -> adv stopped
+I (1364649) BULB: subscribe attr=18 (other) notify=1
+I (1364679) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1364689) BULB: subscribe attr=23 (other) notify=1
+I (1364739) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1364739) MIOT-GATT: rd 0004
+I (1364799) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1364829) MIOT-GATT: mtu -> 247
+I (1364889) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1364889) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1364889) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1364979) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1365039) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+I (1365069) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (1366089) BULB: subscribe attr=18 (other) notify=0
+I (1366089) BULB: subscribe attr=23 (other) notify=0
+I (1366089) MIOT-GATT: disconnected (wr 0010=2 0019=7 001A=0 001B=0)
+I (1366089) BULB: disconnected reason=0x213 -> adv resumed
+I (1369169) MIOT-GATT: connected conn=1 mtu=23
+I (1369169) BULB: phone connected -> adv stopped
+I (1369809) BULB: subscribe attr=18 (other) notify=1
+I (1369829) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1369839) BULB: subscribe attr=23 (other) notify=1
+I (1369869) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1369899) MIOT-GATT: rd 0004
+I (1369959) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1369989) MIOT-GATT: mtu -> 247
+I (1370049) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1370079) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1370079) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (1370109) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (1371159) BULB: subscribe attr=18 (other) notify=0
+I (1371159) BULB: subscribe attr=23 (other) notify=0
+I (1371159) MIOT-GATT: disconnected (wr 0010=2 0019=5 001A=0 001B=0)
+I (1371169) BULB: disconnected reason=0x213 -> adv resumed
+I (1375259) MIOT-GATT: connected conn=1 mtu=23
+I (1375259) BULB: phone connected -> adv stopped
+I (1375929) BULB: subscribe attr=18 (other) notify=1
+I (1375959) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1375969) BULB: subscribe attr=23 (other) notify=1
+I (1376019) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (1376049) MIOT-GATT: rd 0004
+I (1376109) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1376139) MIOT-GATT: mtu -> 247
+I (1376199) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (1376229) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1376229) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1376319) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1376379) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+I (1376409) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1376679) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (1376679) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+I (1376769) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (1376769) MIOT-GATT: wr 0019 #11 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (1377189) MIOT-GATT: wr 0019 #12 len=4 cmd=00
+I (1377189) MIOT-GATT: wr 0019 #13 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (1377579) MIOT-GATT: wr 0019 #14 len=4 cmd=00
+I (1377579) MIOT-GATT: wr 0019 #15 len=4 cmd=00
+I (1381179) MIOT-GATT: wr 0010 #3 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1381209) MIOT-GATT: wr 0019 #16 len=6 cmd=00
+I (1381299) MIOT-GATT: wr 0019 #17 len=18 cmd=01
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (1381389) MIOT-GATT: wr 0019 #18 len=4 cmd=00
+I (1381419) MIOT-GATT: wr 0019 #19 len=4 cmd=00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (1381539) MIOT-GATT: wr 0019 #20 len=4 cmd=00
+I (1381539) MIOT-GATT: wr 0019 #21 len=4 cmd=00
+I (1381569) MIOT-GATT: wr 0019 #22 len=6 cmd=00
+I (1381659) MIOT-GATT: wr 0019 #23 len=20 cmd=01
+I (1381659) MIOT-GATT: wr 0019 #24 len=16 cmd=02
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (1381709) miot: spec session ready (keys set)
+I (1381709) BULB: *** session established: spec channel ready ***
+I (1381749) MIOT-GATT: rd 0004
+I (1383009) BULB: subscribe attr=18 (other) notify=0
+I (1383009) BULB: subscribe attr=23 (other) notify=0
+I (1383009) MIOT-GATT: disconnected (wr 0010=3 0019=24 001A=0 001B=0)
+I (1383019) BULB: disconnected reason=0x213 -> adv resumed
+I (1386119) MIOT-GATT: connected conn=1 mtu=23
+I (1386119) BULB: phone connected -> adv stopped
+I (1386829) BULB: subscribe attr=23 (other) notify=1
+I (1386879) MIOT-GATT: rd 0004
+I (1386939) MIOT-GATT: mtu -> 247
+I (1386999) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1388049) BULB: subscribe attr=23 (other) notify=0
+I (1388049) MIOT-GATT: disconnected (wr 0010=1 0019=0 001A=0 001B=0)
+I (1388059) BULB: disconnected reason=0x213 -> adv resumed
+I (1391129) MIOT-GATT: connected conn=1 mtu=23
+I (1391129) BULB: phone connected -> adv stopped
+I (1391789) BULB: subscribe attr=23 (other) notify=1
+I (1391819) MIOT-GATT: rd 0004
+I (1391859) MIOT-GATT: mtu -> 247
+I (1391919) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1391949) BULB: subscribe attr=18 (other) notify=1
+I (1392009) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (1392039) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1392039) MIOT-GATT: wr 0019 #2 len=6 cmd=00
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (1393119) BULB: subscribe attr=18 (other) notify=0
+I (1393119) BULB: subscribe attr=23 (other) notify=0
+I (1393119) MIOT-GATT: disconnected (wr 0010=2 0019=2 001A=0 001B=0)
+I (1393119) BULB: disconnected reason=0x213 -> adv resumed
+I (1397729) MIOT-GATT: connected conn=1 mtu=23
+I (1397729) BULB: phone connected -> adv stopped
+I (1398399) BULB: subscribe attr=18 (other) notify=1
+I (1398439) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1398449) BULB: subscribe attr=23 (other) notify=1
+I (1398489) MIOT-GATT: rd 0004
+I (1398549) MIOT-GATT: mtu -> 247
+I (1398609) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (1403619) MIOT-GATT: wr 0010 #3 len=4 cmd=24
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (1404669) BULB: subscribe attr=18 (other) notify=0
+I (1404669) BULB: subscribe attr=23 (other) notify=0
+I (1404669) MIOT-GATT: disconnected (wr 0010=3 0019=0 001A=0 001B=0)
+I (1404669) BULB: disconnected reason=0x213 -> adv resumed
+I (1409279) MIOT-GATT: connected conn=1 mtu=23
+I (1409279) BULB: phone connected -> adv stopped
+I (1409949) BULB: subscribe attr=23 (other) notify=1
+I (1409979) MIOT-GATT: rd 0004
+I (1410039) MIOT-GATT: mtu -> 247
+I (1410099) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18

@@ -1,0 +1,881 @@
+
+===== capture start 14:36:09 =====
+[reset pulse sent]
+I (130) esp_image: segment 4: paddr=000abed4 vaddr=403807e8 sizeESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (24) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (27) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1cb28h (117544) map
+I (46) esp_image: segment 1: paddr=0002cb50 vaddr=3fc91a00 size=02cd8h ( 11480) load
+I (48) esp_image: segment 2: paddr=0002f830 vaddr=40380000 size=007e8h (  2024) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7beach (507564) map
+I (130) esp_image: segment 4: paddr=000abed4 vaddr=403807e8 size=11110h ( 69904) load
+I (143) esp_image: segment 5: paddr=000bcfec vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (159) app_init: App version:      8089566-dirty
+I (159) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  b1d0e780c...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (160) heap_init: At 3FC98E00 len 00027200 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 186ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)
+I (443) MIOT-GATT: 0xFE95 service registered (12 chars: 0001/0002/0004/0010/0013/0014/0016/0017/0018/0019/001A/001B), ver=2.1.3_0039
+I (443) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (443) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (443) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (453) MIOT-GATT: handles: 0004=21 0010=23 0013=26 0019=39 001A=42 001B=45 0017=33 0018=36
+
+===== capture start 15:06:29 =====
+[reset pulse sent]
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (24) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (27) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1cb28h (117544) map
+I (46) esp_image: segment 1: paddr=0002cb50 vaddr=3fc91a00 size=02cd8h ( 11480) load
+I (48) esp_image: segment 2: paddr=0002f830 vaddr=40380000 size=007e8h (  2024) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7beach (507564) map
+I (130) esp_image: segment 4: paddr=000abed4 vaddr=403807e8 size=11110h ( 69904) load
+I (143) esp_image: segment 5: paddr=000bcfec vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (159) app_init: App version:      8089566-dirty
+I (159) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  b1d0e780c...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (160) heap_init: At 3FC98E00 len 00027200 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 185ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) MIOT-GATT: 0xFE95 service registered (12 chars: 0001/0002/0004/0010/0013/0014/0016/0017/0018/0019/001A/001B), ver=2.1.3_0039
+I (403) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (403) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (403) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (413) MIOT-GATT: handles: 0004=21 0010=23 0013=26 0019=39 001A=42 001B=45 0017=33 0018=36
+
+===== capture start 15:37:16 =====
+[reset pulse sent]
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (25) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (26) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1cb28h (117544) map
+I (46) esp_image: segment 1: paddr=0002cb50 vaddr=3fc91a00 size=02cd8h ( 11480) load
+I (48) esp_image: segment 2: paddr=0002f830 vaddr=40380000 size=007e8h (  2024) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7beach (507564) map
+I (130) esp_image: segment 4: paddr=000abed4 vaddr=403807e8 size=11110h ( 69904) load
+I (143) esp_image: segment 5: paddr=000bcfec vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (159) app_init: App version:      8089566-dirty
+I (159) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  b1d0e780c...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (160) heap_init: At 3FC98E00 len 00027200 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 185ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) MIOT-GATT: 0xFE95 service registered (12 chars: 0001/0002/0004/0010/0013/0014/0016/0017/0018/0019/001A/001B), ver=2.1.3_0039
+I (403) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (403) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (403) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (413) MIOT-GATT: handles: 0004=21 0010=23 0013=26 0019=39 001A=42 001B=45 0017=33 0018=36
+
+===== capture start 16:07:50 =====
+[reset pulse sent]
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (25) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (26) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (27) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1cb28h (117544) map
+I (46) esp_image: segment 1: paddr=0002cb50 vaddr=3fc91a00 size=02cd8h ( 11480) load
+I (48) esp_image: segment 2: paddr=0002f830 vaddr=40380000 size=007e8h (  2024) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7beach (507564) map
+I (130) esp_image: segment 4: paddr=000abed4 vaddr=403807e8 size=11110h ( 69904) load
+I (143) esp_image: segment 5: paddr=000bcfec vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (159) app_init: Project name:     meshbulb
+I (159) app_init: App version:      8089566-dirty
+I (159) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  b1d0e780c...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (160) efuse_init: Chip rev:         v0.4
+I (160) heap_init: Initializing. RAM available for dynamic allocation:
+I (160) heap_init: At 3FC98E00 len 00027200 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (161) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 186ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)
+I (413) MIOT-GATT: 0xFE95 service registered (12 chars: 0001/0002/0004/0010/0013/0014/0016/0017/0018/0019/001A/001B), ver=2.1.3_0039
+I (413) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (413) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (423) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (423) MIOT-GATT: handles: 0004=21 0010=23 0013=26 0019=39 001A=42 001B=45 0017=33 0018=36
+
+===== capture start 16:38:23 =====
+[reset pulse sent]
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (25) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (26) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1cb28h (117544) map
+I (46) esp_image: segment 1: paddr=0002cb50 vaddr=3fc91a00 size=02cd8h ( 11480) load
+I (48) esp_image: segment 2: paddr=0002f830 vaddr=40380000 size=007e8h (  2024) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7beach (507564) map
+I (130) esp_image: segment 4: paddr=000abed4 vaddr=403807e8 size=11110h ( 69904) load
+I (143) esp_image: segment 5: paddr=000bcfec vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (159) app_init: App version:      8089566-dirty
+I (159) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  b1d0e780c...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (160) heap_init: At 3FC98E00 len 00027200 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 186ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) MIOT-GATT: 0xFE95 service registered (12 chars: 0001/0002/0004/0010/0013/0014/0016/0017/0018/0019/001A/001B), ver=2.1.3_0039
+I (403) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (403) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (403) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (413) MIOT-GATT: handles: 0004=21 0010=23 0013=26 0019=39 001A=42 001B=45 0017=33 0018=36
+I (3100953) MIOT-GATT: connected conn=1 mtu=23 ver='2.1.3_0039'
+I (3100953) BULB: phone connected -> adv stopped
+I (3101853) BULB: subscribe attr=45 (other) notify=1
+I (3101903) BULB: subscribe attr=42 (other) notify=1
+I (3101963) BULB: subscribe attr=39 (other) notify=1
+I (3102023) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+I (3102023) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (3102083) MIOT-GATT: mtu -> 247
+I (3102143) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (3102143) MIOT-GATT:   hex10 A4
+I (3102143) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (3102233) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (3102233) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (3102233) MIOT-GATT: ntf h=39 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (3102293) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (3102293) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (3102293) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (3102293) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 02
+I (3102293) MIOT-GATT: ntf h=39 len=7 rc=0 head=02 00 6C
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (3102383) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (3102383) MIOT-GATT:   hex19 00 00 01 01
+I (3102383) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (3102383) MIOT-GATT:   hex19 00 00 01 00
+I (3102413) BULB: subscribe attr=23 (other) notify=1
+I (3102503) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (3102503) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (3102533) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (3102533) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (3102533) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (3102593) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (3102593) MIOT-GATT:   hex19 01 00 C2 E6 F9 46 07 B9 DD E8 0B E7 0B 24 81 23 A4 98
+I (3102593) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+[miot-auth] LOGIN(STD): use token=C803
+I (3102593) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (3102593) MIOT-GATT: ntf h=39 len=18 rc=0 head=01 00 80
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (3102683) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (3102683) MIOT-GATT:   hex19 00 00 01 01
+I (3102683) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (3102683) MIOT-GATT:   hex19 00 00 01 00
+I (3102783) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (3102783) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 92
+I (3102783) MIOT-GATT: ntf h=39 len=16 rc=0 head=02 00 CA
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (3102863) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (3102863) MIOT-GATT:   hex19 00 00 01 01
+I (3102893) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (3102893) MIOT-GATT:   hex19 00 00 01 00
+I (3102893) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (3102893) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (3102893) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (3102983) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (3102983) MIOT-GATT:   hex19 01 00 19 B5 F5 7D C5 BA D6 7D F2 BB 93 EB 22 24 1C DB 24 24
+I (3102983) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (3102983) MIOT-GATT:   hex19 02 00 C1 10 F3 C7 12 6C 51 2B 1C AA 46 21 A2 F1
+I (3102983) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (3102983) MIOT-GATT: ntf h=23 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (3103033) miot: spec session ready (keys set)
+I (3103033) BULB: *** session established: spec channel ready ***
+I (3103033) BULB: login: wait for App GET (no push)
+I (3103073) MIOT-GATT: rd 0004 op=0 off=0 mtu=247
+I (3103073) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (3103313) MIOT-GATT: wr 001A #1 len=6 cmd=00
+I (3103313) miot: rx#1 len=6: 00 00 00 00 01 00 
+I (3103313) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (3103313) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (3103313) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (3103403) MIOT-GATT: wr 001A #2 len=13 cmd=01
+I (3103403) miot: rx#2 len=13: 01 00 00 00 1A 95 04 27 DA F3 FD FC 7B 
+I (3103403) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (3103403) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (3103403) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (3103403) miot: spec req seq=0 pt=5B
+I (3103403) miot:   pt[000] 05 20 02 00 F0 
+I (3103403) miot: tx#1 pt=5B wire=11B: 05 20 02 00 F0 
+I (3103403) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (3103413) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (3103413) MIOT-GATT: ntf h=23 len=13 rc=0 head=01 00 00
+I (3103413) MIOT-GATT: ntf h=45 len=13 rc=0 head=01 00 00
+I (3103413) miot: spec version exchange done (dev ver=2)
+I (3103413) MIOT-GATT: wr 001A #3 len=13 cmd=01
+I (3103413) miot: rx#3 len=13: 01 00 00 00 1A 95 04 27 DA F3 FD FC 7B 
+I (3103493) MIOT-GATT: wr 001B #1 len=4 cmd=00
+I (3103493) miot: rx#4 len=4: 00 00 01 01 
+I (3103493) MIOT-GATT: wr 001B #2 len=4 cmd=00
+I (3103493) miot: rx#5 len=4: 00 00 01 00 
+I (3103523) MIOT-GATT: wr 001A #4 len=6 cmd=00
+I (3103523) miot: rx#6 len=6: 00 00 00 00 02 00 
+I (3103523) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (3103523) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (3103523) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (3103613) MIOT-GATT: wr 001A #5 len=20 cmd=01
+I (3103613) miot: rx#7 len=20: 01 00 01 00 2F 87 59 80 3B 0D 02 88 7C 31 B1 8D B8 55 80 9E 
+I (3103613) MIOT-GATT: wr 001A #6 len=14 cmd=02
+I (3103613) miot: rx#8 len=14: 02 00 AC 19 53 F3 9F D0 8D D5 EA 90 EF AA 
+I (3103613) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (3103613) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (3103613) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (3103613) miot: spec req seq=1 pt=24B
+I (3103613) miot:   pt[000] 18 20 03 00 02 06 07 01 00 07 02 00 07 03 00 07 04 00 08 01 00 05 EB 03 
+I (3103613) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ok
+I (3103623) miot: tx#2 pt=55B wire=61B: 37 20 03 00 03 06 07 01 00 00 00 01 00 00 07 02 00 00 00 01 10 64 07 03 00 00 00 02 30 88 13 07 04 00 00 00 01 10 00 08 ...
+I (3103623) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (3103623) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (3103623) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 01
+I (3103623) MIOT-GATT: ntf h=45 len=20 rc=0 head=01 00 01
+I (3103623) MIOT-GATT: ntf h=23 len=20 rc=0 head=02 00 6E
+I (3103623) MIOT-GATT: ntf h=45 len=20 rc=0 head=02 00 6E
+I (3103623) MIOT-GATT: ntf h=23 len=20 rc=0 head=03 00 18
+I (3103623) MIOT-GATT: ntf h=45 len=20 rc=0 head=03 00 18
+I (3103623) MIOT-GATT: ntf h=23 len=9 rc=0 head=04 00 8F
+I (3103643) MIOT-GATT: wr 001A #7 len=20 cmd=01
+I (3103643) miot: rx#9 len=20: 01 00 01 00 2F 87 59 80 3B 0D 02 88 7C 31 B1 8D B8 55 80 9E 
+I (3103643) MIOT-GATT: wr 001A #8 len=14 cmd=02
+I (3103643) miot: rx#10 len=14: 02 00 AC 19 53 F3 9F D0 8D D5 EA 90 EF AA 
+I (3103703) MIOT-GATT: wr 001B #3 len=4 cmd=00
+I (3103703) miot: rx#11 len=4: 00 00 01 01 
+I (3103733) MIOT-GATT: wr 001B #4 len=4 cmd=00
+I (3103733) miot: rx#12 len=4: 00 00 01 00 
+I (3103793) MIOT-GATT: wr 001A #9 len=6 cmd=00
+I (3103793) miot: rx#13 len=6: 00 00 00 00 02 00 
+I (3103883) MIOT-GATT: wr 001A #10 len=20 cmd=01
+I (3103883) miot: rx#14 len=20: 01 00 02 00 71 1B A3 80 95 68 71 F0 76 B2 8B 5E 88 30 BB 07 
+I (3103883) MIOT-GATT: wr 001A #11 len=5 cmd=02
+I (3103883) miot: rx#15 len=5: 02 00 50 10 AF 
+I (3103883) miot: spec req seq=2 pt=15B
+I (3103883) miot:   pt[000] 0F 20 04 00 00 01 09 01 00 04 50 A0 C1 FE 6A 
+I (3103883) miot: spec SET 9.1 type=5 val=1795080608
+I (3103883) miot: tx#3 pt=11B wire=17B: 0B 20 04 00 01 01 09 01 00 00 00 
+I (3103893) MIOT-GATT: wr 001A #12 len=20 cmd=01
+I (3103893) miot: rx#16 len=20: 01 00 02 00 71 1B A3 80 95 68 71 F0 76 B2 8B 5E 88 30 BB 07 
+I (3103893) MIOT-GATT: wr 001A #13 len=5 cmd=02
+I (3103893) miot: rx#17 len=5: 02 00 50 10 AF 
+I (3104003) MIOT-GATT: wr 001B #5 len=4 cmd=00
+I (3104003) miot: rx#18 len=4: 00 00 01 01 
+I (3104003) MIOT-GATT: wr 001B #6 len=4 cmd=00
+I (3104003) miot: rx#19 len=4: 00 00 01 00 
+I (3104033) MIOT-GATT: wr 001A #14 len=6 cmd=00
+I (3104033) miot: rx#20 len=6: 00 00 00 00 01 00 
+I (3104123) MIOT-GATT: wr 001A #15 len=17 cmd=01
+I (3104123) miot: rx#21 len=17: 01 00 03 00 CE 9E A9 A6 63 FB 5F 6B E1 F5 12 84 DD 
+I (3104123) miot: spec req seq=3 pt=9B
+I (3104123) miot:   pt[000] 09 20 05 00 02 01 08 02 00 
+I (3104123) miot: spec GET 8.2=ok
+I (3104123) miot: tx#4 pt=13B wire=19B: 0D 20 05 00 03 01 08 02 00 00 00 00 A0 
+I (3104133) MIOT-GATT: wr 001A #16 len=17 cmd=01
+I (3104133) miot: rx#22 len=17: 01 00 03 00 CE 9E A9 A6 63 FB 5F 6B E1 F5 12 84 DD 
+I (3104213) MIOT-GATT: wr 001B #7 len=4 cmd=00
+I (3104213) miot: rx#23 len=4: 00 00 01 01 
+I (3104213) MIOT-GATT: wr 001B #8 len=4 cmd=00
+I (3104213) miot: rx#24 len=4: 00 00 01 00 
+I (3111293) MIOT-GATT: wr 001A #17 len=6 cmd=00
+I (3111293) miot: rx#25 len=6: 00 00 00 00 01 00 
+I (3111353) MIOT-GATT: wr 001A #18 len=20 cmd=01
+I (3111353) miot: rx#26 len=20: 01 00 04 00 90 FE 81 D8 CA 14 16 73 18 C7 AF 3C 97 78 F9 8B 
+I (3111353) miot: spec req seq=4 pt=12B
+I (3111353) miot: spec SET 7.2 type=1 val=100
+I (3111353) miot: tx#5 pt=11B wire=17B: 0B 20 06 00 01 01 07 02 00 00 00 
+I (3111383) miot: tx#6 pt=12B wire=18B: 0C 20 00 00 04 01 07 02 00 01 10 64 
+I (3111383) BULB: properties_changed 7.2
+I (3111383) MIOT-GATT: wr 001A #19 len=20 cmd=01
+I (3111383) miot: rx#27 len=20: 01 00 04 00 90 FE 81 D8 CA 14 16 73 18 C7 AF 3C 97 78 F9 8B 
+I (3111443) MIOT-GATT: wr 001B #9 len=4 cmd=00
+I (3111443) miot: rx#28 len=4: 00 00 01 01 
+I (3111443) MIOT-GATT: wr 001B #10 len=4 cmd=00
+I (3111443) miot: rx#29 len=4: 00 00 01 00 
+I (3112103) MIOT-GATT: wr 001A #20 len=6 cmd=00
+I (3112103) miot: rx#30 len=6: 00 00 00 00 01 00 
+I (3112163) MIOT-GATT: wr 001A #21 len=20 cmd=01
+I (3112163) miot: rx#31 len=20: 01 00 05 00 4B 8F 4E 0E 44 99 D1 A9 EC B4 17 9A 4F 27 1B 29 
+I (3112163) miot: spec req seq=5 pt=12B
+I (3112163) miot: spec SET 7.2 type=1 val=83
+I (3112163) miot: tx#7 pt=11B wire=17B: 0B 20 07 00 01 01 07 02 00 00 00 
+I (3112183) miot: tx#8 pt=12B wire=18B: 0C 20 01 00 04 01 07 02 00 01 10 53 
+I (3112183) BULB: properties_changed 7.2
+I (3112193) MIOT-GATT: wr 001A #22 len=20 cmd=01
+I (3112193) miot: rx#32 len=20: 01 00 05 00 4B 8F 4E 0E 44 99 D1 A9 EC B4 17 9A 4F 27 1B 29 
+I (3112253) MIOT-GATT: wr 001B #11 len=4 cmd=00
+I (3112253) miot: rx#33 len=4: 00 00 01 01 
+I (3112253) MIOT-GATT: wr 001B #12 len=4 cmd=00
+I (3112253) miot: rx#34 len=4: 00 00 01 00 
+I (3112913) MIOT-GATT: wr 001A #23 len=6 cmd=00
+I (3112913) miot: rx#35 len=6: 00 00 00 00 01 00 
+I (3112973) MIOT-GATT: wr 001A #24 len=20 cmd=01
+I (3112973) miot: rx#36 len=20: 01 00 06 00 2D 0D 7F DE A8 1A 5A D8 DA 81 94 8B 00 BA 77 C5 
+I (3112973) miot: spec req seq=6 pt=12B
+I (3112973) miot: spec SET 7.2 type=1 val=68
+I (3112973) miot: tx#9 pt=11B wire=17B: 0B 20 08 00 01 01 07 02 00 00 00 
+I (3112983) miot: tx#10 pt=12B wire=18B: 0C 20 02 00 04 01 07 02 00 01 10 44 
+I (3112983) BULB: properties_changed 7.2
+I (3113003) MIOT-GATT: wr 001A #25 len=20 cmd=01
+I (3113003) miot: rx#37 len=20: 01 00 06 00 2D 0D 7F DE A8 1A 5A D8 DA 81 94 8B 00 BA 77 C5 
+I (3113063) MIOT-GATT: wr 001B #13 len=4 cmd=00
+I (3113063) miot: rx#38 len=4: 00 00 01 01 
+I (3113063) MIOT-GATT: wr 001B #14 len=4 cmd=00
+I (3113063) miot: rx#39 len=4: 00 00 01 00 
+I (3113723) MIOT-GATT: wr 001A #26 len=6 cmd=00
+I (3113723) miot: rx#40 len=6: 00 00 00 00 01 00 
+I (3113783) MIOT-GATT: wr 001A #27 len=20 cmd=01
+I (3113783) miot: rx#41 len=20: 01 00 07 00 3D 07 68 F0 FB C3 EE AB AC 58 90 29 58 07 AC 5A 
+I (3113783) miot: spec req seq=7 pt=12B
+I (3113783) miot: spec SET 7.2 type=1 val=52
+I (3113783) miot: tx#11 pt=11B wire=17B: 0B 20 09 00 01 01 07 02 00 00 00 
+I (3113813) MIOT-GATT: wr 001A #28 len=20 cmd=01
+I (3113813) miot: rx#42 len=20: 01 00 07 00 3D 07 68 F0 FB C3 EE AB AC 58 90 29 58 07 AC 5A 
+I (3113833) miot: tx#12 pt=12B wire=18B: 0C 20 03 00 04 01 07 02 00 01 10 34 
+I (3113833) BULB: properties_changed 7.2
+I (3113903) MIOT-GATT: wr 001B #15 len=4 cmd=00
+I (3113903) miot: rx#43 len=4: 00 00 01 01 
+I (3113903) MIOT-GATT: wr 001B #16 len=4 cmd=00
+I (3113903) miot: rx#44 len=4: 00 00 01 00 
+I (3114023) MIOT-GATT: wr 001A #29 len=6 cmd=00
+I (3114023) miot: rx#45 len=6: 00 00 00 00 01 00 
+I (3114113) MIOT-GATT: wr 001A #30 len=20 cmd=01
+I (3114113) miot: rx#46 len=20: 01 00 08 00 91 09 5D 10 F2 8F 5E 0B 8F 9B CC F5 0C 92 81 C3 
+I (3114113) miot: spec req seq=8 pt=12B
+I (3114113) miot: spec SET 7.2 type=1 val=59
+I (3114113) miot: tx#13 pt=11B wire=17B: 0B 20 0A 00 01 01 07 02 00 00 00 
+I (3114123) MIOT-GATT: wr 001A #31 len=20 cmd=01
+I (3114123) miot: rx#47 len=20: 01 00 08 00 91 09 5D 10 F2 8F 5E 0B 8F 9B CC F5 0C 92 81 C3 
+I (3114133) miot: tx#14 pt=12B wire=18B: 0C 20 04 00 04 01 07 02 00 01 10 3B 
+I (3114133) BULB: properties_changed 7.2
+I (3114203) MIOT-GATT: wr 001B #17 len=4 cmd=00
+I (3114203) miot: rx#48 len=4: 00 00 01 01 
+I (3114203) MIOT-GATT: wr 001B #18 len=4 cmd=00
+I (3114203) miot: rx#49 len=4: 00 00 01 00 
+I (3114953) MIOT-GATT: wr 001A #32 len=6 cmd=00
+I (3114953) miot: rx#50 len=6: 00 00 00 00 02 00 
+I (3115013) MIOT-GATT: wr 001A #33 len=20 cmd=01
+I (3115013) miot: rx#51 len=20: 01 00 0A 00 2A 33 4A D8 03 2B 30 C3 25 72 E7 8D 03 EE 11 E9 
+I (3115013) MIOT-GATT: wr 001A #34 len=3 cmd=02
+I (3115013) miot: spec req seq=10 pt=13B
+I (3115013) miot: spec SET 7.3 type=3 val=4000
+I (3115013) miot: tx#15 pt=11B wire=17B: 0B 20 0C 00 01 01 07 03 00 00 00 
+I (3115033) miot: tx#16 pt=13B wire=19B: 0D 20 05 00 04 01 07 03 00 02 30 A0 0F 
+I (3115033) BULB: properties_changed 7.3
+I (3115043) MIOT-GATT: wr 001A #35 len=20 cmd=01
+I (3115043) miot: rx#52 len=20: 01 00 0A 00 2A 33 4A D8 03 2B 30 C3 25 72 E7 8D 03 EE 11 E9 
+I (3115043) MIOT-GATT: wr 001A #36 len=3 cmd=02
+I (3115103) MIOT-GATT: wr 001B #19 len=4 cmd=00
+I (3115103) miot: rx#53 len=4: 00 00 01 01 
+I (3115103) MIOT-GATT: wr 001B #20 len=4 cmd=00
+I (3115103) miot: rx#54 len=4: 00 00 01 00 
+I (3115823) MIOT-GATT: wr 001A #37 len=6 cmd=00
+I (3115823) miot: rx#55 len=6: 00 00 00 00 02 00 
+I (3115883) MIOT-GATT: wr 001A #38 len=20 cmd=01
+I (3115883) miot: rx#56 len=20: 01 00 0B 00 4D C0 33 85 0A 38 D8 EA B4 33 CC AF 6A 00 C4 8B 
+I (3115883) MIOT-GATT: wr 001A #39 len=3 cmd=02
+I (3115883) miot: spec req seq=11 pt=13B
+I (3115883) miot: spec SET 7.3 type=3 val=3347
+I (3115883) miot: tx#17 pt=11B wire=17B: 0B 20 0D 00 01 01 07 03 00 00 00 
+I (3115893) MIOT-GATT: wr 001A #40 len=20 cmd=01
+I (3115893) miot: rx#57 len=20: 01 00 0B 00 4D C0 33 85 0A 38 D8 EA B4 33 CC AF 6A 00 C4 8B 
+I (3115913) MIOT-GATT: wr 001A #41 len=3 cmd=02
+I (3115933) miot: tx#18 pt=13B wire=19B: 0D 20 06 00 04 01 07 03 00 02 30 13 0D 
+I (3115933) BULB: properties_changed 7.3
+I (3116003) MIOT-GATT: wr 001B #21 len=4 cmd=00
+I (3116003) miot: rx#58 len=4: 00 00 01 01 
+I (3116003) MIOT-GATT: wr 001B #22 len=4 cmd=00
+I (3116003) miot: rx#59 len=4: 00 00 01 00 
+I (3116603) MIOT-GATT: wr 001A #42 len=6 cmd=00
+I (3116603) miot: rx#60 len=6: 00 00 00 00 02 00 
+I (3116663) MIOT-GATT: wr 001A #43 len=20 cmd=01
+I (3116663) miot: rx#61 len=20: 01 00 0C 00 6D F4 29 1C E6 0C 37 C0 59 2E CC 45 FC 96 64 54 
+I (3116663) MIOT-GATT: wr 001A #44 len=3 cmd=02
+I (3116663) miot: spec req seq=12 pt=13B
+I (3116663) miot: spec SET 7.3 type=3 val=3906
+I (3116663) miot: tx#19 pt=11B wire=17B: 0B 20 0E 00 01 01 07 03 00 00 00 
+I (3116683) miot: tx#20 pt=13B wire=19B: 0D 20 07 00 04 01 07 03 00 02 30 42 0F 
+I (3116683) BULB: properties_changed 7.3
+I (3116693) MIOT-GATT: wr 001A #45 len=20 cmd=01
+I (3116693) miot: rx#62 len=20: 01 00 0C 00 6D F4 29 1C E6 0C 37 C0 59 2E CC 45 FC 96 64 54 
+I (3116693) MIOT-GATT: wr 001A #46 len=3 cmd=02
+I (3116753) MIOT-GATT: wr 001B #23 len=4 cmd=00
+I (3116753) miot: rx#63 len=4: 00 00 01 01 
+I (3116753) MIOT-GATT: wr 001B #24 len=4 cmd=00
+I (3116753) miot: rx#64 len=4: 00 00 01 00 
+I (3117413) MIOT-GATT: wr 001A #47 len=6 cmd=00
+I (3117413) miot: rx#65 len=6: 00 00 00 00 02 00 
+I (3117473) MIOT-GATT: wr 001A #48 len=20 cmd=01
+I (3117473) miot: rx#66 len=20: 01 00 0D 00 83 EB E6 74 4C 25 BA 51 E4 31 1C 48 EF DF 0E C0 
+I (3117473) MIOT-GATT: wr 001A #49 len=3 cmd=02
+I (3117473) miot: spec req seq=13 pt=13B
+I (3117473) miot: spec SET 7.3 type=3 val=4259
+I (3117473) miot: tx#21 pt=11B wire=17B: 0B 20 0F 00 01 01 07 03 00 00 00 
+I (3117483) miot: tx#22 pt=13B wire=19B: 0D 20 08 00 04 01 07 03 00 02 30 A3 10 
+I (3117483) BULB: properties_changed 7.3
+I (3117503) MIOT-GATT: wr 001A #50 len=20 cmd=01
+I (3117503) miot: rx#67 len=20: 01 00 0D 00 83 EB E6 74 4C 25 BA 51 E4 31 1C 48 EF DF 0E C0 
+I (3117503) MIOT-GATT: wr 001A #51 len=3 cmd=02
+I (3117533) MIOT-GATT: wr 001B #25 len=4 cmd=00
+I (3117533) miot: rx#68 len=4: 00 00 01 01 
+I (3117563) MIOT-GATT: wr 001B #26 len=4 cmd=00
+I (3117563) miot: rx#69 len=4: 00 00 01 00 
+I (3117803) MIOT-GATT: wr 001A #52 len=6 cmd=00
+I (3117803) miot: rx#70 len=6: 00 00 00 00 02 00 
+I (3117863) MIOT-GATT: wr 001A #53 len=20 cmd=01
+I (3117863) miot: rx#71 len=20: 01 00 0E 00 28 A1 49 09 B6 BB B2 C9 F4 A7 37 51 16 C1 AD 55 
+I (3117863) MIOT-GATT: wr 001A #54 len=3 cmd=02
+I (3117863) miot: spec req seq=14 pt=13B
+I (3117863) miot: spec SET 7.3 type=3 val=4583
+I (3117863) miot: tx#23 pt=11B wire=17B: 0B 20 10 00 01 01 07 03 00 00 00 
+I (3117883) miot: tx#24 pt=13B wire=19B: 0D 20 09 00 04 01 07 03 00 02 30 E7 11 
+I (3117883) BULB: properties_changed 7.3
+I (3117893) MIOT-GATT: wr 001A #55 len=20 cmd=01
+I (3117893) miot: rx#72 len=20: 01 00 0E 00 28 A1 49 09 B6 BB B2 C9 F4 A7 37 51 16 C1 AD 55 
+I (3117893) MIOT-GATT: wr 001A #56 len=3 cmd=02
+I (3117953) MIOT-GATT: wr 001B #27 len=4 cmd=00
+I (3117953) miot: rx#73 len=4: 00 00 01 01 
+I (3117953) MIOT-GATT: wr 001B #28 len=4 cmd=00
+I (3117953) miot: rx#74 len=4: 00 00 01 00 
+I (3119843) MIOT-GATT: wr 001A #57 len=6 cmd=00
+I (3119843) miot: rx#75 len=6: 00 00 00 00 02 00 
+I (3119903) MIOT-GATT: wr 001A #58 len=20 cmd=01
+I (3119903) miot: rx#76 len=20: 01 00 0F 00 8D 40 E9 39 AC 16 F5 3F 61 7B 07 BD 3E B0 86 BA 
+I (3119903) MIOT-GATT: wr 001A #59 len=14 cmd=02
+I (3119903) miot: rx#77 len=14: 02 00 B5 D5 1F 19 B7 F4 EB DC 97 B7 C7 DD 
+I (3119903) miot: spec req seq=15 pt=24B
+I (3119903) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ok
+I (3119903) miot: tx#25 pt=55B wire=61B: 37 20 11 00 03 06 07 01 00 00 00 01 00 00 07 02 00 00 00 01 10 3B 07 03 00 00 00 02 30 E7 11 07 04 00 00 00 01 10 00 08 ...
+I (3119933) MIOT-GATT: wr 001A #60 len=20 cmd=01
+I (3119933) miot: rx#78 len=20: 01 00 0F 00 8D 40 E9 39 AC 16 F5 3F 61 7B 07 BD 3E B0 86 BA 
+I (3119933) MIOT-GATT: wr 001A #61 len=14 cmd=02
+I (3119933) miot: rx#79 len=14: 02 00 B5 D5 1F 19 B7 F4 EB DC 97 B7 C7 DD 
+I (3119993) MIOT-GATT: wr 001B #29 len=4 cmd=00
+I (3119993) miot: rx#80 len=4: 00 00 01 01 
+I (3120023) MIOT-GATT: wr 001B #30 len=4 cmd=00
+I (3120023) miot: rx#81 len=4: 00 00 01 00 
+I (3121823) MIOT-GATT: wr 001A #62 len=6 cmd=00
+I (3121823) miot: rx#82 len=6: 00 00 00 00 02 00 
+I (3121883) MIOT-GATT: wr 001A #63 len=20 cmd=01
+I (3121883) miot: rx#83 len=20: 01 00 10 00 4D 6C D8 C8 F5 EB 7D B3 13 43 43 B4 EE 29 93 96 
+I (3121913) MIOT-GATT: wr 001A #64 len=3 cmd=02
+I (3121913) miot: spec req seq=16 pt=13B
+I (3121913) miot: spec SET 7.3 type=3 val=4561
+I (3121913) miot: tx#26 pt=11B wire=17B: 0B 20 12 00 01 01 07 03 00 00 00 
+I (3121933) miot: tx#27 pt=13B wire=19B: 0D 20 0A 00 04 01 07 03 00 02 30 D1 11 
+I (3121933) BULB: properties_changed 7.3
+I (3121943) MIOT-GATT: wr 001A #65 len=20 cmd=01
+I (3121943) miot: rx#84 len=20: 01 00 10 00 4D 6C D8 C8 F5 EB 7D B3 13 43 43 B4 EE 29 93 96 
+I (3121943) MIOT-GATT: wr 001A #66 len=3 cmd=02
+I (3122003) MIOT-GATT: wr 001B #31 len=4 cmd=00
+I (3122003) miot: rx#85 len=4: 00 00 01 01 
+I (3122003) MIOT-GATT: wr 001B #32 len=4 cmd=00
+I (3122003) miot: rx#86 len=4: 00 00 01 00 
+I (3122123) MIOT-GATT: wr 001A #67 len=6 cmd=00
+I (3122123) miot: rx#87 len=6: 00 00 00 00 02 00 
+I (3122183) MIOT-GATT: wr 001A #68 len=20 cmd=01
+I (3122183) miot: rx#88 len=20: 01 00 11 00 67 9D F8 3A 7C 15 0B D7 41 F8 23 88 3E 6C FA B2 
+I (3122213) MIOT-GATT: wr 001A #69 len=3 cmd=02
+I (3122213) miot: spec req seq=17 pt=13B
+I (3122213) miot: spec SET 7.3 type=3 val=3735
+I (3122213) miot: tx#28 pt=11B wire=17B: 0B 20 13 00 01 01 07 03 00 00 00 
+I (3122213) MIOT-GATT: wr 001A #70 len=20 cmd=01
+I (3122223) miot: rx#89 len=20: 01 00 11 00 67 9D F8 3A 7C 15 0B D7 41 F8 23 88 3E 6C FA B2 
+I (3122233) miot: tx#29 pt=13B wire=19B: 0D 20 0B 00 04 01 07 03 00 02 30 97 0E 
+I (3122233) BULB: properties_changed 7.3
+I (3122243) MIOT-GATT: wr 001A #71 len=3 cmd=02
+I (3122303) MIOT-GATT: wr 001B #33 len=4 cmd=00
+I (3122303) miot: rx#90 len=4: 00 00 01 01 
+I (3122333) MIOT-GATT: wr 001B #34 len=4 cmd=00
+I (3122333) miot: rx#91 len=4: 00 00 01 00 
+I (3122543) MIOT-GATT: wr 001A #72 len=6 cmd=00
+I (3122543) miot: rx#92 len=6: 00 00 00 00 02 00 
+I (3122603) MIOT-GATT: wr 001A #73 len=20 cmd=01
+I (3122603) miot: rx#93 len=20: 01 00 12 00 B8 A5 A9 6E 3A D9 A2 A2 6A D5 F8 AB E2 8F 1C E4 
+I (3122603) MIOT-GATT: wr 001A #74 len=3 cmd=02
+I (3122603) miot: spec req seq=18 pt=13B
+I (3122603) miot: spec SET 7.3 type=3 val=3737
+I (3122603) miot: tx#30 pt=11B wire=17B: 0B 20 14 00 01 01 07 03 00 00 00 
+I (3122633) miot: tx#31 pt=13B wire=19B: 0D 20 0C 00 04 01 07 03 00 02 30 99 0E 
+I (3122633) BULB: properties_changed 7.3
+I (3122633) MIOT-GATT: wr 001A #75 len=20 cmd=01
+I (3122633) miot: rx#94 len=20: 01 00 12 00 B8 A5 A9 6E 3A D9 A2 A2 6A D5 F8 AB E2 8F 1C E4 
+I (3122633) MIOT-GATT: wr 001A #76 len=3 cmd=02
+I (3122693) MIOT-GATT: wr 001B #35 len=4 cmd=00
+I (3122693) miot: rx#95 len=4: 00 00 01 01 
+I (3122693) MIOT-GATT: wr 001B #36 len=4 cmd=00
+I (3122693) miot: rx#96 len=4: 00 00 01 00 
+I (3122843) MIOT-GATT: wr 001A #77 len=6 cmd=00
+I (3122843) miot: rx#97 len=6: 00 00 00 00 02 00 
+I (3122933) MIOT-GATT: wr 001A #78 len=20 cmd=01
+I (3122933) miot: rx#98 len=20: 01 00 13 00 4A A9 A2 97 30 90 30 BD 2A 59 DA 3B 05 08 80 86 
+I (3122933) MIOT-GATT: wr 001A #79 len=3 cmd=02
+I (3122933) miot: spec req seq=19 pt=13B
+I (3122933) miot: spec SET 7.3 type=3 val=4278
+I (3122933) miot: tx#32 pt=11B wire=17B: 0B 20 15 00 01 01 07 03 00 00 00 
+I (3122943) MIOT-GATT: wr 001A #80 len=20 cmd=01
+I (3122943) miot: rx#99 len=20: 01 00 13 00 4A A9 A2 97 30 90 30 BD 2A 59 DA 3B 05 08 80 86 
+I (3122943) MIOT-GATT: wr 001A #81 len=3 cmd=02
+I (3122983) miot: tx#33 pt=13B wire=19B: 0D 20 0D 00 04 01 07 03 00 02 30 B6 10 
+I (3122983) BULB: properties_changed 7.3
+I (3123053) MIOT-GATT: wr 001B #37 len=4 cmd=00
+I (3123053) miot: rx#100 len=4: 00 00 01 01 
+I (3123053) MIOT-GATT: wr 001B #38 len=4 cmd=00
+I (3123053) miot: rx#101 len=4: 00 00 01 00 
+I (3124853) MIOT-GATT: wr 001A #82 len=6 cmd=00
+I (3124853) miot: rx#102 len=6: 00 00 00 00 02 00 
+I (3124943) MIOT-GATT: wr 001A #83 len=20 cmd=01
+I (3124943) miot: rx#103 len=20: 01 00 14 00 13 69 4A 0F E4 32 62 A5 46 A0 F1 3D FE 98 D6 D4 
+I (3124943) MIOT-GATT: wr 001A #84 len=14 cmd=02
+I (3124943) miot: rx#104 len=14: 02 00 3F 9F 2F 9F 28 9A 71 99 74 A6 E3 11 
+I (3124943) miot: spec req seq=20 pt=24B
+I (3124943) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ok
+I (3124943) miot: tx#34 pt=55B wire=61B: 37 20 16 00 03 06 07 01 00 00 00 01 00 00 07 02 00 00 00 01 10 3B 07 03 00 00 00 02 30 B6 10 07 04 00 00 00 01 10 00 08 ...
+I (3124953) MIOT-GATT: wr 001A #85 len=20 cmd=01
+I (3124953) miot: rx#105 len=20: 01 00 14 00 13 69 4A 0F E4 32 62 A5 46 A0 F1 3D FE 98 D6 D4 
+I (3124953) MIOT-GATT: wr 001A #86 len=14 cmd=02
+I (3124953) miot: rx#106 len=14: 02 00 3F 9F 2F 9F 28 9A 71 99 74 A6 E3 11 
+I (3125033) MIOT-GATT: wr 001B #39 len=4 cmd=00
+I (3125033) miot: rx#107 len=4: 00 00 01 01 
+I (3125063) MIOT-GATT: wr 001B #40 len=4 cmd=00
+I (3125063) miot: rx#108 len=4: 00 00 01 00 
+I (3135713) MIOT-GATT: wr 001A #87 len=6 cmd=00
+I (3135713) miot: rx#109 len=6: 00 00 00 00 01 00 
+I (3135773) MIOT-GATT: wr 001A #88 len=20 cmd=01
+I (3135773) miot: rx#110 len=20: 01 00 15 00 8D 06 D0 98 AE 34 9E 89 9E D6 A4 56 E2 7E D7 17 
+I (3135773) miot: spec req seq=21 pt=12B
+I (3135773) miot: spec SET 7.4 type=1 val=1
+I (3135773) miot: tx#35 pt=11B wire=17B: 0B 20 17 00 01 01 07 04 00 00 00 
+I (3135783) miot: tx#36 pt=12B wire=18B: 0C 20 0E 00 04 01 07 04 00 01 10 01 
+I (3135783) BULB: properties_changed 7.4
+I (3135803) MIOT-GATT: wr 001A #89 len=20 cmd=01
+I (3135803) miot: rx#111 len=20: 01 00 15 00 8D 06 D0 98 AE 34 9E 89 9E D6 A4 56 E2 7E D7 17 
+I (3135863) MIOT-GATT: wr 001B #41 len=4 cmd=00
+I (3135863) miot: rx#112 len=4: 00 00 01 01 
+I (3135893) MIOT-GATT: wr 001B #42 len=4 cmd=00
+I (3135893) miot: rx#113 len=4: 00 00 01 00 
+I (3136343) MIOT-GATT: wr 001A #90 len=6 cmd=00
+I (3136343) miot: rx#114 len=6: 00 00 00 00 01 00 
+I (3136403) MIOT-GATT: wr 001A #91 len=20 cmd=01
+I (3136403) miot: rx#115 len=20: 01 00 16 00 B5 E5 A7 9A B4 94 A7 1F 84 E5 CF BD C6 5D FF A6 
+I (3136403) miot: spec req seq=22 pt=12B
+I (3136403) miot: spec SET 7.4 type=1 val=2
+I (3136403) miot: tx#37 pt=11B wire=17B: 0B 20 18 00 01 01 07 04 00 00 00 
+I (3136433) miot: tx#38 pt=12B wire=18B: 0C 20 0F 00 04 01 07 04 00 01 10 02 
+I (3136433) BULB: properties_changed 7.4
+I (3136433) MIOT-GATT: wr 001A #92 len=20 cmd=01
+I (3136433) miot: rx#116 len=20: 01 00 16 00 B5 E5 A7 9A B4 94 A7 1F 84 E5 CF BD C6 5D FF A6 
+I (3136493) MIOT-GATT: wr 001B #43 len=4 cmd=00
+I (3136493) miot: rx#117 len=4: 00 00 01 01 
+I (3136523) MIOT-GATT: wr 001B #44 len=4 cmd=00
+I (3136523) miot: rx#118 len=4: 00 00 01 00 
+I (3137123) MIOT-GATT: wr 001A #93 len=6 cmd=00
+I (3137123) miot: rx#119 len=6: 00 00 00 00 01 00 
+I (3137213) MIOT-GATT: wr 001A #94 len=20 cmd=01
+I (3137213) miot: rx#120 len=20: 01 00 17 00 A9 80 09 85 1B DF BC C9 58 76 94 69 48 D5 6D 90 
+I (3137213) miot: spec req seq=23 pt=12B
+I (3137213) miot: spec SET 7.4 type=1 val=3
+I (3137213) miot: tx#39 pt=11B wire=17B: 0B 20 19 00 01 01 07 04 00 00 00 
+I (3137223) MIOT-GATT: wr 001A #95 len=20 cmd=01
+I (3137223) miot: rx#121 len=20: 01 00 17 00 A9 80 09 85 1B DF BC C9 58 76 94 69 48 D5 6D 90 
+I (3137233) miot: tx#40 pt=12B wire=18B: 0C 20 10 00 04 01 07 04 00 01 10 03 
+I (3137233) BULB: properties_changed 7.4
+I (3137303) MIOT-GATT: wr 001B #45 len=4 cmd=00
+I (3137303) miot: rx#122 len=4: 00 00 01 01 
+I (3137333) MIOT-GATT: wr 001B #46 len=4 cmd=00
+I (3137333) miot: rx#123 len=4: 00 00 01 00 
+I (3137993) MIOT-GATT: wr 001A #96 len=6 cmd=00
+I (3137993) miot: rx#124 len=6: 00 00 00 00 01 00 
+I (3138083) MIOT-GATT: wr 001A #97 len=20 cmd=01
+I (3138083) miot: rx#125 len=20: 01 00 18 00 7A 60 EB 56 76 40 64 A6 6B 7B FD F3 84 F2 3A BE 
+I (3138083) miot: spec req seq=24 pt=12B
+I (3138083) miot: spec SET 7.4 type=1 val=4
+I (3138093) MIOT-GATT: wr 001A #98 len=20 cmd=01
+I (3138093) miot: rx#126 len=20: 01 00 18 00 7A 60 EB 56 76 40 64 A6 6B 7B FD F3 84 F2 3A BE 
+I (3138133) BULB: properties_changed 7.4
+I (3138203) MIOT-GATT: wr 001B #47 len=4 cmd=00
+I (3138203) miot: rx#127 len=4: 00 00 01 01 
+I (3138233) MIOT-GATT: wr 001B #48 len=4 cmd=00
+I (3138233) miot: rx#128 len=4: 00 00 01 00 
+I (3140033) MIOT-GATT: wr 001A #99 len=6 cmd=00
+I (3140033) miot: rx#129 len=6: 00 00 00 00 02 00 
+I (3140153) MIOT-GATT: wr 001A #100 len=20 cmd=01
+I (3140153) miot: rx#130 len=20: 01 00 19 00 2E D7 40 17 3E AB B3 00 F4 C9 67 3D C2 58 17 E7 
+I (3140153) MIOT-GATT: wr 001A #101 len=14 cmd=02
+I (3140153) miot: rx#131 len=14: 02 00 5A 4F 3B D1 2C B5 01 19 2E 97 F8 49 
+I (3140153) miot: spec req seq=25 pt=24B
+I (3140153) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ok
+I (3140163) MIOT-GATT: wr 001A #102 len=20 cmd=01
+I (3140163) miot: rx#132 len=20: 01 00 19 00 2E D7 40 17 3E AB B3 00 F4 C9 67 3D C2 58 17 E7 
+I (3140163) MIOT-GATT: wr 001A #103 len=14 cmd=02
+I (3140163) miot: rx#133 len=14: 02 00 5A 4F 3B D1 2C B5 01 19 2E 97 F8 49 
+I (3140243) MIOT-GATT: wr 001B #49 len=4 cmd=00
+I (3140243) miot: rx#134 len=4: 00 00 01 01 
+I (3140273) MIOT-GATT: wr 001B #50 len=4 cmd=00
+I (3140273) miot: rx#135 len=4: 00 00 01 00 
+I (3168563) BULB: subscribe attr=23 (other) notify=0
+I (3168563) BULB: subscribe attr=39 (other) notify=0
+I (3168563) BULB: subscribe attr=42 (other) notify=0
+I (3168563) BULB: subscribe attr=45 (other) notify=0
+I (3168563) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=103 001B=50)
+I (3168563) BULB: disconnected reason=0x213 -> adv resumed

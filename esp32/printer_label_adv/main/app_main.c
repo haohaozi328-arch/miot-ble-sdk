@@ -68,6 +68,14 @@ static const char *TAG = "PRINTER";
 
 #define BOOT_PIN       9
 #define ADV_PERIOD_MS  4000
+
+/* ★2026-11-24 实验开关：登录后是否主动推 7 条初值。
+ * 0 = 完全跟随 S400/温湿度计的成功时序：登录后设备一句话不说，
+ *     等 App 自己发 F0 版本请求 / spec GET，再逐个应答。
+ * 1 = 老行为（主动 properties_changed，App 只 ACK 不解析）。 */
+#ifndef PUSH_INITIAL_PROPS
+#define PUSH_INITIAL_PROPS 0
+#endif
 #define EVENT_REPEAT   3
 #define EVENT_GAP_MS   400
 #define WAKE_WINDOW_MS 120000
@@ -512,7 +520,13 @@ void app_main(void)
             s_logged_in = 1;
             miot_device_set_session_keys(&s_dev, miot_auth_session_keys(&s_auth));
             ESP_LOGI(TAG, "*** 会话建立 ***");
-            miot_device_send_version_reply(&s_dev, s_dev.tid++);
+            /* ★2026-11-24 实测：主动发 F0（版本交换"应答"）会让 App 的 spec
+             * 状态机卡死——App 只回两个 ag2 ACK 就彻底沉默，不发 GET/SET，
+             * 插件页面停在「正在传输」。
+             * 成功案例（scale/thermo/multi_dev/nightl2）全部是等 App 发 F0
+             * 请求、由 miot_device_dispatch_plain 的 VERSION_XCH 分支回应答。
+             * 这里改成不主动发，交给 App 驱动。 */
+#if PUSH_INITIAL_PROPS
             /* 全属性初值（2.2 string 单独 push，避免整帧因 STRING 编码超长失败） */
             static miot_spec_value_t v[7];
             memset(v, 0, sizeof(v));
@@ -526,6 +540,7 @@ void app_main(void)
             v[i].siid=3; v[i].piid=1; v[i].type=MIOT_TYPE_U8;   v[i++].val.u8=v_battery;
             miot_device_send_props_changed(&s_dev, v, (size_t)i);
             ESP_LOGI(TAG, "initial props pushed (%d)", i);
+#endif
         }
 
         {

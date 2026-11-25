@@ -10,6 +10,7 @@
 #include "nimble/nimble_port.h"
 #include "host/ble_hs.h"
 #include "host/util/util.h"
+#include "print_channel.h"
 
 static const char *TAG = "MIOT-GATT";
 
@@ -33,6 +34,13 @@ static const ble_uuid16_t s_c18_uuid = BLE_UUID16_INIT(0x0018);
 static const ble_uuid16_t s_c19_uuid = BLE_UUID16_INIT(0x0019);
 static const ble_uuid16_t s_c1a_uuid = BLE_UUID16_INIT(0x001A);
 static const ble_uuid16_t s_c1b_uuid = BLE_UUID16_INIT(0x001B);
+/* ★打印机私有打印通道（jasiek/xiaomi-mjbqdyj1-wc-reveng 实测真机存在）：
+ *   001F Write Without Response ← App 发 A3 加密命令（打印数据全走这里）
+ *   0020 Notify                 → 设备回 ACK / 状态心跳
+ * 2026-11-25 定案：此前「正在传输」卡死就是因为 GATT 表缺这两条，
+ * App 服务发现后建立不了打印数据通道，一个字节都不发。 */
+static const ble_uuid16_t s_c1f_uuid = BLE_UUID16_INIT(0x001F);
+static const ble_uuid16_t s_c20_uuid = BLE_UUID16_INIT(0x0020);
 
 static miot_auth_t   *s_auth;
 static miot_device_t *s_dev;
@@ -41,6 +49,7 @@ static uint16_t s_mtu = BLE_ATT_MTU_DFLT;
 
 static uint16_t s_h01, s_h02, s_h04, s_h10, s_h13, s_h14;
 static uint16_t s_h16, s_h17, s_h18, s_h19, s_h1a, s_h1b;
+static uint16_t s_h1f, s_h20;
 
 /* 订阅状态（按 CCCD 的 attr handle 记）与本帧来路面。
  * ★这两个是「App 收不到应答」的根因：登录后 App 把 ag2 帧写到 **0x001A**，
@@ -82,7 +91,7 @@ void gatt_miot_set_pid(uint16_t pid)
 
 /* 各级通道的收发计数，出问题时先看这里：写得进来但没有回包，通常是状态机
  * 停在别的分支；一条写都没有，则是 App 压根没认这个服务。 */
-static uint32_t s_wr10, s_wr19, s_wr1a, s_wr1b;
+static uint32_t s_wr10, s_wr19, s_wr1a, s_wr1b, s_wr1f;
 
 /* 0x0010 是同一条通道上的多路复用：认证命令（A4/A2/24，长度 1 或 4）
  * 和认证之后的数据帧（spec，ag2 封装，首字节 0x00）都从这里进来。
@@ -168,6 +177,19 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
         return BLE_ATT_ERR_UNLIKELY;
     }
 
+    /* ★全量抓包：任何特征值上的写入都完整 dump（打印内容可能 KB 级，
+     * 会被 MTU 分段多次进来；拼帧/去头靠事后分析）。 */
+    ESP_LOGI(TAG, "wr %04X len=%u", u, got);
+    for (uint16_t off = 0; off < got; off += 32) {
+        char hex[97];
+        uint16_t n = got - off > 32 ? 32 : got - off;
+        for (uint16_t i = 0; i < n; i++) {
+            sprintf(&hex[i * 3], "%02X ", buf[off + i]);
+        }
+        hex[n * 3 - 1] = '\0';
+        ESP_LOGI(TAG, "   %04u %s", off, hex);
+    }
+
     switch (u) {
     case 0x0013:
         /* App 绑定后写 20B Device ID，读回要用同一份 */
@@ -226,6 +248,16 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
             s_rx_chan = s_h1b;
             miot_device_on_rx(s_dev, buf, got);
         }
+        break;
+    case 0x001F:
+        /* ★打印机私有打印通道：App 把 A3 加密帧切成 ≤204B 片写进来。
+         * 组帧/解密/命令解析全在 print_channel，这里只做透传。 */
+        s_wr1f++;
+        ESP_LOGI(TAG, "wr 001F #%lu len=%u head=%02X %02X %02X %02X",
+                 (unsigned long)s_wr1f, got,
+                 got > 0 ? buf[0] : 0, got > 1 ? buf[1] : 0,
+                 got > 2 ? buf[2] : 0, got > 3 ? buf[3] : 0);
+        print_channel_on_rx(buf, got);
         break;
     case 0x0001:
         /* 老型号的 token 通道（12B）。标准 ECDH 型号不会走这里，
@@ -335,6 +367,21 @@ static const struct ble_gatt_chr_def s_chrs[] = {
                  BLE_GATT_CHR_F_NOTIFY,
         .val_handle = &s_h1b,
     },
+    {
+        /* 0x001F 打印数据下行（Write Without Response）：
+         * App 发 A3 20 加密命令（切片 ≤204B），真机实测存在 */
+        .uuid = &s_c1f_uuid.u,
+        .access_cb = gatt_access,
+        .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
+        .val_handle = &s_h1f,
+    },
+    {
+        /* 0x0020 打印数据上行（Notify）：ACK / 状态心跳 */
+        .uuid = &s_c20_uuid.u,
+        .access_cb = gatt_access,
+        .flags = BLE_GATT_CHR_F_NOTIFY,
+        .val_handle = &s_h20,
+    },
     { 0 },
 };
 
@@ -359,8 +406,8 @@ void gatt_miot_register_svcs(void)
         ESP_LOGE(TAG, "add_svcs rc=%d", rc);
         return;
     }
-    ESP_LOGI(TAG, "0xFE95 service registered (12 chrs: 0001/0002/0004/0010/0013/0014/"
-                  "0016/0017/0018/0019/001A/001B — 与真机逐条一致)");
+    ESP_LOGI(TAG, "0xFE95 service registered (14 chrs: 0001/0002/0004/0010/0013/0014/"
+                  "0016/0017/0018/0019/001A/001B/001F/0020)");
 }
 
 void gatt_miot_bind(miot_auth_t *auth, miot_device_t *dev)
@@ -372,17 +419,20 @@ void gatt_miot_bind(miot_auth_t *auth, miot_device_t *dev)
 void gatt_miot_on_connect(uint16_t conn_handle, uint16_t mtu)
 {    s_conn = conn_handle;
     s_mtu = mtu ? mtu : BLE_ATT_MTU_DFLT;
-    s_wr10 = s_wr19 = s_wr1a = s_wr1b = 0;
+    s_wr10 = s_wr19 = s_wr1a = s_wr1b = s_wr1f = 0;
     s_rx_chan = 0;
     memset(s_sub, 0, sizeof(s_sub));   /* 订阅是按连接生效的，新连接重新记 */
+    print_channel_reset();
     ESP_LOGI(TAG, "connected conn=%u mtu=%u", conn_handle, s_mtu);
 }
 
 void gatt_miot_on_disconnect(void)
 {
-    ESP_LOGI(TAG, "disconnected (wr 0010=%lu 0019=%lu 001A=%lu 001B=%lu)",
+    ESP_LOGI(TAG, "disconnected (wr 0010=%lu 0019=%lu 001A=%lu 001B=%lu 001F=%lu, "
+             "print cmds=%lu)",
              (unsigned long)s_wr10, (unsigned long)s_wr19,
-             (unsigned long)s_wr1a, (unsigned long)s_wr1b);
+             (unsigned long)s_wr1a, (unsigned long)s_wr1b, (unsigned long)s_wr1f,
+             (unsigned long)print_channel_cmd_count());
     s_conn = BLE_HS_CONN_HANDLE_NONE;
     s_mtu = BLE_ATT_MTU_DFLT;
     s_rx_chan = 0;
@@ -394,9 +444,9 @@ void gatt_miot_dump_handles(void)
     /* value handle；CCCD 一般紧跟其后（+1/+2 视是否多个描述符而定）。
      * App 的 SUBSCRIBE 事件里给的是 CCCD handle，对照这里就能知道它订的是哪条通道。 */
     ESP_LOGI(TAG, "handles: 0001=%u 0002=%u 0004=%u 0010=%u 0013=%u 0014=%u "
-                  "0016=%u 0017=%u 0018=%u 0019=%u 001A=%u 001B=%u",
+                  "0016=%u 0017=%u 0018=%u 0019=%u 001A=%u 001B=%u 001F=%u 0020=%u",
              s_h01, s_h02, s_h04, s_h10, s_h13, s_h14,
-             s_h16, s_h17, s_h18, s_h19, s_h1a, s_h1b);
+             s_h16, s_h17, s_h18, s_h19, s_h1a, s_h1b, s_h1f, s_h20);
 }
 
 void gatt_miot_on_mtu(uint16_t mtu)
@@ -476,4 +526,10 @@ int gatt_miot_notify_auth_0019(void *user, const uint8_t *d, size_t len)
      * （docs/known-issues §2.1 表 1）。登录完成后的 ag2 才改看本帧来路面。 */
     uint16_t h = (s_auth && miot_auth_is_logged_in(s_auth)) ? pick_chan(s_h19) : s_h19;
     return notify_chr(h, d, len);
+}
+
+int gatt_miot_notify_0020(const uint8_t *d, size_t len)
+{
+    /* 打印通道应答/心跳固定走 0x0020（jasiek 逆向 + ArtrixTech 实机验证） */
+    return notify_chr(s_h20, d, len);
 }

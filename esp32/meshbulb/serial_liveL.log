@@ -1,0 +1,1178 @@
+
+===== capture start 14:22:00 =====
+[reset pulse sent]
+I (130) esp_image: segment 4: paddr=000abdd8 vaddr=40380838 sizeESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (25) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (26) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1cb10h (117520) map
+I (46) esp_image: segment 1: paddr=0002cb38 vaddr=3fc91a00 size=02ca0h ( 11424) load
+I (48) esp_image: segment 2: paddr=0002f7e0 vaddr=40380000 size=00838h (  2104) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7bdb0h (507312) map
+I (130) esp_image: segment 4: paddr=000abdd8 vaddr=40380838 size=110c0h ( 69824) load
+I (143) esp_image: segment 5: paddr=000bcea0 vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (158) app_init: App version:      8089566-dirty
+I (158) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  814429349...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (159) heap_init: At 3FC98DA0 len 00027260 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (161) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 186ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)
+I (413) MIOT-GATT: 0xFE95 service registered (12 chars: 0001/0002/0004/0010/0013/0014/0016/0017/0018/0019/001A/001B), ver=2.1.3_0039
+I (413) MIOT-GATT: NUS service registered (6E400001 rx=6E400002 tx=6E400003)
+W (413) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (423) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (423) MIOT-GATT: handles: 0004=21 0010=23 0013=26 0019=39 001A=42 001B=45 0017=33 0018=36
+I (562623) MIOT-GATT: connected conn=1 mtu=23 ver='2.1.3_0039'
+I (562623) BULB: phone connected -> adv stopped
+I (563493) BULB: subscribe attr=45 (other) notify=1
+I (563533) BULB: subscribe attr=42 (other) notify=1
+I (563583) BULB: subscribe attr=39 (other) notify=1
+I (563633) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+I (563633) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (563693) MIOT-GATT: mtu -> 247
+I (563753) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (563753) MIOT-GATT:   hex10 A4
+I (563753) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (563843) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (563843) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (563843) MIOT-GATT: ntf h=39 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (563933) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (563933) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (563933) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (563933) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 02
+I (563933) MIOT-GATT: ntf h=39 len=7 rc=0 head=02 00 6C
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (564023) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (564023) MIOT-GATT:   hex19 00 00 01 01
+I (564053) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (564053) MIOT-GATT:   hex19 00 00 01 00
+I (564053) BULB: subscribe attr=23 (other) notify=1
+I (564113) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (564113) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (564143) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (564143) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (564143) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (564233) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (564233) MIOT-GATT:   hex19 01 00 5D A6 2D 9C 44 05 78 83 79 92 7F 62 9F 2A 34 E6
+I (564233) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+[miot-auth] LOGIN(STD): use token=C803
+I (564233) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (564233) MIOT-GATT: ntf h=39 len=18 rc=0 head=01 00 B6
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (564323) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (564323) MIOT-GATT:   hex19 00 00 01 01
+I (564323) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (564323) MIOT-GATT:   hex19 00 00 01 00
+I (564423) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (564423) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 AC
+I (564423) MIOT-GATT: ntf h=39 len=16 rc=0 head=02 00 65
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (564473) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (564473) MIOT-GATT:   hex19 00 00 01 01
+I (564503) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (564503) MIOT-GATT:   hex19 00 00 01 00
+I (564503) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (564503) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (564503) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (564593) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (564593) MIOT-GATT:   hex19 01 00 8E 42 68 EE 10 71 67 8E 3D 42 DF 6A 0C F2 39 34 A1 73
+I (564593) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (564593) MIOT-GATT:   hex19 02 00 57 95 54 9B 28 ED DC 9B AE D0 50 E3 EF 04
+I (564593) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (564593) MIOT-GATT: ntf h=23 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (564623) miot: spec session ready (keys set)
+I (564623) BULB: *** session established: spec channel ready ***
+I (564623) BULB: login: wait for App GET (no push)
+I (564683) MIOT-GATT: rd 0004 op=0 off=0 mtu=247
+I (564683) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (564893) MIOT-GATT: wr 001A #1 len=6 cmd=00
+I (564893) miot: rx#1 len=6: 00 00 00 00 01 00 
+I (564893) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (564893) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (564893) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (564983) MIOT-GATT: wr 001A #2 len=13 cmd=01
+I (564983) miot: rx#2 len=13: 01 00 00 00 73 85 86 9F E8 A6 BE AC 44 
+I (564983) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (564983) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (564983) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (564983) miot: spec req seq=0 pt=5B
+I (564983) miot:   pt[000] 05 20 02 00 F0 
+I (564983) miot: tx#1 pt=5B wire=11B: 05 20 02 00 F0 
+I (564983) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (564983) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (564993) MIOT-GATT: ntf h=23 len=13 rc=0 head=01 00 00
+I (564993) MIOT-GATT: ntf h=45 len=13 rc=0 head=01 00 00
+I (564993) miot: spec version exchange done (dev ver=2)
+I (564993) MIOT-GATT: wr 001A #3 len=13 cmd=01
+I (564993) miot: rx#3 len=13: 01 00 00 00 73 85 86 9F E8 A6 BE AC 44 
+I (565073) MIOT-GATT: wr 001B #1 len=4 cmd=00
+I (565073) miot: rx#4 len=4: 00 00 01 01 
+I (565103) MIOT-GATT: wr 001B #2 len=4 cmd=00
+I (565103) miot: rx#5 len=4: 00 00 01 00 
+I (565133) MIOT-GATT: wr 001A #4 len=6 cmd=00
+I (565133) miot: rx#6 len=6: 00 00 00 00 02 00 
+I (565133) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (565133) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (565133) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (565223) MIOT-GATT: wr 001A #5 len=20 cmd=01
+I (565223) miot: rx#7 len=20: 01 00 01 00 A0 13 98 19 8D AA 90 92 D2 EA 7C EA 79 A0 5F 50 
+I (565223) MIOT-GATT: wr 001A #6 len=14 cmd=02
+I (565223) miot: rx#8 len=14: 02 00 68 14 E4 10 29 7F 2E F6 8D 81 7E 30 
+I (565223) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (565223) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (565223) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (565223) miot: spec req seq=1 pt=24B
+I (565223) miot:   pt[000] 18 20 03 00 02 06 07 01 00 07 02 00 07 03 00 07 04 00 08 01 00 05 EB 03 
+I (565223) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (565233) miot: tx#2 pt=52B wire=58B: 34 20 03 00 03 06 07 01 00 00 00 01 00 00 07 02 00 00 00 01 10 64 07 03 00 00 00 02 30 88 13 07 04 00 00 00 01 10 00 08 ...
+I (565233) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (565233) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (565233) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 01
+I (565233) MIOT-GATT: ntf h=45 len=20 rc=0 head=01 00 01
+I (565233) MIOT-GATT: ntf h=23 len=20 rc=0 head=02 00 00
+I (565233) MIOT-GATT: ntf h=45 len=20 rc=0 head=02 00 00
+I (565233) MIOT-GATT: ntf h=23 len=20 rc=0 head=03 00 DF
+I (565233) MIOT-GATT: ntf h=45 len=20 rc=0 head=03 00 DF
+I (565233) MIOT-GATT: ntf h=23 len=6 rc=0 head=04 00 30
+I (565253) MIOT-GATT: wr 001A #7 len=20 cmd=01
+I (565253) miot: rx#9 len=20: 01 00 01 00 A0 13 98 19 8D AA 90 92 D2 EA 7C EA 79 A0 5F 50 
+I (565253) MIOT-GATT: wr 001A #8 len=14 cmd=02
+I (565253) miot: rx#10 len=14: 02 00 68 14 E4 10 29 7F 2E F6 8D 81 7E 30 
+I (565343) MIOT-GATT: wr 001B #3 len=4 cmd=00
+I (565343) miot: rx#11 len=4: 00 00 01 01 
+I (565373) MIOT-GATT: wr 001B #4 len=4 cmd=00
+I (565373) miot: rx#12 len=4: 00 00 01 00 
+I (565403) MIOT-GATT: wr 001A #9 len=6 cmd=00
+I (565403) miot: rx#13 len=6: 00 00 00 00 02 00 
+I (565493) MIOT-GATT: wr 001A #10 len=20 cmd=01
+I (565493) miot: rx#14 len=20: 01 00 02 00 7C E0 14 48 EF AA 39 19 80 B8 0B 36 C4 10 56 0E 
+I (565493) MIOT-GATT: wr 001A #11 len=5 cmd=02
+I (565493) miot: rx#15 len=5: 02 00 A0 B3 F3 
+I (565493) miot: spec req seq=2 pt=15B
+I (565493) miot:   pt[000] 0F 20 04 00 00 01 09 01 00 04 50 BE 97 FE 6A 
+I (565493) miot: spec SET 9.1 type=5 val=1795069886 -> ERR
+I (565493) miot: tx#3 pt=11B wire=17B: 0B 20 04 00 01 01 09 01 00 01 00 
+I (565523) MIOT-GATT: wr 001A #12 len=20 cmd=01
+I (565523) miot: rx#16 len=20: 01 00 02 00 7C E0 14 48 EF AA 39 19 80 B8 0B 36 C4 10 56 0E 
+I (565523) MIOT-GATT: wr 001A #13 len=5 cmd=02
+I (565523) miot: rx#17 len=5: 02 00 A0 B3 F3 
+I (565613) MIOT-GATT: wr 001B #5 len=4 cmd=00
+I (565613) miot: rx#18 len=4: 00 00 01 01 
+I (565613) MIOT-GATT: wr 001B #6 len=4 cmd=00
+I (565613) miot: rx#19 len=4: 00 00 01 00 
+I (565643) MIOT-GATT: wr 001A #14 len=6 cmd=00
+I (565643) miot: rx#20 len=6: 00 00 00 00 01 00 
+I (565733) MIOT-GATT: wr 001A #15 len=17 cmd=01
+I (565733) miot: rx#21 len=17: 01 00 03 00 84 93 85 26 91 44 78 49 F0 58 C7 48 07 
+I (565733) miot: spec req seq=3 pt=9B
+I (565733) miot:   pt[000] 09 20 05 00 02 01 08 02 00 
+I (565733) miot: spec GET 8.2=ERR
+I (565733) miot: tx#4 pt=11B wire=17B: 0B 20 05 00 03 01 08 02 00 01 00 
+I (565763) MIOT-GATT: wr 001A #16 len=17 cmd=01
+I (565763) miot: rx#22 len=17: 01 00 03 00 84 93 85 26 91 44 78 49 F0 58 C7 48 07 
+I (565823) MIOT-GATT: wr 001B #7 len=4 cmd=00
+I (565823) miot: rx#23 len=4: 00 00 01 01 
+I (565853) MIOT-GATT: wr 001B #8 len=4 cmd=00
+I (565853) miot: rx#24 len=4: 00 00 01 00 
+I (609293) MIOT-GATT: wr 001A #17 len=6 cmd=00
+I (609293) miot: rx#25 len=6: 00 00 00 00 01 00 
+I (609383) MIOT-GATT: wr 001A #18 len=20 cmd=01
+I (609383) miot: rx#26 len=20: 01 00 04 00 B9 ED CD 7D 08 28 92 AD 71 42 0F EA 5C 1C 9C F9 
+I (609383) miot: spec req seq=4 pt=12B
+I (609383) miot: spec SET 7.2 type=1 val=99
+I (609383) miot: tx#5 pt=11B wire=17B: 0B 20 06 00 01 01 07 02 00 00 00 
+I (609393) MIOT-GATT: wr 001A #19 len=20 cmd=01
+I (609393) miot: rx#27 len=20: 01 00 04 00 B9 ED CD 7D 08 28 92 AD 71 42 0F EA 5C 1C 9C F9 
+I (609423) miot: tx#6 pt=12B wire=18B: 0C 20 00 00 04 01 07 02 00 01 10 63 
+I (609423) BULB: properties_changed 7.2
+I (609473) MIOT-GATT: wr 001B #9 len=4 cmd=00
+I (609473) miot: rx#28 len=4: 00 00 01 01 
+I (609503) MIOT-GATT: wr 001B #10 len=4 cmd=00
+I (609503) miot: rx#29 len=4: 00 00 01 00 
+I (610103) MIOT-GATT: wr 001A #20 len=6 cmd=00
+I (610103) miot: rx#30 len=6: 00 00 00 00 01 00 
+I (610193) MIOT-GATT: wr 001A #21 len=20 cmd=01
+I (610193) miot: rx#31 len=20: 01 00 05 00 C7 81 AC DD F9 4C 6A 9E 04 E4 A0 D4 DF AD C9 7B 
+I (610193) miot: spec req seq=5 pt=12B
+I (610193) miot: spec SET 7.2 type=1 val=95
+I (610193) miot: tx#7 pt=11B wire=17B: 0B 20 07 00 01 01 07 02 00 00 00 
+I (610203) MIOT-GATT: wr 001A #22 len=20 cmd=01
+I (610203) miot: rx#32 len=20: 01 00 05 00 C7 81 AC DD F9 4C 6A 9E 04 E4 A0 D4 DF AD C9 7B 
+I (610223) miot: tx#8 pt=12B wire=18B: 0C 20 01 00 04 01 07 02 00 01 10 5F 
+I (610223) BULB: properties_changed 7.2
+I (610313) MIOT-GATT: wr 001B #11 len=4 cmd=00
+I (610313) miot: rx#33 len=4: 00 00 01 01 
+I (610313) MIOT-GATT: wr 001B #12 len=4 cmd=00
+I (610313) miot: rx#34 len=4: 00 00 01 00 
+I (610913) MIOT-GATT: wr 001A #23 len=6 cmd=00
+I (610913) miot: rx#35 len=6: 00 00 00 00 01 00 
+I (611003) MIOT-GATT: wr 001A #24 len=20 cmd=01
+I (611003) miot: rx#36 len=20: 01 00 06 00 63 11 72 74 09 A5 4A 90 EF CB C2 E1 5C 23 FD 94 
+I (611003) miot: spec req seq=6 pt=12B
+I (611003) miot: spec SET 7.2 type=1 val=26
+I (611003) miot: tx#9 pt=11B wire=17B: 0B 20 08 00 01 01 07 02 00 00 00 
+I (611013) MIOT-GATT: wr 001A #25 len=20 cmd=01
+I (611013) miot: rx#37 len=20: 01 00 06 00 63 11 72 74 09 A5 4A 90 EF CB C2 E1 5C 23 FD 94 
+I (611023) miot: tx#10 pt=12B wire=18B: 0C 20 02 00 04 01 07 02 00 01 10 1A 
+I (611023) BULB: properties_changed 7.2
+I (611093) MIOT-GATT: wr 001B #13 len=4 cmd=00
+I (611093) miot: rx#38 len=4: 00 00 01 01 
+I (611123) MIOT-GATT: wr 001B #14 len=4 cmd=00
+I (611123) miot: rx#39 len=4: 00 00 01 00 
+I (611633) MIOT-GATT: wr 001A #26 len=6 cmd=00
+I (611633) miot: rx#40 len=6: 00 00 00 00 01 00 
+I (611723) MIOT-GATT: wr 001A #27 len=20 cmd=01
+I (611723) miot: rx#41 len=20: 01 00 07 00 5A 48 2E EA 39 C5 B5 64 23 51 E1 14 2D 68 E6 98 
+I (611723) miot: spec req seq=7 pt=12B
+I (611723) miot: spec SET 7.2 type=1 val=100
+I (611723) miot: tx#11 pt=11B wire=17B: 0B 20 09 00 01 01 07 02 00 00 00 
+I (611733) MIOT-GATT: wr 001A #28 len=20 cmd=01
+I (611733) miot: rx#42 len=20: 01 00 07 00 5A 48 2E EA 39 C5 B5 64 23 51 E1 14 2D 68 E6 98 
+I (611773) miot: tx#12 pt=12B wire=18B: 0C 20 03 00 04 01 07 02 00 01 10 64 
+I (611773) BULB: properties_changed 7.2
+I (611843) MIOT-GATT: wr 001B #15 len=4 cmd=00
+I (611843) miot: rx#43 len=4: 00 00 01 01 
+I (611843) MIOT-GATT: wr 001B #16 len=4 cmd=00
+I (611843) miot: rx#44 len=4: 00 00 01 00 
+I (612653) MIOT-GATT: wr 001A #29 len=6 cmd=00
+I (612653) miot: rx#45 len=6: 00 00 00 00 02 00 
+I (612713) MIOT-GATT: wr 001A #30 len=20 cmd=01
+I (612713) miot: rx#46 len=20: 01 00 08 00 48 74 6C B1 BA C2 62 07 05 24 E5 5F B0 8B 1C 33 
+I (612713) MIOT-GATT: wr 001A #31 len=3 cmd=02
+I (612713) miot: spec req seq=8 pt=13B
+I (612713) miot: spec SET 7.3 type=3 val=4964
+I (612713) miot: tx#13 pt=11B wire=17B: 0B 20 0A 00 01 01 07 03 00 00 00 
+I (612723) miot: tx#14 pt=13B wire=19B: 0D 20 04 00 04 01 07 03 00 02 30 64 13 
+I (612723) BULB: properties_changed 7.3
+I (612743) MIOT-GATT: wr 001A #32 len=20 cmd=01
+I (612743) miot: rx#47 len=20: 01 00 08 00 48 74 6C B1 BA C2 62 07 05 24 E5 5F B0 8B 1C 33 
+I (612743) MIOT-GATT: wr 001A #33 len=3 cmd=02
+I (612833) MIOT-GATT: wr 001B #17 len=4 cmd=00
+I (612833) miot: rx#48 len=4: 00 00 01 01 
+I (612833) MIOT-GATT: wr 001B #18 len=4 cmd=00
+I (612833) miot: rx#49 len=4: 00 00 01 00 
+I (613463) MIOT-GATT: wr 001A #34 len=6 cmd=00
+I (613463) miot: rx#50 len=6: 00 00 00 00 02 00 
+I (613523) MIOT-GATT: wr 001A #35 len=20 cmd=01
+I (613523) miot: rx#51 len=20: 01 00 09 00 42 CE ED ED AF 0D 78 5E A5 10 DC 3F 83 D2 1E F0 
+I (613553) MIOT-GATT: wr 001A #36 len=3 cmd=02
+I (613553) miot: spec req seq=9 pt=13B
+I (613553) miot: spec SET 7.3 type=3 val=2796
+I (613553) miot: tx#15 pt=11B wire=17B: 0B 20 0B 00 01 01 07 03 00 00 00 
+I (613563) MIOT-GATT: wr 001A #37 len=20 cmd=01
+I (613563) miot: rx#52 len=20: 01 00 09 00 42 CE ED ED AF 0D 78 5E A5 10 DC 3F 83 D2 1E F0 
+I (613563) MIOT-GATT: wr 001A #38 len=3 cmd=02
+I (613573) miot: tx#16 pt=13B wire=19B: 0D 20 05 00 04 01 07 03 00 02 30 EC 0A 
+I (613573) BULB: properties_changed 7.3
+I (613673) MIOT-GATT: wr 001B #19 len=4 cmd=00
+I (613673) miot: rx#53 len=4: 00 00 01 01 
+I (613673) MIOT-GATT: wr 001B #20 len=4 cmd=00
+I (613673) miot: rx#54 len=4: 00 00 01 00 
+I (613883) MIOT-GATT: wr 001A #39 len=6 cmd=00
+I (613883) miot: rx#55 len=6: 00 00 00 00 02 00 
+I (613973) MIOT-GATT: wr 001A #40 len=20 cmd=01
+I (613973) miot: rx#56 len=20: 01 00 0A 00 E1 20 14 D2 44 A2 CE 45 0C 35 08 CF A0 89 93 A4 
+I (613973) MIOT-GATT: wr 001A #41 len=3 cmd=02
+I (613973) miot: spec req seq=10 pt=13B
+I (613973) miot: spec SET 7.3 type=3 val=5000
+I (613973) miot: tx#17 pt=11B wire=17B: 0B 20 0C 00 01 01 07 03 00 00 00 
+I (613983) MIOT-GATT: wr 001A #42 len=20 cmd=01
+I (613983) miot: rx#57 len=20: 01 00 0A 00 E1 20 14 D2 44 A2 CE 45 0C 35 08 CF A0 89 93 A4 
+I (613983) MIOT-GATT: wr 001A #43 len=3 cmd=02
+I (614023) miot: tx#18 pt=13B wire=19B: 0D 20 06 00 04 01 07 03 00 02 30 88 13 
+I (614023) BULB: properties_changed 7.3
+I (614123) MIOT-GATT: wr 001B #21 len=4 cmd=00
+I (614123) miot: rx#58 len=4: 00 00 01 01 
+I (614123) MIOT-GATT: wr 001B #22 len=4 cmd=00
+I (614123) miot: rx#59 len=4: 00 00 01 00 
+I (614513) MIOT-GATT: wr 001A #44 len=6 cmd=00
+I (614513) miot: rx#60 len=6: 00 00 00 00 01 00 
+I (614603) MIOT-GATT: wr 001A #45 len=20 cmd=01
+I (614603) miot: rx#61 len=20: 01 00 0B 00 2A 05 C9 5A 62 78 02 48 8D 80 30 AC 6D 57 D6 01 
+I (614603) miot: spec req seq=11 pt=12B
+I (614603) miot: spec SET 7.4 type=1 val=2
+I (614603) miot: tx#19 pt=11B wire=17B: 0B 20 0D 00 01 01 07 04 00 00 00 
+I (614613) MIOT-GATT: wr 001A #46 len=20 cmd=01
+I (614613) miot: rx#62 len=20: 01 00 0B 00 2A 05 C9 5A 62 78 02 48 8D 80 30 AC 6D 57 D6 01 
+I (614623) miot: tx#20 pt=12B wire=18B: 0C 20 07 00 04 01 07 04 00 01 10 02 
+I (614623) BULB: properties_changed 7.4
+I (614723) MIOT-GATT: wr 001B #23 len=4 cmd=00
+I (614723) miot: rx#63 len=4: 00 00 01 01 
+I (614753) MIOT-GATT: wr 001B #24 len=4 cmd=00
+I (614753) miot: rx#64 len=4: 00 00 01 00 
+I (615053) MIOT-GATT: wr 001A #47 len=6 cmd=00
+I (615053) miot: rx#65 len=6: 00 00 00 00 01 00 
+I (615143) MIOT-GATT: wr 001A #48 len=20 cmd=01
+I (615143) miot: rx#66 len=20: 01 00 0C 00 38 52 1F BE AD A2 E5 60 00 FC C4 9E FF 04 20 EC 
+I (615143) miot: spec req seq=12 pt=12B
+I (615143) miot: spec SET 7.4 type=1 val=3
+I (615143) miot: tx#21 pt=11B wire=17B: 0B 20 0E 00 01 01 07 04 00 00 00 
+I (615153) MIOT-GATT: wr 001A #49 len=20 cmd=01
+I (615153) miot: rx#67 len=20: 01 00 0C 00 38 52 1F BE AD A2 E5 60 00 FC C4 9E FF 04 20 EC 
+I (615173) miot: tx#22 pt=12B wire=18B: 0C 20 08 00 04 01 07 04 00 01 10 03 
+I (615173) BULB: properties_changed 7.4
+I (615263) MIOT-GATT: wr 001B #25 len=4 cmd=00
+I (615263) miot: rx#68 len=4: 00 00 01 01 
+I (615263) MIOT-GATT: wr 001B #26 len=4 cmd=00
+I (615263) miot: rx#69 len=4: 00 00 01 00 
+I (615503) MIOT-GATT: wr 001A #50 len=6 cmd=00
+I (615503) miot: rx#70 len=6: 00 00 00 00 01 00 
+I (615593) MIOT-GATT: wr 001A #51 len=20 cmd=01
+I (615593) miot: rx#71 len=20: 01 00 0D 00 F2 52 57 69 2B 49 3E 47 FC 76 94 0E 9A 0D 3C 33 
+I (615593) miot: spec req seq=13 pt=12B
+I (615593) miot: spec SET 7.4 type=1 val=4
+I (615593) miot: tx#23 pt=11B wire=17B: 0B 20 0F 00 01 01 07 04 00 00 00 
+I (615623) miot: tx#24 pt=12B wire=18B: 0C 20 09 00 04 01 07 04 00 01 10 04 
+I (615623) BULB: properties_changed 7.4
+I (615623) MIOT-GATT: wr 001A #52 len=20 cmd=01
+I (615623) miot: rx#72 len=20: 01 00 0D 00 F2 52 57 69 2B 49 3E 47 FC 76 94 0E 9A 0D 3C 33 
+I (615713) MIOT-GATT: wr 001B #27 len=4 cmd=00
+I (615713) miot: rx#73 len=4: 00 00 01 01 
+I (615743) MIOT-GATT: wr 001B #28 len=4 cmd=00
+I (615743) miot: rx#74 len=4: 00 00 01 00 
+I (616163) MIOT-GATT: wr 001A #53 len=6 cmd=00
+I (616163) miot: rx#75 len=6: 00 00 00 00 01 00 
+I (616253) MIOT-GATT: wr 001A #54 len=20 cmd=01
+I (616253) miot: rx#76 len=20: 01 00 0E 00 97 B5 91 E2 9D C9 ED 5E EE CD 95 F9 DE 63 31 27 
+I (616253) miot: spec req seq=14 pt=12B
+I (616253) miot: spec SET 7.4 type=1 val=1
+I (616253) miot: tx#25 pt=11B wire=17B: 0B 20 10 00 01 01 07 04 00 00 00 
+I (616263) MIOT-GATT: wr 001A #55 len=20 cmd=01
+I (616263) miot: rx#77 len=20: 01 00 0E 00 97 B5 91 E2 9D C9 ED 5E EE CD 95 F9 DE 63 31 27 
+I (616273) miot: tx#26 pt=12B wire=18B: 0C 20 0A 00 04 01 07 04 00 01 10 01 
+I (616273) BULB: properties_changed 7.4
+I (616403) MIOT-GATT: wr 001B #29 len=4 cmd=00
+I (616403) miot: rx#78 len=4: 00 00 01 01 
+I (616403) MIOT-GATT: wr 001B #30 len=4 cmd=00
+I (616403) miot: rx#79 len=4: 00 00 01 00 
+I (616643) MIOT-GATT: wr 001A #56 len=6 cmd=00
+I (616643) miot: rx#80 len=6: 00 00 00 00 01 00 
+I (616733) MIOT-GATT: wr 001A #57 len=20 cmd=01
+I (616733) miot: rx#81 len=20: 01 00 0F 00 C0 63 5A 6D 12 82 B7 C4 F2 8F 0C 92 CD 31 C2 24 
+I (616733) miot: spec req seq=15 pt=12B
+I (616733) miot: spec SET 7.4 type=1 val=2
+I (616733) miot: tx#27 pt=11B wire=17B: 0B 20 11 00 01 01 07 04 00 00 00 
+I (616763) MIOT-GATT: wr 001A #58 len=20 cmd=01
+I (616763) miot: rx#82 len=20: 01 00 0F 00 C0 63 5A 6D 12 82 B7 C4 F2 8F 0C 92 CD 31 C2 24 
+I (616773) miot: tx#28 pt=12B wire=18B: 0C 20 0B 00 04 01 07 04 00 01 10 02 
+I (616773) BULB: properties_changed 7.4
+I (616823) MIOT-GATT: wr 001B #31 len=4 cmd=00
+I (616823) miot: rx#83 len=4: 00 00 01 01 
+I (616853) MIOT-GATT: wr 001B #32 len=4 cmd=00
+I (616853) miot: rx#84 len=4: 00 00 01 00 
+I (617063) MIOT-GATT: wr 001A #59 len=6 cmd=00
+I (617063) miot: rx#85 len=6: 00 00 00 00 01 00 
+I (617153) MIOT-GATT: wr 001A #60 len=20 cmd=01
+I (617153) miot: rx#86 len=20: 01 00 10 00 EE 6B 3E C9 12 A7 D6 99 FD 6F AB FA 60 99 A8 E9 
+I (617153) miot: spec req seq=16 pt=12B
+I (617153) miot: spec SET 7.4 type=1 val=3
+I (617153) miot: tx#29 pt=11B wire=17B: 0B 20 12 00 01 01 07 04 00 00 00 
+I (617163) MIOT-GATT: wr 001A #61 len=20 cmd=01
+I (617163) miot: rx#87 len=20: 01 00 10 00 EE 6B 3E C9 12 A7 D6 99 FD 6F AB FA 60 99 A8 E9 
+I (617173) miot: tx#30 pt=12B wire=18B: 0C 20 0C 00 04 01 07 04 00 01 10 03 
+I (617173) BULB: properties_changed 7.4
+I (617273) MIOT-GATT: wr 001B #33 len=4 cmd=00
+I (617273) miot: rx#88 len=4: 00 00 01 01 
+I (617303) MIOT-GATT: wr 001B #34 len=4 cmd=00
+I (617303) miot: rx#89 len=4: 00 00 01 00 
+I (617843) MIOT-GATT: wr 001A #62 len=6 cmd=00
+I (617843) miot: rx#90 len=6: 00 00 00 00 01 00 
+I (617933) MIOT-GATT: wr 001A #63 len=20 cmd=01
+I (617933) miot: rx#91 len=20: 01 00 11 00 5D 82 B3 E1 7D BC 72 F5 32 17 4B 28 C0 98 7D 00 
+I (617933) miot: spec req seq=17 pt=12B
+I (617933) miot: spec SET 7.4 type=1 val=4
+I (617933) miot: tx#31 pt=11B wire=17B: 0B 20 13 00 01 01 07 04 00 00 00 
+I (617943) MIOT-GATT: wr 001A #64 len=20 cmd=01
+I (617943) miot: rx#92 len=20: 01 00 11 00 5D 82 B3 E1 7D BC 72 F5 32 17 4B 28 C0 98 7D 00 
+I (617973) miot: tx#32 pt=12B wire=18B: 0C 20 0D 00 04 01 07 04 00 01 10 04 
+I (617973) BULB: properties_changed 7.4
+I (618053) MIOT-GATT: wr 001B #35 len=4 cmd=00
+I (618053) miot: rx#93 len=4: 00 00 01 01 
+I (618083) MIOT-GATT: wr 001B #36 len=4 cmd=00
+I (618083) miot: rx#94 len=4: 00 00 01 00 
+I (619853) MIOT-GATT: wr 001A #65 len=6 cmd=00
+I (619853) miot: rx#95 len=6: 00 00 00 00 02 00 
+I (619943) MIOT-GATT: wr 001A #66 len=20 cmd=01
+I (619943) miot: rx#96 len=20: 01 00 12 00 03 8F 1F 34 40 C7 E9 97 F6 F9 1B 3F 07 CC C0 91 
+I (619943) MIOT-GATT: wr 001A #67 len=14 cmd=02
+I (619943) miot: rx#97 len=14: 02 00 31 13 4E B8 45 0D 3F 0D 72 B0 24 66 
+I (619943) miot: spec req seq=18 pt=24B
+I (619943) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (619953) miot: tx#33 pt=52B wire=58B: 34 20 14 00 03 06 07 01 00 00 00 01 00 00 07 02 00 00 00 01 10 64 07 03 00 00 00 02 30 88 13 07 04 00 00 00 01 10 04 08 ...
+I (619953) MIOT-GATT: wr 001A #68 len=20 cmd=01
+I (619953) miot: rx#98 len=20: 01 00 12 00 03 8F 1F 34 40 C7 E9 97 F6 F9 1B 3F 07 CC C0 91 
+I (619953) MIOT-GATT: wr 001A #69 len=14 cmd=02
+I (619953) miot: rx#99 len=14: 02 00 31 13 4E B8 45 0D 3F 0D 72 B0 24 66 
+I (620063) MIOT-GATT: wr 001B #37 len=4 cmd=00
+I (620063) miot: rx#100 len=4: 00 00 01 01 
+I (620063) MIOT-GATT: wr 001B #38 len=4 cmd=00
+I (620063) miot: rx#101 len=4: 00 00 01 00 
+I (650993) MIOT-GATT: wr 001A #70 len=6 cmd=00
+I (650993) miot: rx#102 len=6: 00 00 00 00 01 00 
+I (651083) MIOT-GATT: wr 001A #71 len=20 cmd=01
+I (651083) miot: rx#103 len=20: 01 00 13 00 C2 E5 FC C4 14 BB 92 F0 F8 48 8E 43 50 06 50 68 
+I (651083) miot: spec req seq=19 pt=12B
+I (651083) miot: spec SET 7.2 type=1 val=100
+I (651083) miot: tx#34 pt=11B wire=17B: 0B 20 15 00 01 01 07 02 00 00 00 
+I (651093) MIOT-GATT: wr 001A #72 len=20 cmd=01
+I (651093) miot: rx#104 len=20: 01 00 13 00 C2 E5 FC C4 14 BB 92 F0 F8 48 8E 43 50 06 50 68 
+I (651123) miot: tx#35 pt=12B wire=18B: 0C 20 0E 00 04 01 07 02 00 01 10 64 
+I (651123) BULB: properties_changed 7.2
+I (651203) MIOT-GATT: wr 001B #39 len=4 cmd=00
+I (651203) miot: rx#105 len=4: 00 00 01 01 
+I (651203) MIOT-GATT: wr 001B #40 len=4 cmd=00
+I (651203) miot: rx#106 len=4: 00 00 01 00 
+I (651773) MIOT-GATT: wr 001A #73 len=6 cmd=00
+I (651773) miot: rx#107 len=6: 00 00 00 00 01 00 
+I (651863) MIOT-GATT: wr 001A #74 len=20 cmd=01
+I (651863) miot: rx#108 len=20: 01 00 14 00 B6 86 F1 09 A2 85 5D 49 40 3C A0 D5 92 7D 51 C0 
+I (651863) miot: spec req seq=20 pt=12B
+I (651863) miot: spec SET 7.2 type=1 val=14
+I (651873) miot: tx#36 pt=11B wire=17B: 0B 20 16 00 01 01 07 02 00 00 00 
+I (651873) MIOT-GATT: wr 001A #75 len=20 cmd=01
+I (651873) miot: rx#109 len=20: 01 00 14 00 B6 86 F1 09 A2 85 5D 49 40 3C A0 D5 92 7D 51 C0 
+I (651873) miot: tx#37 pt=12B wire=18B: 0C 20 0F 00 04 01 07 02 00 01 10 0E 
+I (651873) BULB: properties_changed 7.2
+I (651983) MIOT-GATT: wr 001B #41 len=4 cmd=00
+I (651983) miot: rx#110 len=4: 00 00 01 01 
+I (651983) MIOT-GATT: wr 001B #42 len=4 cmd=00
+I (651983) miot: rx#111 len=4: 00 00 01 00 
+I (652043) MIOT-GATT: wr 001A #76 len=6 cmd=00
+I (652043) miot: rx#112 len=6: 00 00 00 00 01 00 
+I (652103) MIOT-GATT: wr 001A #77 len=20 cmd=01
+I (652103) miot: rx#113 len=20: 01 00 15 00 94 D2 E3 A8 EF 7D 43 45 3A A4 D0 DA 94 63 C2 97 
+I (652103) miot: spec req seq=21 pt=12B
+I (652103) miot: spec SET 7.2 type=1 val=13
+I (652103) miot: tx#38 pt=11B wire=17B: 0B 20 17 00 01 01 07 02 00 00 00 
+I (652123) miot: tx#39 pt=12B wire=18B: 0C 20 10 00 04 01 07 02 00 01 10 0D 
+I (652123) BULB: properties_changed 7.2
+I (652133) MIOT-GATT: wr 001A #78 len=20 cmd=01
+I (652133) miot: rx#114 len=20: 01 00 15 00 94 D2 E3 A8 EF 7D 43 45 3A A4 D0 DA 94 63 C2 97 
+I (652223) MIOT-GATT: wr 001B #43 len=4 cmd=00
+I (652223) miot: rx#115 len=4: 00 00 01 01 
+I (652223) MIOT-GATT: wr 001B #44 len=4 cmd=00
+I (652223) miot: rx#116 len=4: 00 00 01 00 
+I (652493) MIOT-GATT: wr 001A #79 len=6 cmd=00
+I (652493) miot: rx#117 len=6: 00 00 00 00 01 00 
+I (652583) MIOT-GATT: wr 001A #80 len=20 cmd=01
+I (652583) miot: rx#118 len=20: 01 00 16 00 F5 84 94 F9 17 52 29 F4 8B 16 3A 59 F1 4C D5 98 
+I (652583) miot: spec req seq=22 pt=12B
+I (652583) miot: spec SET 7.2 type=1 val=1
+I (652583) miot: tx#40 pt=11B wire=17B: 0B 20 18 00 01 01 07 02 00 00 00 
+I (652593) MIOT-GATT: wr 001A #81 len=20 cmd=01
+I (652593) miot: rx#119 len=20: 01 00 16 00 F5 84 94 F9 17 52 29 F4 8B 16 3A 59 F1 4C D5 98 
+I (652623) BULB: properties_changed 7.2
+I (652673) MIOT-GATT: wr 001B #45 len=4 cmd=00
+I (652673) miot: rx#120 len=4: 00 00 01 01 
+I (652703) MIOT-GATT: wr 001B #46 len=4 cmd=00
+I (652703) miot: rx#121 len=4: 00 00 01 00 
+I (652973) MIOT-GATT: wr 001A #82 len=6 cmd=00
+I (652973) miot: rx#122 len=6: 00 00 00 00 01 00 
+I (653033) MIOT-GATT: wr 001A #83 len=20 cmd=01
+I (653033) miot: rx#123 len=20: 01 00 17 00 9E 6B 6E 3E 97 44 01 75 FC A1 9A B5 EA D5 23 D6 
+I (653033) miot: spec req seq=23 pt=12B
+I (653033) miot: spec SET 7.2 type=1 val=1
+I (653063) MIOT-GATT: wr 001A #84 len=20 cmd=01
+I (653063) miot: rx#124 len=20: 01 00 17 00 9E 6B 6E 3E 97 44 01 75 FC A1 9A B5 EA D5 23 D6 
+I (653073) BULB: properties_changed 7.2
+I (653123) MIOT-GATT: wr 001B #47 len=4 cmd=00
+I (653123) miot: rx#125 len=4: 00 00 01 01 
+I (653123) MIOT-GATT: wr 001B #48 len=4 cmd=00
+I (653123) miot: rx#126 len=4: 00 00 01 00 
+I (653273) MIOT-GATT: wr 001A #85 len=6 cmd=00
+I (653273) miot: rx#127 len=6: 00 00 00 00 01 00 
+I (653363) MIOT-GATT: wr 001A #86 len=20 cmd=01
+I (653363) miot: rx#128 len=20: 01 00 18 00 3D 02 55 1A C6 3B EC 88 5C 4C 3A C0 B7 C6 8E 7D 
+I (653363) miot: spec req seq=24 pt=12B
+I (653363) miot: spec SET 7.2 type=1 val=1
+I (653373) MIOT-GATT: wr 001A #87 len=20 cmd=01
+I (653373) miot: rx#129 len=20: 01 00 18 00 3D 02 55 1A C6 3B EC 88 5C 4C 3A C0 B7 C6 8E 7D 
+I (653373) BULB: properties_changed 7.2
+I (653483) MIOT-GATT: wr 001B #49 len=4 cmd=00
+I (653483) miot: rx#130 len=4: 00 00 01 01 
+I (653483) MIOT-GATT: wr 001B #50 len=4 cmd=00
+I (653483) miot: rx#131 len=4: 00 00 01 00 
+I (654143) MIOT-GATT: wr 001A #88 len=6 cmd=00
+I (654143) miot: rx#132 len=6: 00 00 00 00 01 00 
+I (654233) MIOT-GATT: wr 001A #89 len=20 cmd=01
+I (654233) miot: rx#133 len=20: 01 00 1A 00 AF F0 72 95 60 B8 18 90 14 E3 9D 6B 1F 2E 3C 86 
+I (654233) miot: spec req seq=26 pt=12B
+I (654233) miot: spec SET 7.2 type=1 val=100
+I (654243) MIOT-GATT: wr 001A #90 len=20 cmd=01
+I (654243) miot: rx#134 len=20: 01 00 1A 00 AF F0 72 95 60 B8 18 90 14 E3 9D 6B 1F 2E 3C 86 
+I (654273) BULB: properties_changed 7.2
+I (654353) MIOT-GATT: wr 001B #51 len=4 cmd=00
+I (654353) miot: rx#135 len=4: 00 00 01 01 
+I (654353) MIOT-GATT: wr 001B #52 len=4 cmd=00
+I (654353) miot: rx#136 len=4: 00 00 01 00 
+I (656183) MIOT-GATT: wr 001A #91 len=6 cmd=00
+I (656183) miot: rx#137 len=6: 00 00 00 00 02 00 
+I (656273) MIOT-GATT: wr 001A #92 len=20 cmd=01
+I (656273) miot: rx#138 len=20: 01 00 1B 00 DE A8 E3 3C 6C F3 46 63 11 DB 0A 68 0C 49 FF C6 
+I (656273) MIOT-GATT: wr 001A #93 len=14 cmd=02
+I (656273) miot: rx#139 len=14: 02 00 F2 07 02 FC 50 D5 C9 C4 F4 EA 7F 82 
+I (656273) miot: spec req seq=27 pt=24B
+I (656283) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (656303) MIOT-GATT: wr 001A #94 len=20 cmd=01
+I (656303) miot: rx#140 len=20: 01 00 1B 00 DE A8 E3 3C 6C F3 46 63 11 DB 0A 68 0C 49 FF C6 
+I (656333) MIOT-GATT: wr 001A #95 len=14 cmd=02
+I (656333) miot: rx#141 len=14: 02 00 F2 07 02 FC 50 D5 C9 C4 F4 EA 7F 82 
+I (656453) MIOT-GATT: wr 001B #53 len=4 cmd=00
+I (656453) miot: rx#142 len=4: 00 00 01 01 
+I (656483) MIOT-GATT: wr 001B #54 len=4 cmd=00
+I (656483) miot: rx#143 len=4: 00 00 01 00 
+W (658223) BULB: BOOT 短按 -> 配对窗口 60s（快播 30ms）
+I (662603) MIOT-GATT: wr 001A #96 len=6 cmd=00
+I (662603) miot: rx#144 len=6: 00 00 00 00 01 00 
+I (662693) MIOT-GATT: wr 001A #97 len=20 cmd=01
+I (662693) miot: rx#145 len=20: 01 00 1C 00 1F 0A 7E 44 E7 E8 F2 97 27 BA EA 4F BB 86 B5 62 
+I (662693) miot: spec req seq=28 pt=12B
+I (662693) miot: spec SET 7.4 type=1 val=3
+I (662703) MIOT-GATT: wr 001A #98 len=20 cmd=01
+I (662703) miot: rx#146 len=20: 01 00 1C 00 1F 0A 7E 44 E7 E8 F2 97 27 BA EA 4F BB 86 B5 62 
+I (662723) BULB: properties_changed 7.4
+I (662813) MIOT-GATT: wr 001B #55 len=4 cmd=00
+I (662813) miot: rx#147 len=4: 00 00 01 01 
+I (662843) MIOT-GATT: wr 001B #56 len=4 cmd=00
+I (662843) miot: rx#148 len=4: 00 00 01 00 
+I (663083) MIOT-GATT: wr 001A #99 len=6 cmd=00
+I (663083) miot: rx#149 len=6: 00 00 00 00 01 00 
+I (663173) MIOT-GATT: wr 001A #100 len=20 cmd=01
+I (663173) miot: rx#150 len=20: 01 00 1D 00 35 06 89 16 5F DA AD 42 9A DA 6B 2C 03 D5 FF 5B 
+I (663173) miot: spec req seq=29 pt=12B
+I (663173) miot: spec SET 7.4 type=1 val=4
+I (663183) MIOT-GATT: wr 001A #101 len=20 cmd=01
+I (663183) miot: rx#151 len=20: 01 00 1D 00 35 06 89 16 5F DA AD 42 9A DA 6B 2C 03 D5 FF 5B 
+I (663223) BULB: properties_changed 7.4
+I (663263) MIOT-GATT: wr 001B #57 len=4 cmd=00
+I (663263) miot: rx#152 len=4: 00 00 01 01 
+I (663293) MIOT-GATT: wr 001B #58 len=4 cmd=00
+I (663293) miot: rx#153 len=4: 00 00 01 00 
+I (664013) MIOT-GATT: wr 001A #102 len=6 cmd=00
+I (664013) miot: rx#154 len=6: 00 00 00 00 01 00 
+I (664103) MIOT-GATT: wr 001A #103 len=20 cmd=01
+I (664103) miot: rx#155 len=20: 01 00 1E 00 DD 6C 21 F5 51 BA F5 92 FC 18 F1 30 45 12 68 15 
+I (664103) miot: spec req seq=30 pt=12B
+I (664103) miot: spec SET 7.4 type=1 val=3
+I (664113) MIOT-GATT: wr 001A #104 len=20 cmd=01
+I (664113) miot: rx#156 len=20: 01 00 1E 00 DD 6C 21 F5 51 BA F5 92 FC 18 F1 30 45 12 68 15 
+I (664123) BULB: properties_changed 7.4
+I (664223) MIOT-GATT: wr 001B #59 len=4 cmd=00
+I (664223) miot: rx#157 len=4: 00 00 01 01 
+I (664253) MIOT-GATT: wr 001B #60 len=4 cmd=00
+I (664253) miot: rx#158 len=4: 00 00 01 00 
+W (664803) BULB: BOOT 短按 -> 配对窗口 60s（快播 30ms）
+I (666053) MIOT-GATT: wr 001A #105 len=6 cmd=00
+I (666053) miot: rx#159 len=6: 00 00 00 00 02 00 
+I (666143) MIOT-GATT: wr 001A #106 len=20 cmd=01
+I (666143) miot: rx#160 len=20: 01 00 1F 00 C7 79 71 05 7D 76 39 25 44 2F 83 59 C6 35 00 88 
+I (666143) MIOT-GATT: wr 001A #107 len=14 cmd=02
+I (666143) miot: rx#161 len=14: 02 00 3A CE 15 FA 64 2D 6F E8 FF 3A AC F8 
+I (666143) miot: spec req seq=31 pt=24B
+I (666153) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (666173) MIOT-GATT: wr 001A #108 len=20 cmd=01
+I (666173) miot: rx#162 len=20: 01 00 1F 00 C7 79 71 05 7D 76 39 25 44 2F 83 59 C6 35 00 88 
+I (666173) MIOT-GATT: wr 001A #109 len=14 cmd=02
+I (666173) miot: rx#163 len=14: 02 00 3A CE 15 FA 64 2D 6F E8 FF 3A AC F8 
+I (666293) MIOT-GATT: wr 001B #61 len=4 cmd=00
+I (666293) miot: rx#164 len=4: 00 00 01 01 
+I (666293) MIOT-GATT: wr 001B #62 len=4 cmd=00
+I (666293) miot: rx#165 len=4: 00 00 01 00 
+I (668813) BULB: subscribe attr=23 (other) notify=0
+I (668813) BULB: subscribe attr=39 (other) notify=0
+I (668813) BULB: subscribe attr=42 (other) notify=0
+I (668813) BULB: subscribe attr=45 (other) notify=0
+I (668813) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=109 001B=62)
+I (668813) BULB: disconnected reason=0x213 -> adv resumed
+I (669463) MIOT-GATT: connected conn=1 mtu=23 ver='2.1.3_0039'
+I (669463) BULB: phone connected -> adv stopped
+I (670333) BULB: subscribe attr=45 (other) notify=1
+I (670373) BULB: subscribe attr=42 (other) notify=1
+I (670463) BULB: subscribe attr=39 (other) notify=1
+I (670523) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+I (670523) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (670583) MIOT-GATT: mtu -> 247
+I (670643) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (670643) MIOT-GATT:   hex10 A4
+I (670643) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (670733) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (670733) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (670733) MIOT-GATT: ntf h=39 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (670853) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (670853) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (670853) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (670853) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 02
+I (670853) MIOT-GATT: ntf h=39 len=7 rc=0 head=02 00 6C
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (670943) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (670943) MIOT-GATT:   hex19 00 00 01 01
+I (670943) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (670943) MIOT-GATT:   hex19 00 00 01 00
+I (670973) BULB: subscribe attr=23 (other) notify=1
+I (671033) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (671033) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (671063) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (671063) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (671063) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (671123) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (671123) MIOT-GATT:   hex19 01 00 71 3C C2 91 4B A9 77 85 D0 11 45 20 AD E2 57 2D
+I (671123) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+[miot-auth] LOGIN(STD): use token=C803
+I (671123) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (671123) MIOT-GATT: ntf h=39 len=18 rc=0 head=01 00 AA
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (671213) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (671213) MIOT-GATT:   hex19 00 00 01 01
+I (671213) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (671213) MIOT-GATT:   hex19 00 00 01 00
+I (671323) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (671323) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 3C
+I (671323) MIOT-GATT: ntf h=39 len=16 rc=0 head=02 00 E0
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (671363) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (671363) MIOT-GATT:   hex19 00 00 01 01
+I (671393) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (671393) MIOT-GATT:   hex19 00 00 01 00
+I (671393) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (671393) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (671393) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (671453) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (671453) MIOT-GATT:   hex19 01 00 52 79 F5 2B 32 00 7D 56 4A 59 A8 F5 A1 AC 5B CC 61 BD
+I (671453) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (671453) MIOT-GATT:   hex19 02 00 68 9D A4 20 54 6A 06 7D 3F C6 FD 91 61 DB
+I (671453) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (671453) MIOT-GATT: ntf h=23 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (671473) miot: spec session ready (keys set)
+I (671473) BULB: *** session established: spec channel ready ***
+I (671473) BULB: login: wait for App GET (no push)
+I (671513) MIOT-GATT: rd 0004 op=0 off=0 mtu=247
+I (671513) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (671723) MIOT-GATT: wr 001A #1 len=6 cmd=00
+I (671723) miot: rx#166 len=6: 00 00 00 00 01 00 
+I (671723) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (671723) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (671723) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (671783) MIOT-GATT: wr 001A #2 len=13 cmd=01
+I (671783) miot: rx#167 len=13: 01 00 00 00 EB 90 CD 72 2E 9D 00 CD 6D 
+I (671783) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (671783) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (671783) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (671783) miot: spec req seq=0 pt=5B
+I (671783) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (671783) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (671783) MIOT-GATT: ntf h=23 len=13 rc=0 head=01 00 00
+I (671793) MIOT-GATT: ntf h=45 len=13 rc=0 head=01 00 00
+I (671793) miot: spec version exchange done (dev ver=2)
+I (671813) MIOT-GATT: wr 001A #3 len=13 cmd=01
+I (671813) miot: rx#168 len=13: 01 00 00 00 EB 90 CD 72 2E 9D 00 CD 6D 
+I (671873) MIOT-GATT: wr 001B #1 len=4 cmd=00
+I (671873) miot: rx#169 len=4: 00 00 01 01 
+I (671873) MIOT-GATT: wr 001B #2 len=4 cmd=00
+I (671873) miot: rx#170 len=4: 00 00 01 00 
+I (671903) MIOT-GATT: wr 001A #4 len=6 cmd=00
+I (671903) miot: rx#171 len=6: 00 00 00 00 02 00 
+I (671903) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (671903) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (671903) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (671963) MIOT-GATT: wr 001A #5 len=20 cmd=01
+I (671963) miot: rx#172 len=20: 01 00 01 00 00 B2 5F E5 C8 6F FC BD 1E 9C 77 DD 54 7E FA B6 
+I (671963) MIOT-GATT: wr 001A #6 len=14 cmd=02
+I (671963) miot: rx#173 len=14: 02 00 29 C3 71 E3 7B 25 B2 47 4D 12 48 96 
+I (671963) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (671963) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (671963) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (671963) miot: spec req seq=1 pt=24B
+I (671963) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (671963) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (671973) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (671973) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 01
+I (671973) MIOT-GATT: ntf h=45 len=20 rc=0 head=01 00 01
+I (671973) MIOT-GATT: ntf h=23 len=20 rc=0 head=02 00 FD
+I (671973) MIOT-GATT: ntf h=45 len=20 rc=0 head=02 00 FD
+I (671973) MIOT-GATT: ntf h=23 len=20 rc=0 head=03 00 14
+I (671973) MIOT-GATT: ntf h=45 len=20 rc=0 head=03 00 14
+I (671973) MIOT-GATT: ntf h=23 len=6 rc=0 head=04 00 B0
+I (671993) MIOT-GATT: wr 001A #7 len=20 cmd=01
+I (671993) miot: rx#174 len=20: 01 00 01 00 00 B2 5F E5 C8 6F FC BD 1E 9C 77 DD 54 7E FA B6 
+I (671993) MIOT-GATT: wr 001A #8 len=14 cmd=02
+I (671993) miot: rx#175 len=14: 02 00 29 C3 71 E3 7B 25 B2 47 4D 12 48 96 
+I (672083) MIOT-GATT: wr 001B #3 len=4 cmd=00
+I (672083) miot: rx#176 len=4: 00 00 01 01 
+I (672083) MIOT-GATT: wr 001B #4 len=4 cmd=00
+I (672083) miot: rx#177 len=4: 00 00 01 00 
+I (672113) MIOT-GATT: wr 001A #9 len=6 cmd=00
+I (672113) miot: rx#178 len=6: 00 00 00 00 02 00 
+I (672173) MIOT-GATT: wr 001A #10 len=20 cmd=01
+I (672173) miot: rx#179 len=20: 01 00 02 00 84 8E 76 0F 7B 6E 41 87 88 D6 45 98 9E 96 D0 7A 
+I (672173) MIOT-GATT: wr 001A #11 len=5 cmd=02
+I (672173) miot: rx#180 len=5: 02 00 A8 2A C6 
+I (672173) miot: spec req seq=2 pt=15B
+I (672173) miot: spec SET 9.1 type=5 val=1795069993 -> ERR
+I (672203) MIOT-GATT: wr 001A #12 len=20 cmd=01
+I (672203) miot: rx#181 len=20: 01 00 02 00 84 8E 76 0F 7B 6E 41 87 88 D6 45 98 9E 96 D0 7A 
+I (672203) MIOT-GATT: wr 001A #13 len=5 cmd=02
+I (672203) miot: rx#182 len=5: 02 00 A8 2A C6 
+I (672263) MIOT-GATT: wr 001B #5 len=4 cmd=00
+I (672263) miot: rx#183 len=4: 00 00 01 01 
+I (672263) MIOT-GATT: wr 001B #6 len=4 cmd=00
+I (672263) miot: rx#184 len=4: 00 00 01 00 
+I (672263) MIOT-GATT: wr 001A #14 len=6 cmd=00
+I (672263) miot: rx#185 len=6: 00 00 00 00 02 00 
+I (672353) MIOT-GATT: wr 001A #15 len=20 cmd=01
+I (672353) miot: rx#186 len=20: 01 00 03 00 54 F9 99 D1 A4 D1 F4 D0 FD 93 1F 34 B3 13 21 5D 
+I (672353) MIOT-GATT: wr 001A #16 len=14 cmd=02
+I (672353) miot: rx#187 len=14: 02 00 51 C5 10 E6 D9 98 64 24 78 7A 75 72 
+I (672353) miot: spec req seq=3 pt=24B
+I (672353) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (672363) MIOT-GATT: wr 001A #17 len=20 cmd=01
+I (672363) miot: rx#188 len=20: 01 00 03 00 54 F9 99 D1 A4 D1 F4 D0 FD 93 1F 34 B3 13 21 5D 
+I (672363) MIOT-GATT: wr 001A #18 len=14 cmd=02
+I (672363) miot: rx#189 len=14: 02 00 51 C5 10 E6 D9 98 64 24 78 7A 75 72 
+I (672443) MIOT-GATT: wr 001B #7 len=4 cmd=00
+I (672443) miot: rx#190 len=4: 00 00 01 01 
+I (672443) MIOT-GATT: wr 001B #8 len=4 cmd=00
+I (672443) miot: rx#191 len=4: 00 00 01 00 
+I (672473) MIOT-GATT: wr 001A #19 len=6 cmd=00
+I (672473) miot: rx#192 len=6: 00 00 00 00 02 00 
+I (672533) MIOT-GATT: wr 001A #20 len=20 cmd=01
+I (672533) miot: rx#193 len=20: 01 00 05 00 4D E9 96 16 6D 90 2A 42 E5 6F 2D 8F DD F9 83 D0 
+I (672533) MIOT-GATT: wr 001A #21 len=5 cmd=02
+I (672533) miot: rx#194 len=5: 02 00 E5 14 91 
+I (672533) miot: spec req seq=5 pt=15B
+I (672533) miot: spec SET 9.1 type=5 val=1795069993 -> ERR
+I (672563) MIOT-GATT: wr 001A #22 len=20 cmd=01
+I (672563) miot: rx#195 len=20: 01 00 05 00 4D E9 96 16 6D 90 2A 42 E5 6F 2D 8F DD F9 83 D0 
+I (672563) MIOT-GATT: wr 001A #23 len=5 cmd=02
+I (672563) miot: rx#196 len=5: 02 00 E5 14 91 
+I (672623) MIOT-GATT: wr 001B #9 len=4 cmd=00
+I (672623) miot: rx#197 len=4: 00 00 01 01 
+I (672623) MIOT-GATT: wr 001B #10 len=4 cmd=00
+I (672623) miot: rx#198 len=4: 00 00 01 00 
+I (672653) MIOT-GATT: wr 001A #24 len=6 cmd=00
+I (672653) miot: rx#199 len=6: 00 00 00 00 01 00 
+I (672713) MIOT-GATT: wr 001A #25 len=17 cmd=01
+I (672713) miot: rx#200 len=17: 01 00 06 00 2B 87 F9 A3 0F AA D6 A9 7F 0C 31 FD 28 
+I (672713) miot: spec req seq=6 pt=9B
+I (672713) miot: spec GET 8.2=ERR
+I (672743) MIOT-GATT: wr 001A #26 len=17 cmd=01
+I (672743) miot: rx#201 len=17: 01 00 06 00 2B 87 F9 A3 0F AA D6 A9 7F 0C 31 FD 28 
+I (672833) MIOT-GATT: wr 001B #11 len=4 cmd=00
+I (672833) miot: rx#202 len=4: 00 00 01 01 
+I (672833) MIOT-GATT: wr 001B #12 len=4 cmd=00
+I (672833) miot: rx#203 len=4: 00 00 01 00 
+I (680513) MIOT-GATT: wr 001A #27 len=6 cmd=00
+I (680513) miot: rx#204 len=6: 00 00 00 00 01 00 
+I (680573) MIOT-GATT: wr 001A #28 len=20 cmd=01
+I (680573) miot: rx#205 len=20: 01 00 07 00 91 20 BE 8D 78 E6 73 44 D9 2C B5 CB 68 AA E0 5D 
+I (680573) miot: spec req seq=7 pt=12B
+I (680573) miot: spec SET 7.4 type=1 val=1
+I (680603) MIOT-GATT: wr 001A #29 len=20 cmd=01
+I (680603) miot: rx#206 len=20: 01 00 07 00 91 20 BE 8D 78 E6 73 44 D9 2C B5 CB 68 AA E0 5D 
+I (680623) BULB: properties_changed 7.4
+I (680663) MIOT-GATT: wr 001B #13 len=4 cmd=00
+I (680663) miot: rx#207 len=4: 00 00 01 01 
+I (680693) MIOT-GATT: wr 001B #14 len=4 cmd=00
+I (680693) miot: rx#208 len=4: 00 00 01 00 
+I (681113) MIOT-GATT: wr 001A #30 len=6 cmd=00
+I (681113) miot: rx#209 len=6: 00 00 00 00 01 00 
+I (681203) MIOT-GATT: wr 001A #31 len=20 cmd=01
+I (681203) miot: rx#210 len=20: 01 00 08 00 DB DE 0C F2 6B BE 07 8F 64 0B E6 24 D6 54 64 21 
+I (681203) miot: spec req seq=8 pt=12B
+I (681203) miot: spec SET 7.4 type=1 val=2
+I (681223) BULB: properties_changed 7.4
+I (681233) MIOT-GATT: wr 001A #32 len=20 cmd=01
+I (681233) miot: rx#211 len=20: 01 00 08 00 DB DE 0C F2 6B BE 07 8F 64 0B E6 24 D6 54 64 21 
+I (681323) MIOT-GATT: wr 001B #15 len=4 cmd=00
+I (681323) miot: rx#212 len=4: 00 00 01 01 
+I (681323) MIOT-GATT: wr 001B #16 len=4 cmd=00
+I (681323) miot: rx#213 len=4: 00 00 01 00 
+I (681713) MIOT-GATT: wr 001A #33 len=6 cmd=00
+I (681713) miot: rx#214 len=6: 00 00 00 00 01 00 
+I (681803) MIOT-GATT: wr 001A #34 len=20 cmd=01
+I (681803) miot: rx#215 len=20: 01 00 09 00 BE C5 44 EB F9 27 C5 44 DC 1C B3 82 BB 71 07 DE 
+I (681803) miot: spec req seq=9 pt=12B
+I (681803) miot: spec SET 7.4 type=1 val=3
+I (681803) MIOT-GATT: wr 001A #35 len=20 cmd=01
+I (681813) miot: rx#216 len=20: 01 00 09 00 BE C5 44 EB F9 27 C5 44 DC 1C B3 82 BB 71 07 DE 
+I (681823) BULB: properties_changed 7.4
+I (681923) MIOT-GATT: wr 001B #17 len=4 cmd=00
+I (681923) miot: rx#217 len=4: 00 00 01 01 
+I (681923) MIOT-GATT: wr 001B #18 len=4 cmd=00
+I (681923) miot: rx#218 len=4: 00 00 01 00 
+I (682433) MIOT-GATT: wr 001A #36 len=6 cmd=00
+I (682433) miot: rx#219 len=6: 00 00 00 00 01 00 
+I (682523) MIOT-GATT: wr 001A #37 len=20 cmd=01
+I (682523) miot: rx#220 len=20: 01 00 0A 00 DE 5A 0A 37 98 83 2F 44 60 4F FD 2F DC CD 3B 82 
+I (682523) miot: spec req seq=10 pt=12B
+I (682523) miot: spec SET 7.4 type=1 val=4
+I (682523) MIOT-GATT: wr 001A #38 len=20 cmd=01
+I (682533) miot: rx#221 len=20: 01 00 0A 00 DE 5A 0A 37 98 83 2F 44 60 4F FD 2F DC CD 3B 82 
+I (682573) BULB: properties_changed 7.4
+I (682643) MIOT-GATT: wr 001B #19 len=4 cmd=00
+I (682643) miot: rx#222 len=4: 00 00 01 01 
+I (682643) MIOT-GATT: wr 001B #20 len=4 cmd=00
+I (682643) miot: rx#223 len=4: 00 00 01 00 
+I (683033) MIOT-GATT: wr 001A #39 len=6 cmd=00
+I (683033) miot: rx#224 len=6: 00 00 00 00 01 00 
+I (683123) MIOT-GATT: wr 001A #40 len=20 cmd=01
+I (683123) miot: rx#225 len=20: 01 00 0B 00 D3 E4 B4 C8 6A 4A 05 1C 8E 5E 26 D9 39 32 B5 4B 
+I (683123) miot: spec req seq=11 pt=12B
+I (683123) miot: spec SET 7.4 type=1 val=1
+I (683123) MIOT-GATT: wr 001A #41 len=20 cmd=01
+I (683133) miot: rx#226 len=20: 01 00 0B 00 D3 E4 B4 C8 6A 4A 05 1C 8E 5E 26 D9 39 32 B5 4B 
+I (683173) BULB: properties_changed 7.4
+I (683243) MIOT-GATT: wr 001B #21 len=4 cmd=00
+I (683243) miot: rx#227 len=4: 00 00 01 01 
+I (683273) MIOT-GATT: wr 001B #22 len=4 cmd=00
+I (683273) miot: rx#228 len=4: 00 00 01 00 
+I (683813) MIOT-GATT: wr 001A #42 len=6 cmd=00
+I (683813) miot: rx#229 len=6: 00 00 00 00 01 00 
+I (683903) MIOT-GATT: wr 001A #43 len=20 cmd=01
+I (683903) miot: rx#230 len=20: 01 00 0C 00 BE FC CE EB C8 4F 28 A5 54 26 FA C2 4D B1 45 92 
+I (683903) miot: spec req seq=12 pt=12B
+I (683903) miot: spec SET 7.4 type=1 val=2
+I (683923) BULB: properties_changed 7.4
+I (683933) MIOT-GATT: wr 001A #44 len=20 cmd=01
+I (683933) miot: rx#231 len=20: 01 00 0C 00 BE FC CE EB C8 4F 28 A5 54 26 FA C2 4D B1 45 92 
+I (684023) MIOT-GATT: wr 001B #23 len=4 cmd=00
+I (684023) miot: rx#232 len=4: 00 00 01 01 
+I (684053) MIOT-GATT: wr 001B #24 len=4 cmd=00
+I (684053) miot: rx#233 len=4: 00 00 01 00 
+I (685793) MIOT-GATT: wr 001A #45 len=6 cmd=00
+I (685793) miot: rx#234 len=6: 00 00 00 00 02 00 
+I (685883) MIOT-GATT: wr 001A #46 len=20 cmd=01
+I (685883) miot: rx#235 len=20: 01 00 0D 00 E7 E9 C3 19 5F 7C 82 F0 55 06 CC D4 F6 8D F4 4F 
+I (685883) MIOT-GATT: wr 001A #47 len=14 cmd=02
+I (685883) miot: rx#236 len=14: 02 00 95 E4 6C 67 9D 64 C3 C6 C1 13 82 5A 
+I (685883) miot: spec req seq=13 pt=24B
+I (685883) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (685913) MIOT-GATT: wr 001A #48 len=20 cmd=01
+I (685913) miot: rx#237 len=20: 01 00 0D 00 E7 E9 C3 19 5F 7C 82 F0 55 06 CC D4 F6 8D F4 4F 
+I (685913) MIOT-GATT: wr 001A #49 len=14 cmd=02
+I (685913) miot: rx#238 len=14: 02 00 95 E4 6C 67 9D 64 C3 C6 C1 13 82 5A 
+I (685973) MIOT-GATT: wr 001B #25 len=4 cmd=00
+I (685973) miot: rx#239 len=4: 00 00 01 01 
+I (686033) MIOT-GATT: wr 001B #26 len=4 cmd=00
+I (686033) miot: rx#240 len=4: 00 00 01 00 
+I (691463) BULB: subscribe attr=23 (other) notify=0
+I (691463) BULB: subscribe attr=39 (other) notify=0
+I (691463) BULB: subscribe attr=42 (other) notify=0
+I (691463) BULB: subscribe attr=45 (other) notify=0
+I (691463) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=49 001B=26)
+I (691463) BULB: disconnected reason=0x213 -> adv resumed
+I (696613) MIOT-GATT: connected conn=1 mtu=23 ver='2.1.3_0039'
+I (696613) BULB: phone connected -> adv stopped
+I (697443) BULB: subscribe attr=45 (other) notify=1
+I (697473) BULB: subscribe attr=42 (other) notify=1
+I (697523) BULB: subscribe attr=39 (other) notify=1
+I (697613) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+I (697613) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (697703) MIOT-GATT: mtu -> 247
+I (697763) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (697763) MIOT-GATT:   hex10 A4
+I (697763) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (697883) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (697883) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (697883) MIOT-GATT: ntf h=39 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (697973) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (697973) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (697973) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (697973) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 02
+I (697973) MIOT-GATT: ntf h=39 len=7 rc=0 head=02 00 6C
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (698063) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (698063) MIOT-GATT:   hex19 00 00 01 01
+I (698063) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (698063) MIOT-GATT:   hex19 00 00 01 00
+I (698093) BULB: subscribe attr=23 (other) notify=1
+I (698153) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (698153) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (698183) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (698183) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (698183) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (698273) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (698273) MIOT-GATT:   hex19 01 00 CA A9 AA 14 4B 08 9B 74 13 B8 59 50 F5 B2 EE 7E
+I (698273) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+[miot-auth] LOGIN(STD): use token=C803
+I (698273) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (698273) MIOT-GATT: ntf h=39 len=18 rc=0 head=01 00 D3
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (698363) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (698363) MIOT-GATT:   hex19 00 00 01 01
+I (698363) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (698363) MIOT-GATT:   hex19 00 00 01 00
+I (698473) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (698473) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 1F
+I (698473) MIOT-GATT: ntf h=39 len=16 rc=0 head=02 00 63
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (698513) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (698513) MIOT-GATT:   hex19 00 00 01 01
+I (698543) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (698543) MIOT-GATT:   hex19 00 00 01 00
+I (698543) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (698543) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (698543) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (698633) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (698633) MIOT-GATT:   hex19 01 00 93 94 F6 0B 31 4C B1 9B A2 E9 1E A4 4B BF CC C1 C8 9C
+I (698633) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (698633) MIOT-GATT:   hex19 02 00 91 70 4D A0 33 C5 78 70 2D ED 91 58 42 2E
+I (698633) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (698633) MIOT-GATT: ntf h=23 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (698673) miot: spec session ready (keys set)
+I (698673) BULB: *** session established: spec channel ready ***
+I (698673) BULB: login: wait for App GET (no push)
+I (698723) MIOT-GATT: rd 0004 op=0 off=0 mtu=247
+I (698723) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (698963) MIOT-GATT: wr 001A #1 len=6 cmd=00
+I (698963) miot: rx#241 len=6: 00 00 00 00 01 00 
+I (698963) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (698963) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (698963) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (700013) BULB: subscribe attr=23 (other) notify=0
+I (700013) BULB: subscribe attr=39 (other) notify=0
+I (700013) BULB: subscribe attr=42 (other) notify=0
+I (700013) BULB: subscribe attr=45 (other) notify=0
+I (700013) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=1 001B=0)
+I (700013) BULB: disconnected reason=0x213 -> adv resumed
+I (733603) MIOT-GATT: connected conn=1 mtu=23 ver='2.1.3_0039'
+I (733603) BULB: phone connected -> adv stopped
+I (734433) BULB: subscribe attr=45 (other) notify=1
+I (734483) BULB: subscribe attr=42 (other) notify=1
+I (734543) BULB: subscribe attr=39 (other) notify=1
+I (734603) MIOT-GATT: rd 0004 op=0 off=0 mtu=23
+I (734603) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (734663) MIOT-GATT: mtu -> 247
+I (734723) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (734723) MIOT-GATT:   hex10 A4
+I (734723) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (734783) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (734783) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (734783) MIOT-GATT: ntf h=39 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (734843) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (734843) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (734843) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (734843) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 02
+I (734843) MIOT-GATT: ntf h=39 len=7 rc=0 head=02 00 6C
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (734903) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (734903) MIOT-GATT:   hex19 00 00 01 01
+I (734963) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (734963) MIOT-GATT:   hex19 00 00 01 00
+I (734963) BULB: subscribe attr=23 (other) notify=1
+I (735023) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (735023) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (735023) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (735023) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (735023) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (735083) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (735083) MIOT-GATT:   hex19 01 00 42 E0 78 29 94 11 77 A3 3D F8 15 8F B8 7B 92 A7
+I (735083) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+[miot-auth] LOGIN(STD): use token=C803
+I (735083) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (735083) MIOT-GATT: ntf h=39 len=18 rc=0 head=01 00 6D
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (735143) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (735143) MIOT-GATT:   hex19 00 00 01 01
+I (735173) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (735173) MIOT-GATT:   hex19 00 00 01 00
+I (735253) MIOT-GATT: ntf h=39 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (735253) MIOT-GATT: ntf h=39 len=20 rc=0 head=01 00 24
+I (735253) MIOT-GATT: ntf h=39 len=16 rc=0 head=02 00 75
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (735293) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (735293) MIOT-GATT:   hex19 00 00 01 01
+I (735323) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (735323) MIOT-GATT:   hex19 00 00 01 00
+I (735323) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (735323) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (735323) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (735383) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (735383) MIOT-GATT:   hex19 01 00 57 05 38 34 A8 FF CD 28 C6 F2 FC 19 69 92 DB 6F F8 E6
+I (735383) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (735383) MIOT-GATT:   hex19 02 00 3B 86 EB E2 F1 C8 25 77 5D 28 9A C6 EF A2
+I (735383) MIOT-GATT: ntf h=39 len=4 rc=0 head=00 00 01
+I (735383) MIOT-GATT: ntf h=23 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (735403) miot: spec session ready (keys set)
+I (735403) BULB: *** session established: spec channel ready ***
+I (735403) BULB: login: wait for App GET (no push)
+I (735443) MIOT-GATT: rd 0004 op=0 off=0 mtu=247
+I (735443) MIOT-GATT:   -> ver '2.1.3_0039' off=0 send=20B rc=0 om=21B
+I (735683) MIOT-GATT: wr 001A #1 len=6 cmd=00
+I (735683) miot: rx#242 len=6: 00 00 00 00 01 00 
+I (735683) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (735683) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (735683) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (735743) MIOT-GATT: wr 001A #2 len=13 cmd=01
+I (735743) miot: rx#243 len=13: 01 00 00 00 CC 5E 39 BC 7B 01 EE 6F 66 
+I (735743) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (735743) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (735743) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (735743) miot: spec req seq=0 pt=5B
+I (735743) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (735743) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (735743) MIOT-GATT: ntf h=23 len=13 rc=0 head=01 00 00
+I (735753) MIOT-GATT: ntf h=45 len=13 rc=0 head=01 00 00
+I (735753) miot: spec version exchange done (dev ver=2)
+I (735773) MIOT-GATT: wr 001A #3 len=13 cmd=01
+I (735773) miot: rx#244 len=13: 01 00 00 00 CC 5E 39 BC 7B 01 EE 6F 66 
+I (735833) MIOT-GATT: wr 001B #1 len=4 cmd=00
+I (735833) miot: rx#245 len=4: 00 00 01 01 
+I (735833) MIOT-GATT: wr 001B #2 len=4 cmd=00
+I (735833) miot: rx#246 len=4: 00 00 01 00 
+I (735863) MIOT-GATT: wr 001A #4 len=6 cmd=00
+I (735863) miot: rx#247 len=6: 00 00 00 00 02 00 
+I (735863) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (735863) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (735863) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (735923) MIOT-GATT: wr 001A #5 len=20 cmd=01
+I (735923) miot: rx#248 len=20: 01 00 01 00 9D 7B BC 6D C4 46 17 30 57 D4 4A D2 BE 95 D9 C2 
+I (735923) MIOT-GATT: wr 001A #6 len=14 cmd=02
+I (735923) miot: rx#249 len=14: 02 00 5F 86 D4 8C 82 F9 7C E8 57 7C 9C 43 
+I (735923) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (735923) MIOT-GATT: ntf h=42 len=4 rc=0 head=00 00 01
+I (735923) MIOT-GATT: ntf h=45 len=4 rc=0 head=00 00 01
+I (735923) miot: spec req seq=1 pt=24B
+I (735923) miot: spec GET 7.1=ok 7.2=ok 7.3=ok 7.4=ok 8.1=ok 5.1003=ERR
+I (735933) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+I (735933) MIOT-GATT: ntf h=45 len=6 rc=0 head=00 00 00
+I (735933) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 01
+I (735933) MIOT-GATT: ntf h=45 len=20 rc=0 head=01 00 01
+I (735933) MIOT-GATT: ntf h=23 len=20 rc=0 head=02 00 3D
+I (735933) MIOT-GATT: ntf h=45 len=20 rc=0 head=02 00 3D
+I (735933) MIOT-GATT: ntf h=23 len=20 rc=0 head=03 00 A1
+I (735933) MIOT-GATT: ntf h=45 len=20 rc=0 head=03 00 A1
+I (735933) MIOT-GATT: ntf h=23 len=6 rc=0 head=04 00 6C
+I (735953) MIOT-GATT: wr 001A #7 len=20 cmd=01
+I (735953) miot: rx#250 len=20: 01 00 01 00 9D 7B BC 6D C4 46 17 30 57 D4 4A D2 BE 95 D9 C2 
+I (735953) MIOT-GATT: wr 001A #8 len=14 cmd=02
+I (735953) miot: rx#251 len=14: 02 00 5F 86 D4 8C 82 F9 7C E8 57 7C 9C 43 
+I (736043) MIOT-GATT: wr 001B #3 len=4 cmd=00
+I (736043) miot: rx#252 len=4: 00 00 01 01 
+I (736043) MIOT-GATT: wr 001B #4 len=4 cmd=00
+I (736043) miot: rx#253 len=4: 00 00 01 00 
+I (736103) MIOT-GATT: wr 001A #9 len=6 cmd=00
+I (736103) miot: rx#254 len=6: 00 00 00 00 02 00 
+I (736193) MIOT-GATT: wr 001A #10 len=20 cmd=01
+I (736193) miot: rx#255 len=20: 01 00 02 00 84 FD 1B B2 05 FA 49 AD A7 38 B9 C6 98 28 A6 E8 
+I (736193) MIOT-GATT: wr 001A #11 len=5 cmd=02
+I (736193) miot: rx#256 len=5: 02 00 64 DE E4 
+I (736193) miot: spec req seq=2 pt=15B
+I (736193) miot: spec SET 9.1 type=5 val=1795070057 -> ERR
+I (736223) MIOT-GATT: wr 001A #12 len=20 cmd=01
+I (736223) miot: rx#257 len=20: 01 00 02 00 84 FD 1B B2 05 FA 49 AD A7 38 B9 C6 98 28 A6 E8 
+I (736223) MIOT-GATT: wr 001A #13 len=5 cmd=02
+I (736223) miot: rx#258 len=5: 02 00 64 DE E4 
+I (736283) MIOT-GATT: wr 001B #5 len=4 cmd=00
+I (736283) miot: rx#259 len=4: 00 00 01 01 
+I (736313) MIOT-GATT: wr 001B #6 len=4 cmd=00
+I (736313) miot: rx#260 len=4: 00 00 01 00 
+I (736343) MIOT-GATT: wr 001A #14 len=6 cmd=00
+I (736343) miot: rx#261 len=6: 00 00 00 00 01 00 
+I (736433) MIOT-GATT: wr 001A #15 len=17 cmd=01
+I (736433) miot: rx#262 len=17: 01 00 03 00 9A DA 5F 10 2B AE 2D 09 34 50 22 19 5C 
+I (736433) miot: spec req seq=3 pt=9B
+I (736433) miot: spec GET 8.2=ERR
+I (736433) MIOT-GATT: wr 001A #16 len=17 cmd=01
+I (736443) miot: rx#263 len=17: 01 00 03 00 9A DA 5F 10 2B AE 2D 09 34 50 22 19 5C 
+I (736523) MIOT-GATT: wr 001B #7 len=4 cmd=00
+I (736523) miot: rx#264 len=4: 00 00 01 01 
+I (736553) MIOT-GATT: wr 001B #8 len=4 cmd=00
+I (736553) miot: rx#265 len=4: 00 00 01 00 
+I (781073) BULB: subscribe attr=23 (other) notify=0
+I (781073) BULB: subscribe attr=39 (other) notify=0
+I (781073) BULB: subscribe attr=42 (other) notify=0
+I (781073) BULB: subscribe attr=45 (other) notify=0
+I (781073) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=16 001B=8)
+I (781073) BULB: disconnected reason=0x213 -> adv resumed

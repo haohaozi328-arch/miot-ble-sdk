@@ -60,6 +60,9 @@ int gatt_miot_notify_spec(void *user, const uint8_t *d, size_t len);
 int gatt_miot_notify_auth_0010(void *user, const uint8_t *d, size_t len);
 int gatt_miot_notify_auth_0019(void *user, const uint8_t *d, size_t len);
 
+/** 打印通道 notify 出口（0x0020）：ACK / 状态心跳，print_channel 调用 */
+int gatt_miot_notify_0020(const uint8_t *d, size_t len);
+
 #ifdef __cplusplus
 }
 #endif

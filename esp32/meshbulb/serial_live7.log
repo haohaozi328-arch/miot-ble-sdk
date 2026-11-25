@@ -1,0 +1,559 @@
+
+===== capture start 23:36:30 =====
+[reset pulse sent]
+I (130) esp_image: segment 4: paddr=000aba48 vaddr=40380cc8 sizeESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (25) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (25) boot: Partition Table:
+I (25) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (26) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1c690h (116368) map
+I (46) esp_image: segment 1: paddr=0002c6b8 vaddr=3fc91a00 size=02c90h ( 11408) load
+I (48) esp_image: segment 2: paddr=0002f350 vaddr=40380000 size=00cc8h (  3272) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7ba20h (506400) map
+I (130) esp_image: segment 4: paddr=000aba48 vaddr=40380cc8 size=10c30h ( 68656) load
+I (143) esp_image: segment 5: paddr=000bc680 vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (149) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (158) app_init: App version:      8089566-dirty
+I (158) app_init: Compile time:     Nov 16 2026 14:19:56
+I (158) app_init: ELF file SHA256:  8849d83b5...
+I (158) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (159) efuse_init: Max chip rev:     v1.99 
+I (159) efuse_init: Chip rev:         v0.4
+I (159) heap_init: Initializing. RAM available for dynamic allocation:
+I (159) heap_init: At 3FC98D80 len 00027280 (156 KiB): RAM
+I (159) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (160) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (161) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (161) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (163) main_task: Started on CPU0
+I (163) main_task: Calling app_main()
+W (163) BULB: MAC 未覆盖，用编译默认
+I (163) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (163) BULB: PID 0x6266  MAC 后续打印
+I (163) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (163) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (353) BULB: ECDH prepare 185ms
+I (353) BLE_INIT: BT controller compile version [1bb2f50]
+I (353) BLE_INIT: Using main XTAL as clock source
+I (353) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (353) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (353) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (403) MIOT-GATT: 0xFE95 service registered (0004/0010/0013/0019/001A/001B/0017/0018), ver=3.0.9_9999
+W (403) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (403) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (413) MIOT-GATT: handles: 0004=16 0010=18 0013=21 0019=23 001A=26 001B=29 0017=31 0018=34
+I (52753) MIOT-GATT: connected conn=1 mtu=23
+I (52753) BULB: phone connected -> adv stopped
+I (53513) BULB: subscribe attr=23 (other) notify=1
+I (53573) MIOT-GATT: rd 0004
+I (53573) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (53633) MIOT-GATT: mtu -> 247
+I (53693) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (53693) MIOT-GATT:   hex10 A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (53783) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (53783) MIOT-GATT:   hex19 00 00 05 00 06 12
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (53873) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (53873) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (53963) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (53963) MIOT-GATT:   hex19 00 00 01 01
+I (53993) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (53993) MIOT-GATT:   hex19 00 00 01 00
+I (54023) BULB: subscribe attr=18 (other) notify=1
+I (54083) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (54083) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (54113) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (54113) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (54203) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (54203) MIOT-GATT:   hex19 01 00 AF 2F F3 53 12 D2 B7 5D C1 11 87 16 93 67 BA D7
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (54293) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (54293) MIOT-GATT:   hex19 00 00 01 01
+I (54323) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (54323) MIOT-GATT:   hex19 00 00 01 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (54473) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (54473) MIOT-GATT:   hex19 00 00 01 01
+I (54503) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (54503) MIOT-GATT:   hex19 00 00 01 00
+I (54533) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (54533) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (54623) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (54623) MIOT-GATT:   hex19 01 00 91 92 51 BF 82 90 81 2E 27 85 F0 01 B8 01 CB 6A 62 BC
+I (54623) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (54623) MIOT-GATT:   hex19 02 00 E0 02 2C 06 F7 23 2A C6 A1 D7 A3 5B 48 92
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (54643) miot: spec session ready (keys set)
+I (54643) BULB: *** session established: spec channel ready ***
+I (54643) miot: tx#1 pt=49B wire=55B: 31 20 00 00 04 07 07 01 00 01 00 00 07 02 00 01 10 64 07 03 00 02 30 88 13 07 04 00 01 10 00 02 EB 03 01 10 64 02 01 00 ...
+I (54643) BULB: login -> push 7 props rc=49
+I (54743) MIOT-GATT: rd 0004
+I (54743) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (55943) BULB: subscribe attr=18 (other) notify=0
+I (55943) BULB: subscribe attr=23 (other) notify=0
+I (55943) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (55943) BULB: disconnected reason=0x213 -> adv resumed
+I (59033) MIOT-GATT: connected conn=1 mtu=23
+I (59033) BULB: phone connected -> adv stopped
+I (59733) BULB: subscribe attr=23 (other) notify=1
+I (59783) MIOT-GATT: rd 0004
+I (59783) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (59843) MIOT-GATT: mtu -> 247
+I (59903) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (59903) MIOT-GATT:   hex10 A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (59963) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (59963) MIOT-GATT:   hex19 00 00 05 00 06 12
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+[miot-auth] device info fired (fallback 250ms, no echo)
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (61013) BULB: subscribe attr=23 (other) notify=0
+I (61013) MIOT-GATT: disconnected (wr 0010=1 0019=1 001A=0 001B=0)
+I (61013) BULB: disconnected reason=0x213 -> adv resumed
+I (64103) MIOT-GATT: connected conn=1 mtu=23
+I (64103) BULB: phone connected -> adv stopped
+I (64793) BULB: subscribe attr=23 (other) notify=1
+I (64813) MIOT-GATT: rd 0004
+I (64813) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (64833) BULB: subscribe attr=18 (other) notify=1
+I (64883) MIOT-GATT: mtu -> 247
+I (64943) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+I (64943) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (64943) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+I (64943) MIOT-GATT:   hex10 A4
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (64943) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (64943) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (65003) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+I (65003) MIOT-GATT:   hex19 01 00 80 C7 1B 42 E5 EF 2E EB 31 B8 C4 E6 C3 64 AD 33
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (66053) BULB: subscribe attr=18 (other) notify=0
+I (66053) BULB: subscribe attr=23 (other) notify=0
+I (66053) MIOT-GATT: disconnected (wr 0010=2 0019=2 001A=0 001B=0)
+I (66053) BULB: disconnected reason=0x213 -> adv resumed
+
+===== capture start 23:42:07 =====
+[reset pulse sent]
+I (130) esp_image: segment 4: paddr=000ab970 vaddr=40380cc8 sizeESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0xd (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038a1c2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5830,len:0x1594
+load:0x403cbf10,len:0xc9c
+load:0x403ce710,len:0x3010
+entry 0x403cbf1a
+I (24) boot: ESP-IDF v6.0-dirty 2nd stage bootloader
+I (24) boot: compile time Nov 15 2026 14:11:54
+I (25) boot: chip revision: v0.4
+I (25) boot: efuse block revision: v1.3
+I (25) boot.esp32c3: SPI Speed      : 80MHz
+I (25) boot.esp32c3: SPI Mode       : DIO
+I (25) boot.esp32c3: SPI Flash Size : 4MB
+I (25) boot: Enabling RNG early entropy source...
+I (26) boot: Partition Table:
+I (26) boot: ## Label            Usage          Type ST Offset   Length
+I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (26) boot:  2 factory          factory app      00 00 00010000 00100000
+I (27) boot: End of partition table
+I (27) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=1c690h (116368) map
+I (46) esp_image: segment 1: paddr=0002c6b8 vaddr=3fc91a00 size=02c90h ( 11408) load
+I (48) esp_image: segment 2: paddr=0002f350 vaddr=40380000 size=00cc8h (  3272) load
+I (49) esp_image: segment 3: paddr=00030020 vaddr=42000020 size=7b948h (506184) map
+I (130) esp_image: segment 4: paddr=000ab970 vaddr=40380cc8 size=10c30h ( 68656) load
+I (143) esp_image: segment 5: paddr=000bc5a8 vaddr=50000000 size=00024h (    36) load
+I (149) boot: Loaded app from partition at offset 0x10000
+I (149) boot: Disabling RNG early entropy source...
+I (150) cpu_start: Unicore app
+I (158) cpu_start: Pro cpu start user code
+I (158) cpu_start: cpu freq: 160000000 Hz
+I (158) app_init: Application information:
+I (158) app_init: Project name:     meshbulb
+I (159) app_init: App version:      8089566-dirty
+I (159) app_init: Compile time:     Nov 16 2026 14:19:56
+I (159) app_init: ELF file SHA256:  4720b11c4...
+I (159) app_init: ESP-IDF:          v6.0-dirty
+I (159) efuse_init: Min chip rev:     v0.3
+I (160) efuse_init: Max chip rev:     v1.99 
+I (160) efuse_init: Chip rev:         v0.4
+I (160) heap_init: Initializing. RAM available for dynamic allocation:
+I (160) heap_init: At 3FC98D80 len 00027280 (156 KiB): RAM
+I (160) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+I (160) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+I (161) heap_init: At 50000024 len 00001FC4 (7 KiB): RTCRAM
+I (161) spi_flash: detected chip: generic
+I (161) spi_flash: flash io: dio
+I (162) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (162) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (164) main_task: Started on CPU0
+I (164) main_task: Calling app_main()
+W (164) BULB: MAC 未覆盖，用编译默认
+I (164) BULB: ===== 小米汽车磁吸补光灯 careco.nlight.o654（PID 0x6266）=====
+I (164) BULB: PID 0x6266  MAC 后续打印
+I (164) BULB: LED: GPIO8 低电平点亮, 5000Hz PWM（2.2 亮度 → 占空比）
+I (164) BULB: identity loaded, did[0..3]=00 62 6C 74
+[miot-auth] ECDH keypair ready
+I (344) BULB: ECDH prepare 182ms
+I (344) BLE_INIT: BT controller compile version [1bb2f50]
+I (344) BLE_INIT: Using main XTAL as clock source
+I (344) BLE_INIT: Feature Config, ADV:1, BLE_50:1, DTM:1, SCAN:1, CCA:0, SMP:1, CONNECT:1
+I (354) BLE_INIT: Bluetooth MAC: 10:00:3b:ce:72:05
+I (354) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+I (394) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)
+I (434) MIOT-GATT: 0xFE95 service registered (0004/0010/0013/0019/001A/001B/0017/0018), ver=3.0.9_9999
+W (434) BULB: meshoff=1：不注册 0x1827/0x1828，纯 BLE 形态
+I (444) BULB: host synced, MAC 10:00:3B:CE:72:05  PID=0x6266 bound=1
+I (444) MIOT-GATT: handles: 0004=16 0010=18 0013=21 0019=23 001A=26 001B=29 0017=31 0018=34
+I (138834) MIOT-GATT: connected conn=1 mtu=23
+I (138834) BULB: phone connected -> adv stopped
+I (139524) BULB: subscribe attr=23 (other) notify=1
+I (139574) MIOT-GATT: rd 0004
+I (139584) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (139644) MIOT-GATT: mtu -> 247
+I (139704) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (139704) MIOT-GATT:   hex10 A4
+I (139704) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (139784) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (139794) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (139794) MIOT-GATT: ntf h=23 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (139874) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (139884) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (139884) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (139884) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 02
+I (139884) MIOT-GATT: ntf h=23 len=7 rc=0 head=02 00 39
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (139964) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (139974) MIOT-GATT:   hex19 00 00 01 01
+I (139974) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (139974) MIOT-GATT:   hex19 00 00 01 00
+I (139994) BULB: subscribe attr=18 (other) notify=1
+I (140054) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (140064) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (140084) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (140094) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (140094) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (140174) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (140184) MIOT-GATT:   hex19 01 00 0C 79 23 0E 0E A4 13 60 CD 41 3A 78 83 B5 16 66
+I (140184) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (140184) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (140184) MIOT-GATT: ntf h=23 len=18 rc=0 head=01 00 A7
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (140264) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (140274) MIOT-GATT:   hex19 00 00 01 01
+I (140294) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (140304) MIOT-GATT:   hex19 00 00 01 00
+I (140334) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (140334) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 D8
+I (140334) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 A2
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (140414) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (140424) MIOT-GATT:   hex19 00 00 01 01
+I (140424) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (140424) MIOT-GATT:   hex19 00 00 01 00
+I (140444) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (140454) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (140454) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (140534) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (140544) MIOT-GATT:   hex19 01 00 A8 29 08 F0 3F 2B 14 A3 20 D2 A2 E8 6B 6A 16 92 3A 75
+I (140544) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (140544) MIOT-GATT:   hex19 02 00 C1 FE 64 FC 9F 78 D5 D8 99 41 EF BD 33 FE
+I (140544) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (140544) MIOT-GATT: ntf h=18 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (140584) miot: spec session ready (keys set)
+I (140584) BULB: *** session established: spec channel ready ***
+I (140584) BULB: login: wait for App GET (no push)
+I (140624) MIOT-GATT: rd 0004
+I (140634) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (141744) BULB: subscribe attr=18 (other) notify=0
+I (141744) BULB: subscribe attr=23 (other) notify=0
+I (141744) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (141744) BULB: disconnected reason=0x213 -> adv resumed
+I (156354) MIOT-GATT: connected conn=1 mtu=23
+I (156354) BULB: phone connected -> adv stopped
+I (157044) BULB: subscribe attr=23 (other) notify=1
+I (157104) MIOT-GATT: rd 0004
+I (157104) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (157164) MIOT-GATT: mtu -> 247
+I (157254) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (157254) MIOT-GATT:   hex10 A4
+I (157254) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (157344) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (157344) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (157344) MIOT-GATT: ntf h=23 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+I (157434) MIOT-GATT: wr 0019 #2 len=20 cmd=00
+I (157434) MIOT-GATT:   hex19 00 00 05 01 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
+I (157434) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (157434) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 02
+I (157434) MIOT-GATT: ntf h=23 len=7 rc=0 head=02 00 39
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (157524) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (157524) MIOT-GATT:   hex19 00 00 01 01
+I (157524) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (157524) MIOT-GATT:   hex19 00 00 01 00
+I (157554) BULB: subscribe attr=18 (other) notify=1
+I (157614) MIOT-GATT: wr 0010 #2 len=4 cmd=24
+I (157614) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (157644) MIOT-GATT: wr 0019 #5 len=6 cmd=00
+I (157644) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (157644) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (157734) MIOT-GATT: wr 0019 #6 len=18 cmd=01
+I (157734) MIOT-GATT:   hex19 01 00 F5 B3 FE DE DD F8 2E CD 9B B4 1C C1 51 82 FC 02
+I (157734) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (157734) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (157734) MIOT-GATT: ntf h=23 len=18 rc=0 head=01 00 A4
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (157824) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (157824) MIOT-GATT:   hex19 00 00 01 01
+I (157824) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (157824) MIOT-GATT:   hex19 00 00 01 00
+I (157894) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (157894) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 D6
+I (157894) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 E0
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (157974) MIOT-GATT: wr 0019 #9 len=4 cmd=00
+I (157974) MIOT-GATT:   hex19 00 00 01 01
+I (158004) MIOT-GATT: wr 0019 #10 len=4 cmd=00
+I (158004) MIOT-GATT:   hex19 00 00 01 00
+I (158004) MIOT-GATT: wr 0019 #11 len=6 cmd=00
+I (158004) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (158004) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (158094) MIOT-GATT: wr 0019 #12 len=20 cmd=01
+I (158094) MIOT-GATT:   hex19 01 00 86 0E 9C 31 3D 24 1D 61 8B 7E DB BB 75 54 E0 ED 77 E2
+I (158094) MIOT-GATT: wr 0019 #13 len=16 cmd=02
+I (158094) MIOT-GATT:   hex19 02 00 D6 8F 29 4F 58 7F 50 98 BA D3 1D ED E1 6C
+I (158094) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (158094) MIOT-GATT: ntf h=18 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (158094) miot: spec session ready (keys set)
+I (158094) BULB: *** session established: spec channel ready ***
+I (158094) BULB: login: wait for App GET (no push)
+I (158184) MIOT-GATT: rd 0004
+I (158184) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (159414) BULB: subscribe attr=18 (other) notify=0
+I (159414) BULB: subscribe attr=23 (other) notify=0
+I (159414) MIOT-GATT: disconnected (wr 0010=2 0019=13 001A=0 001B=0)
+I (159414) BULB: disconnected reason=0x213 -> adv resumed
+I (162414) MIOT-GATT: connected conn=1 mtu=23
+I (162414) BULB: phone connected -> adv stopped
+I (163104) BULB: subscribe attr=23 (other) notify=1
+I (163164) MIOT-GATT: rd 0004
+I (163164) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (163224) MIOT-GATT: mtu -> 247
+I (163314) MIOT-GATT: wr 0010 #1 len=1 cmd=A4
+I (163314) MIOT-GATT:   hex10 A4
+I (163314) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (163404) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (163404) MIOT-GATT:   hex19 00 00 05 00 06 12
+I (163404) MIOT-GATT: ntf h=23 len=20 rc=0 head=00 00 05
+[miot-auth] channel READY (mng_ack test 16x0x12 sent)
+[miot-auth] device info fired (fallback 250ms, no echo)
+I (163694) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=0 cnt=2 (23B)
+I (163694) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 02
+I (163694) MIOT-GATT: ntf h=23 len=7 rc=0 head=02 00 39
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] device info sent (did=19B, 23B payload)
+I (164484) BULB: subscribe attr=23 (other) notify=0
+I (164484) MIOT-GATT: disconnected (wr 0010=1 0019=1 001A=0 001B=0)
+I (164484) BULB: disconnected reason=0x213 -> adv resumed
+I (167544) MIOT-GATT: connected conn=1 mtu=23
+I (167544) BULB: phone connected -> adv stopped
+I (168224) BULB: subscribe attr=18 (other) notify=1
+I (168254) BULB: subscribe attr=23 (other) notify=1
+I (168284) MIOT-GATT: wr 0010 #1 len=4 cmd=24
+I (168284) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (168314) MIOT-GATT: rd 0004
+I (168314) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (168374) MIOT-GATT: wr 0019 #1 len=6 cmd=00
+I (168374) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (168384) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (168404) MIOT-GATT: mtu -> 247
+I (168464) MIOT-GATT: wr 0010 #2 len=1 cmd=A4
+I (168474) MIOT-GATT:   hex10 A4
+I (168474) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 04
+[miot-auth] a4 -> mng(code=0) num=6 dmtu=18
+I (168974) MIOT-GATT: wr 0019 #2 len=18 cmd=01
+I (168974) MIOT-GATT:   hex19 01 00 2C 80 B8 2E 2B D4 19 8A 0C F1 44 F3 ED 8F 14 1E
+I (168984) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (168984) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (168984) MIOT-GATT: ntf h=23 len=18 rc=0 head=01 00 DD
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (169144) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (169144) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 00
+I (169144) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 B5
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (169544) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (169544) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 00
+I (169544) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 B5
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+I (169574) MIOT-GATT: wr 0019 #3 len=4 cmd=00
+I (169574) MIOT-GATT:   hex19 00 00 01 01
+I (169574) MIOT-GATT: wr 0019 #4 len=4 cmd=00
+I (169584) MIOT-GATT:   hex19 00 00 01 00
+I (169754) MIOT-GATT: wr 0019 #5 len=4 cmd=00
+I (169754) MIOT-GATT:   hex19 00 00 01 01
+I (169944) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (169944) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 00
+I (169944) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 B5
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (170114) MIOT-GATT: wr 0019 #6 len=4 cmd=00
+I (170114) MIOT-GATT:   hex19 00 00 01 00
+I (170344) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (170344) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 00
+I (170344) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 B5
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (170534) MIOT-GATT: wr 0019 #7 len=4 cmd=00
+I (170534) MIOT-GATT:   hex19 00 00 01 01
+I (170894) MIOT-GATT: wr 0019 #8 len=4 cmd=00
+I (170894) MIOT-GATT:   hex19 00 00 01 00
+I (173474) MIOT-GATT: wr 0010 #3 len=4 cmd=24
+I (173474) MIOT-GATT:   hex10 24 00 00 00
+[miot-auth] CMD_LOGIN -> wait appRandom(0x0B)
+I (173504) MIOT-GATT: wr 0019 #9 len=6 cmd=00
+I (173504) MIOT-GATT:   hex19 00 00 00 0B 01 00
+I (173514) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (174074) MIOT-GATT: wr 0019 #10 len=18 cmd=01
+I (174074) MIOT-GATT:   hex19 01 00 8A FE A2 3A 61 64 DE A8 68 EB B2 21 FE E5 B2 5A
+I (174084) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (174084) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=13 cnt=1 (16B)
+I (174084) MIOT-GATT: ntf h=23 len=18 rc=0 head=01 00 FA
+[miot-auth] ag tx parcel done 1 frames
+[miot-auth] LOGIN: devRandom(0x0D) sent, devConfirm staged (0x0C)
+I (174244) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (174244) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 F3
+I (174244) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 16
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#1)
+I (174644) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (174644) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 F3
+I (174644) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 16
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#2)
+I (174674) MIOT-GATT: wr 0019 #11 len=4 cmd=00
+I (174674) MIOT-GATT:   hex19 00 00 01 01
+I (174684) MIOT-GATT: wr 0019 #12 len=4 cmd=00
+I (174684) MIOT-GATT:   hex19 00 00 01 00
+I (174824) MIOT-GATT: wr 0019 #13 len=4 cmd=00
+I (174824) MIOT-GATT:   hex19 00 00 01 01
+I (175044) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (175044) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 F3
+I (175044) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 16
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#3)
+I (175214) MIOT-GATT: wr 0019 #14 len=4 cmd=00
+I (175214) MIOT-GATT:   hex19 00 00 01 00
+I (175224) MIOT-GATT: wr 0019 #15 len=6 cmd=00
+I (175224) MIOT-GATT:   hex19 00 00 00 0A 02 00
+I (175224) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (175444) MIOT-GATT: ntf h=23 len=6 rc=0 head=00 00 00
+[miot-auth] ag tx START pkg=12 cnt=2 (32B)
+I (175444) MIOT-GATT: ntf h=23 len=20 rc=0 head=01 00 F3
+I (175444) MIOT-GATT: ntf h=23 len=16 rc=0 head=02 00 16
+[miot-auth] ag tx parcel done 2 frames
+[miot-auth] LOGIN: devConfirm sent (#4)
+I (175634) MIOT-GATT: wr 0019 #16 len=20 cmd=01
+I (175644) MIOT-GATT:   hex19 01 00 28 8D 11 0E 20 43 B1 99 14 89 44 94 1B BC CF 6A F0 3B
+I (175644) MIOT-GATT: wr 0019 #17 len=16 cmd=02
+I (175644) MIOT-GATT:   hex19 02 00 F3 65 A5 91 AA B1 1B 9F 89 DA D2 05 1A 69
+I (175644) MIOT-GATT: ntf h=23 len=4 rc=0 head=00 00 01
+I (175644) MIOT-GATT: ntf h=18 len=4 rc=0 head=21 00 00
+[miot-auth] *** STD LOGIN COMPLETE (0x21 on 0x0010) ***
+I (175644) miot: spec session ready (keys set)
+I (175644) BULB: *** session established: spec channel ready ***
+I (175644) BULB: login: wait for App GET (no push)
+I (176234) MIOT-GATT: rd 0004
+I (176234) MIOT-GATT:   -> ver '3.0.9_9999' (10B)
+I (177644) BULB: subscribe attr=18 (other) notify=0
+I (177654) BULB: subscribe attr=23 (other) notify=0
+I (177654) MIOT-GATT: disconnected (wr 0010=3 0019=17 001A=0 001B=0)
+I (177654) BULB: disconnected reason=0x213 -> adv resumed
