@@ -34,3 +34,21 @@ sdkconfig.clean
 /_*.out
 /_*.bin
 esp32/multi_dev/build/
+
+# 本地抓包/逆向大产物与密钥（绝不入库）
+/_cert/
+/logs/
+/_apk/
+/_dex/
+/_lyra_dex/
+/_lyra.apk
+/_br_*.zip
+/_bugreport_*.zip
+/_repack/
+/_srv/
+/_tools/
+/_tmp/
+/_snoop_*/
+/.backup_*/
+__pycache__/
+*.pbm
