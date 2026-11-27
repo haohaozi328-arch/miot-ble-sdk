@@ -34,6 +34,7 @@
 | [06 安全设计分析](06-security-analysis.md) | 为什么私钥无法通过空口获取、派生假设的证伪 |
 | [07 中继工程实践](07-relay-practice.md) | 双角色地址、写队列、CCCD 订阅、链路重建 |
 | [08 Mesh 1.0 灯泡实测](08-mesh10-lamp-field-notes.md) | 0x4707 真灯：未配网广播帧形、`close uart` 时序、配网瞬间的日志锚点（2026-11-26） |
+| [09 Mesh 2.0 模组接线观测](09-mesh20-mhcb12g-wiring-notes.md) | MHCB12G 脚位映射、UART 口全程静默、广播帧恒定 → 控制链路本地不可观测（2026-11-27） |
 
 ## 配套工具
 
@@ -45,6 +46,7 @@
 | `btsnoop_parse.py` | Android btsnooz / btsnoop 日志解析 |
 | `pkg9_entropy.py` | 从串口日志重组多帧包，做熵值与结构分析 |
 | `derive_test.py` | 验证「私钥是否由 MAC / 设备信息派生」，支持 `--sn` 追加自定义种子 |
+| `watch_mhcb_adv.py` | 全量抓 MiBeacon(0xFE95)/Mesh beacon(0x1827/0x1828)，带时间戳，不预置 MAC/PID |
 
 ## 适用范围与局限
 
