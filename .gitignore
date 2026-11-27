@@ -33,6 +33,9 @@ sdkconfig.clean
 /_*.py
 /_*.out
 /_*.bin
+# 各工程目录下的临时抓取日志同理不入库（_ 前缀）
+esp32/*/_*.log
+esp32/*/_*.txt
 esp32/multi_dev/build/
 
 # 本地抓包/逆向大产物与密钥（绝不入库）

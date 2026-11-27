@@ -33,6 +33,7 @@
 | [05 实测观察](05-observations.md) | 20 秒链路寿命、MAC 一致性、广播行为 |
 | [06 安全设计分析](06-security-analysis.md) | 为什么私钥无法通过空口获取、派生假设的证伪 |
 | [07 中继工程实践](07-relay-practice.md) | 双角色地址、写队列、CCCD 订阅、链路重建 |
+| [08 Mesh 1.0 灯泡实测](08-mesh10-lamp-field-notes.md) | 0x4707 真灯：未配网广播帧形、`close uart` 时序、配网瞬间的日志锚点（2026-11-26） |
 
 ## 配套工具
 

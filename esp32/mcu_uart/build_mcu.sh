@@ -7,8 +7,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+HOST_ROOT="$(cygpath -m "$(cd "$(dirname "$0")/../.." && pwd)")"
+
 MSYS_NO_PATHCONV=1 docker run --rm \
-  -v "D:/workspace/temp/miot-ble-sdk":/project \
+  -v "$HOST_ROOT:/project" \
   -w /project/esp32/mcu_uart espressif/idf:v6.0 \
   bash -c "source /opt/esp/idf/export.sh >/dev/null 2>&1 \
            && CCACHE_DISABLE=1 idf.py build > build/mcu_build.log 2>&1; rc=\$?; \
