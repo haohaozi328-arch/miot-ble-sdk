@@ -14,17 +14,21 @@
 2. 云端设备记录：`xiaomi.printer.ricott` / did `blt.3.1qvon88q04o00` / MAC `10:00:3B:CE:05:08`
 3. 设备页完整渲染：打印任务 / 经典照片 / 动态照片 / 模板 / AR照片 / 留声照片
 
-## ★关于传图
+## ★关于打印通道（2026-11-25 已定性）
 
 照片打印的**图片数据不走标准 spec 属性**。ricott 的官方 spec 只有 device-information
-（5 个只读 string）+ indicator-light / battery 两个空服务，**没有任何可上报的业务属性**，
-打印内容走 App 私有 BLE 通道下发（与标签打印机的 L2CAP PSM 0x80 同类，私有协议另行逆向）。
+（5 个只读 string）+ indicator-light / battery 两个空服务。
 
-本工程应对方式：绑定后只发**空对象心跳帧**维持在线，不挂标签打印机的
-state/paper/fault/battery 对象号（ricott spec 里不存在，App 会整帧丢弃判异常）。
+**打印通道不走 BLE**：绑定完成后，插件对设备发起**经典蓝牙（BR/EDR）RFCOMM/SPP**
+连接（UUID `00001101`，手机 logcat 实证），协议为 Hannto 家族 0x7E 分帧 +
+DH 握手 + AES-128-ECB。ESP32-C3 无经典蓝牙 → 设备页「连接中」永远转圈，
+**本工程（C3）能力上限就是绑定 + 设备页渲染**，打印通道需要 ESP32 经典款
+（WROOM-32 双模）重做固件。
 
-设备页点「连接」后仍停在「连接中...」——私有 RN 打印插件的连接触发条件尚未逆向出来，
-属独立课题，本固件未覆盖。
+完整分析（协议栈细节 / logcat 证据 / 实现路线图 / 验证清单）见
+[`docs/ricott-print-protocol-analysis.md`](../../docs/ricott-print-protocol-analysis.md)。
+参考实现：`refs/xiaomi-photo-printer/`（tuat-yate，Pro 海外版全协议 Python）、
+`refs/mizink/`（basil 逆向，传输层全景）。
 
 ## 编译 / 烧录
 
