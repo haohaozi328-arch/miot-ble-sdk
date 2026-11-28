@@ -170,7 +170,10 @@ int miot_beacon_frame_v5_nomac(const miot_beacon_cfg_t *cfg, uint32_t frame_cnt,
                                const uint8_t *objs, size_t objs_len,
                                uint8_t *out, size_t cap)
 {
-    if (objs_len > 7) return -2;                    /* 13+7=20，超过就超 ATT 上限 */
+    /* 广播走 Service Data(0xFE95)：flags 3B + AD 头 6B + 帧 ≤ 31B
+     * → 帧 ≤ 22B → objs ≤ 9B。u8 对象占 4B（obj2+len1+val1），
+     * 所以最多两个 u8 对象（水温+电量）。 */
+    if (objs_len > 9) return -2;
     const size_t total = 6 + objs_len + 3 + 4;
     if (cap < total) return -3;
 
