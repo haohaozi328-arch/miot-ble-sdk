@@ -110,6 +110,7 @@ include/miot_ble/   SDK 公共头（auth / device / spec / props / ag2 / crypto 
 src/                对应实现（纯 C11，无 OS 依赖）
 port/esp32/         ESP32 + NimBLE + mbedTLS 移植参考
 esp32/              各设备独立 ESP-IDF 工程（上表「工程」列，一个型号一个目录）+ multi_dev 多档工程
+                    + ir_bus / ir_beacon 红外下行通道实验（不在设备清单内）
 examples/           每台设备一个可运行演示（host 编译，打印帧/解析结果）
 test/               黄金样本单测（样本即真机抓包）
 tools/              build_all.sh（全量编译门禁）/ 串口与抓包脚本 / mesh 工具
@@ -218,6 +219,18 @@ void app_main(void) {
 | **spec 连接型** | 是 | 标准认证（ECDH P-256 REGISTER + HKDF LOGIN）→ spec v2 通道收发；数据走手机 GATT，不经网关 |
 | **广播型** | 否（只在绑定时连一下） | MiBeacon v5 加密广播 → 网关解密上云；手机不在附近也能上报 |
 | **事件型** | 可连（仅用于绑定） | 按键事件走加密广播，不进 GATT |
+
+### 想要「云端下发 / 语音控制」？
+
+上面三种通道都只有上行。三条绕路，按省事程度排：
+
+| 路线 | 卡在哪 | 说明 |
+|---|---|---|
+| **红外下发** | 不卡协议 | 小爱音箱发红外当指令通道，ESP32 收下后自己执行，见 [`esp32/ir_bus`](esp32/ir_bus)（[方案参考](esp32/ir_bus/DESIGN.md)）。不碰米家协议、不需要私钥；代价是**上云回传高度依赖网关**（见下方白名单那条），并非完全免网关 |
+| BLE Mesh | **产线私钥** | 配网要用设备私钥签 `pkg4`，服务器验签；私钥产线随机烧录、空口不泄露，实测见 [mesh 1.0](docs/mesh-ref/provisioning/08-mesh10-lamp-field-notes.md) / [mesh 2.0](docs/mesh-ref/provisioning/09-mesh20-mhcb12g-wiring-notes.md) → 只能买官方模组 |
+| WiFi 设备 | 厂商鉴权 | 走 miio，需要设备 token（云侧下发），自造设备进不了云 |
+
+> 嫌麻烦就别自己趟：**米家二手拆机片**（成品主板，带真实固件与设备身份）比自己逆向、赌云端白名单省事。
 
 ## 五个必踩的坑
 
