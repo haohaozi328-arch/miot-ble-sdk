@@ -16,7 +16,7 @@
 ┌──────────────────────────────────────────────────────────┐
 │  你的产品逻辑（体重计 / 温湿度计 / 灯 / 任意 MIoT 设备）      │
 ├──────────────────────────────────────────────────────────┤
-│  miot_profiles 已验证设备档案（36 台设备，见下方设备清单）     │
+│  miot_profiles 已验证设备档案（35 台设备，见下方设备清单）     │
 │  miot_beacon   MiBeacon v5 加密广播帧（不建连接的传感器）      │
 ├──────────────────────────────────────────────────────────┤
 │  miot_device   组合层：加密通道+分派+属性表+主动上报           │
@@ -35,13 +35,13 @@
 
 ## 设备清单
 
-36 台设备，全部在米家 Android App 上做过实机验证（扫描添加 → 绑定 → 数据互通），仅 24 号（LED 灯泡）未通过、保留作协议研究记录。
+35 台设备，全部在米家 Android App 上做过实机验证（扫描添加 → 绑定 → 数据互通）。
 
 - ✅ 实测通过　⚠️ 能用但带已知问题　❌ 未打通（保留作协议研究记录）
 - 能否用**官方原版 App（无模块、未 root）**添加，逐条对照 → [docs/clean-app-matrix.md](docs/clean-app-matrix.md)
 - 逐设备回归步骤与踩坑 → [docs/testing.md](docs/testing.md)
 
-> **范围说明**：下表 36 台全部是 **BLE GATT 直连**形态——手机 ↔ 设备建立连接后直连通信
+> **范围说明**：下表 35 台全部是 **BLE GATT 直连**形态——手机 ↔ 设备建立连接后直连通信
 > （部分型号同时发 MiBeacon 加密广播，见「通道」列；广播/事件型的连接只用于绑定）。
 > 设备在米家 App 里可见、可绑定、可读写属性，**上行是通的**：属性与事件变化会上报上云
 > （GATT 型由 App 在线时同步，广播型经网关转发），因此可以**触发上报功能、触发米家自动化任务**。
@@ -74,19 +74,18 @@
 | 21 | 领普压力有无传感器 | `linp.senpres.ps1bb` | `0x3F4C` | 广播 | ✅ 有无压力 + 电量双向 | [`senpres_adv`](esp32/senpres_adv) |
 | 22 | 花花草草监测仪 | `hhcc.plantmonitor.v1` | `0x0098` | 广播 | ✅ 土壤湿度/肥力/光照/气温四槽<br>土壤湿度用 `0x1008`，别用 `0x1006` | [`plant_adv`](esp32/plant_adv) |
 | 23 | 空气检测仪（树色） | `shuse.airm.ss006` | `0x6651` | 广播 | ✅ 温/湿/AQI/CO₂/HCHO/TVOC 六属性双向<br>HCHO·TVOC 官方 range [0,2]，超范围打坏读口 | [`airm_adv`](esp32/airm_adv) |
-| 24 | LED 灯泡（蓝牙 Mesh 版） | MJDP003 | `0x06EB`（推断） | Mesh spec | ❌ `-27`，拒绝点在 PID 类型层 | [`bulb_gatt`](esp32/bulb_gatt) |
-| 25 | 烟感卫士 2 | `xiaomi.sensor_smoke.yg2` | `0x7ABA` | 广播 | ✅ status/电量双向<br>status 是 enum(1 正常/2 告警)，不是 bool；MAC 撞号会被米家按地址去重过滤 | [`smoke2_adv`](esp32/smoke2_adv) |
-| 26 | 小米水浸卫士2 | `xiaomi.flood.oh83w` | `0x6375` | 广播 | ✅ 未浸水/未淋水/电量三属性双向<br>新 eid 0x4806/0x487B/0x4C03 | [`flood2_adv`](esp32/flood2_adv) |
-| 27 | 闪极 100W 迷你充电器（蓝牙版） | `sharge.plug.sj01` | `0x1E1C` | spec 直连 | ✅ 开关 set→回推闭环<br>全库唯一 BLE 插座，控制走手机 GATT 不经网关 | [`outlet_adv`](esp32/outlet_adv) |
-| 28 | 米家声波电动牙刷 T501 | `soocare.toothbrush.1501` | `0x1FF3` | 广播 | ✅ 电量/充电/刷头三属性双向<br>仓库首个牙刷品类；手环走 MiWear 私有栈不可做 | [`toothbrush_adv`](esp32/toothbrush_adv) |
-| 29 | 米家伺服扫振电动牙刷 Pro | `xiaomi.toothbrush.24p` | `0x6800` | 广播 | ✅ 电量/充电/刷头三属性双向<br>旗舰款，UI 更丰富（本周刷牙/覆盖率/参数设置）；刷头范围 0~100 | [`brushpro_adv`](esp32/brushpro_adv) |
-| 30 | 小米汽车磁吸补光灯 | `careco.nlight.o654` | `0x6266` | spec 直连 | ✅ 开关/亮度/色温/模式/对时 set→回推全闭环<br>仓库首个可调光+调色温本地控制类；亮度/色温滑块拖动实时 SET，控制走手机 GATT 不经网关 | [`carlight_adv`](esp32/carlight_adv) |
-| 31 | PTX 无线开关（蓝牙版） | `090615.remote.btsw1` | `0x38BB` | 广播 | ✅ 绑定 + 单击/双击/长按/低电量四事件上报<br>事件对象号 0x4E0C/0x4E0D/0x4E0E/0x4C01；电量 ≤15% 快广播补发低电事件 | [`ptxsw1_adv`](esp32/ptxsw1_adv) |
-| 32 | 米家恒温电水壶 Pro | `yunmi.kettle.v13` | `0x1809` | spec 直连 | ✅ 17 属性全读 + 档位/时长/水温双向<br>★3.3 官方标 R 但 App 当可写下发，必须注册 RW 并联动水温；水温由传感器回推 | [`kettle_adv`](esp32/kettle_adv) |
-| 33 | 米家智能香氛机-杯托版 | `xiaomi.diffuser.xwczxf` | `0x39E6` | spec 直连 | ✅ 11 属性全读 + 浓度/香型双向<br>★官方标 R 但 App 当可写下发，全部注册 RW；浓度 u16 val=150=5档 | [`diffuser_adv`](esp32/diffuser_adv) |
-| 34 | 小米磁吸散热背夹 | `xiaomi.cooler.r02p` | `0x52AA` | spec 直连 | ✅ 14 属性全读 + 模式/温度/灯效全控<br>★修复 SDK 两坑：I8 编码缺失致温度 `--`；BOOL SET 新格式帧被旧格式分支误判 rc=-4 卡死延时开关 | [`cooler_adv`](esp32/cooler_adv) |
-| 35 | 米家标签打印机 | `xiaomi.printer.label` | `0x34FE` | spec 直连 | ✅ 7 属性 + 3 action；设备页完整渲染（素材广场/打印历史/按键标签）<br>★私有打印通道已打通：001F/0020 GATT + A3/AES-128-CBC/CRC32 帧协议，App 真实打印任务 4764B 位图端到端解密还原（详见工程 README） | [`printer_label_adv`](esp32/printer_label_adv) |
-| 36 | 领普人体存在传感器 ES3（电池款） | `linp.sensor_occupy.es2` | `0x50FB` | 广播 | ✅ 有人/无人 + 光照 + 持续有人/无人时长上云双向<br>★产品叫 ES3 型号是 es2（官方数据如此）；存在状态枚举 0/1，同骨架的 POP2 是 0/6 照抄会不认；设备页完整渲染（感应记录/光照记录/感应设置） | [`occ_es3_adv`](esp32/occ_es3_adv) |
+| 24 | 烟感卫士 2 | `xiaomi.sensor_smoke.yg2` | `0x7ABA` | 广播 | ✅ status/电量双向<br>status 是 enum(1 正常/2 告警)，不是 bool；MAC 撞号会被米家按地址去重过滤 | [`smoke2_adv`](esp32/smoke2_adv) |
+| 25 | 小米水浸卫士2 | `xiaomi.flood.oh83w` | `0x6375` | 广播 | ✅ 未浸水/未淋水/电量三属性双向<br>新 eid 0x4806/0x487B/0x4C03 | [`flood2_adv`](esp32/flood2_adv) |
+| 26 | 闪极 100W 迷你充电器（蓝牙版） | `sharge.plug.sj01` | `0x1E1C` | spec 直连 | ✅ 开关 set→回推闭环<br>全库唯一 BLE 插座，控制走手机 GATT 不经网关 | [`outlet_adv`](esp32/outlet_adv) |
+| 27 | 米家声波电动牙刷 T501 | `soocare.toothbrush.1501` | `0x1FF3` | 广播 | ✅ 电量/充电/刷头三属性双向<br>仓库首个牙刷品类；手环走 MiWear 私有栈不可做 | [`toothbrush_adv`](esp32/toothbrush_adv) |
+| 28 | 米家伺服扫振电动牙刷 Pro | `xiaomi.toothbrush.24p` | `0x6800` | 广播 | ✅ 电量/充电/刷头三属性双向<br>旗舰款，UI 更丰富（本周刷牙/覆盖率/参数设置）；刷头范围 0~100 | [`brushpro_adv`](esp32/brushpro_adv) |
+| 29 | 小米汽车磁吸补光灯 | `careco.nlight.o654` | `0x6266` | spec 直连 | ✅ 开关/亮度/色温/模式/对时 set→回推全闭环<br>仓库首个可调光+调色温本地控制类；亮度/色温滑块拖动实时 SET，控制走手机 GATT 不经网关 | [`carlight_adv`](esp32/carlight_adv) |
+| 30 | PTX 无线开关（蓝牙版） | `090615.remote.btsw1` | `0x38BB` | 广播 | ✅ 绑定 + 单击/双击/长按/低电量四事件上报<br>事件对象号 0x4E0C/0x4E0D/0x4E0E/0x4C01；电量 ≤15% 快广播补发低电事件 | [`ptxsw1_adv`](esp32/ptxsw1_adv) |
+| 31 | 米家恒温电水壶 Pro | `yunmi.kettle.v13` | `0x1809` | spec 直连 | ✅ 17 属性全读 + 档位/时长/水温双向<br>★3.3 官方标 R 但 App 当可写下发，必须注册 RW 并联动水温；水温由传感器回推 | [`kettle_adv`](esp32/kettle_adv) |
+| 32 | 米家智能香氛机-杯托版 | `xiaomi.diffuser.xwczxf` | `0x39E6` | spec 直连 | ✅ 11 属性全读 + 浓度/香型双向<br>★官方标 R 但 App 当可写下发，全部注册 RW；浓度 u16 val=150=5档 | [`diffuser_adv`](esp32/diffuser_adv) |
+| 33 | 小米磁吸散热背夹 | `xiaomi.cooler.r02p` | `0x52AA` | spec 直连 | ✅ 14 属性全读 + 模式/温度/灯效全控<br>★修复 SDK 两坑：I8 编码缺失致温度 `--`；BOOL SET 新格式帧被旧格式分支误判 rc=-4 卡死延时开关 | [`cooler_adv`](esp32/cooler_adv) |
+| 34 | 米家标签打印机 | `xiaomi.printer.label` | `0x34FE` | spec 直连 | ✅ 7 属性 + 3 action；设备页完整渲染（素材广场/打印历史/按键标签）<br>★私有打印通道已打通：001F/0020 GATT + A3/AES-128-CBC/CRC32 帧协议，App 真实打印任务 4764B 位图端到端解密还原（详见工程 README） | [`printer_label_adv`](esp32/printer_label_adv) |
+| 35 | 领普人体存在传感器 ES3（电池款） | `linp.sensor_occupy.es2` | `0x50FB` | 广播 | ✅ 有人/无人 + 光照 + 持续有人/无人时长上云双向<br>★产品叫 ES3 型号是 es2（官方数据如此）；存在状态枚举 0/1，同骨架的 POP2 是 0/6 照抄会不认；设备页完整渲染（感应记录/光照记录/感应设置） | [`occ_es3_adv`](esp32/occ_es3_adv) |
 
 **入门推荐**：蓝牙温湿度计 2 —— 标准认证、免网关、属性可验证，链路注释最全，最适合当模板改新型号。
 

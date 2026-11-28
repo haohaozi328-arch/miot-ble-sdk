@@ -55,3 +55,7 @@ esp32/multi_dev/build/
 /.backup_*/
 __pycache__/
 *.pbm
+
+# 调试二进制 / 依赖
+frida-server*
+node_modules/
