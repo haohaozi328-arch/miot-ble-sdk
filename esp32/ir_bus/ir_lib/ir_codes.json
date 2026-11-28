@@ -1,0 +1,69 @@
+{
+  "_说明": "索尼 SIRC 电视码表（device code = 0x01）。数据来源：SIRCS 官方命令表 + Flipper-IRDB Sony Bravia，两组独立来源一致。载波 40kHz，帧头 2.4ms/0.6ms，位宽 mark 0.6ms=0 / 1.2ms=1，LSB first，12bit = 7bit cmd + 5bit dev。",
+  "protocol": "SIRC12",
+  "device": "0x01",
+  "carrier_khz": 40,
+  "keys": [
+    { "cmd": "0x00", "name": "1",         "zh": "数字 1" },
+    { "cmd": "0x01", "name": "2",         "zh": "数字 2" },
+    { "cmd": "0x02", "name": "3",         "zh": "数字 3" },
+    { "cmd": "0x03", "name": "4",         "zh": "数字 4" },
+    { "cmd": "0x04", "name": "5",         "zh": "数字 5" },
+    { "cmd": "0x05", "name": "6",         "zh": "数字 6" },
+    { "cmd": "0x06", "name": "7",         "zh": "数字 7" },
+    { "cmd": "0x07", "name": "8",         "zh": "数字 8" },
+    { "cmd": "0x08", "name": "9",         "zh": "数字 9" },
+    { "cmd": "0x09", "name": "0",         "zh": "数字 0" },
+    { "cmd": "0x0B", "name": "ENTER",     "zh": "确认/输入" },
+
+    { "cmd": "0x10", "name": "CH+",       "zh": "频道 +" },
+    { "cmd": "0x11", "name": "CH-",       "zh": "频道 -" },
+    { "cmd": "0x12", "name": "VOL+",      "zh": "音量 +",   "note": "已实测" },
+    { "cmd": "0x13", "name": "VOL-",      "zh": "音量 -",   "note": "待实测，建议作「关」指令" },
+    { "cmd": "0x14", "name": "MUTE",      "zh": "静音" },
+    { "cmd": "0x15", "name": "POWER",     "zh": "电源/开关", "note": "已实测，建议作「开」指令" },
+    { "cmd": "0x16", "name": "RESET",     "zh": "电视复位" },
+    { "cmd": "0x17", "name": "AUDIO",     "zh": "音效模式（单声道/双语/立体声）" },
+    { "cmd": "0x18", "name": "PIC+",      "zh": "图像 +" },
+    { "cmd": "0x19", "name": "PIC-",      "zh": "图像 -" },
+    { "cmd": "0x1E", "name": "BRIGHT+",   "zh": "亮度 +" },
+    { "cmd": "0x1F", "name": "BRIGHT-",   "zh": "亮度 -" },
+
+    { "cmd": "0x25", "name": "INPUT",     "zh": "切换输入源" },
+    { "cmd": "0x29", "name": "SURROUND",  "zh": "环绕声开关" },
+    { "cmd": "0x2F", "name": "PWR_OFF",   "zh": "关机（只关不开）", "note": "单向关机，适合做「绝对关」" },
+    { "cmd": "0x30", "name": "TIME",      "zh": "时间显示" },
+    { "cmd": "0x36", "name": "SLEEP",     "zh": "睡眠定时" },
+    { "cmd": "0x3A", "name": "CH_DISP",   "zh": "频道显示" },
+    { "cmd": "0x3B", "name": "JUMP",      "zh": "频道跳回" },
+
+    { "cmd": "0x40", "name": "VIDEO1",    "zh": "输入 Video 1" },
+    { "cmd": "0x41", "name": "VIDEO2",    "zh": "输入 Video 2" },
+    { "cmd": "0x42", "name": "VIDEO3",    "zh": "输入 Video 3" },
+
+    { "cmd": "0x58", "name": "PIP_CH+",   "zh": "画中画频道 +" },
+    { "cmd": "0x59", "name": "PIP_CH-",   "zh": "画中画频道 -" },
+    { "cmd": "0x5B", "name": "PIP_ON",    "zh": "画中画开关" },
+    { "cmd": "0x5C", "name": "FREEZE",    "zh": "画面冻结" },
+
+    { "cmd": "0x60", "name": "GUIDE",     "zh": "节目指南" },
+    { "cmd": "0x61", "name": "VIDEO_SET", "zh": "图像设置" },
+    { "cmd": "0x62", "name": "AUDIO_SET", "zh": "声音设置" },
+    { "cmd": "0x63", "name": "EXIT_SET",  "zh": "退出设置" },
+    { "cmd": "0x6B", "name": "AUTO_PROG", "zh": "自动搜台" },
+
+    { "cmd": "0x70", "name": "TREBLE+",   "zh": "高音 +" },
+    { "cmd": "0x71", "name": "TREBLE-",   "zh": "高音 -" },
+    { "cmd": "0x72", "name": "BASS+",     "zh": "低音 +" },
+    { "cmd": "0x73", "name": "BASS-",     "zh": "低音 -" },
+    { "cmd": "0x74", "name": "UP",        "zh": "方向上 / 加键", "note": "老码表记为「+ 键」，新 Bravia 记为「上」，两种解释并存" },
+    { "cmd": "0x75", "name": "DOWN",      "zh": "方向下 / 减键", "note": "老码表记为「- 键」，新 Bravia 记为「下」" }
+  ],
+  "建议暗号": [
+    { "用途": "开",  "cmd": "0x15", "理由": "POWER，米家虚拟遥控页第一排就有，好按" },
+    { "用途": "关",  "cmd": "0x2F", "理由": "PWR_OFF 只关不开，绝对指令，不会漂移" },
+    { "用途": "场景A", "cmd": "0x40", "理由": "VIDEO1，家里没索尼电视时没人用这个键" },
+    { "用途": "场景B", "cmd": "0x41", "理由": "VIDEO2" },
+    { "用途": "场景C", "cmd": "0x42", "理由": "VIDEO3" }
+  ]
+}
